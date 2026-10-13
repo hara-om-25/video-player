@@ -1,0 +1,48 @@
+{
+ "id": "./",
+ "name": "Відеоплеєр ХАРА ОМ",
+ "short_name": "Відеоплеєр",
+ "description": "Відеоплеєр з мітками, покадровою прокруткою та регулятором",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#1a1b1d",
+ "theme_color": "#151618",
+ "lang": "uk",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ],
+ "file_handlers": [
+  {
+   "action": "./",
+   "accept": {
+    "video/*": [
+     ".mp4",
+     ".m4v",
+     ".webm",
+     ".mkv",
+     ".mov",
+     ".3gp"
+    ]
+   }
+  }
+ ],
+ "launch_handler": {
+  "client_mode": [
+   "focus-existing",
+   "auto"
+  ]
+ }
+}
