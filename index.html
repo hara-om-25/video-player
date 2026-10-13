@@ -277,6 +277,9 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 }
 .jog .hit, .jog .hub { pointer-events: all; }
 .jog .hub { cursor: pointer; }
+.jog .jogtxt { font: 700 10.5px 'Tektur', system-ui, sans-serif; fill: var(--dim); letter-spacing: .02em; }
+.jog .jogtxt .on, .jog #jogValTxt.on { fill: var(--accent); }
+#jogVal { display: none !important; }
 .jog .pulse { opacity: 0; pointer-events: none; }
 .jog.paused .pulse { animation: jogPulse 2.4s ease-in-out infinite; }
 @keyframes jogPulse { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
@@ -1160,11 +1163,9 @@ const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець
 (function buildJog() {
   const svg = $('jog'), NS = 'http://www.w3.org/2000/svg';
   const pt = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
-  let dots = '';
-  for (let i = 0; i < 60; i++) {
-    const a = -135 + i * 6, [x, y] = pt(108, a), d = Math.min(i, 60 - i);
-    dots += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${d ? 1.1 : 1.6}" fill="#ffd23f" opacity="${Math.max(.18, 1 - d / 12).toFixed(2)}"/>`;
-  }
+  // «± N сек» — дугою над колесом (на місці колишніх крапок), не крутиться разом з РП
+  const [a1x, a1y] = pt(104, -172), [a2x, a2y] = pt(104, -98);
+  const valArc = `<path id="jgValArc" d="M${a1x.toFixed(2)} ${a1y.toFixed(2)}A104 104 0 0 1 ${a2x.toFixed(2)} ${a2y.toFixed(2)}" fill="none"/>`;
   // Край — металева рифлена ручка: зубці крутяться разом з колесом, а світло (відблиски й тіні)
   // нерухоме, як від лампи зверху-зліва, тож при оберті зубці «біжать» крізь відблиск.
   const R1 = 86.5, R2 = 98;
@@ -1187,7 +1188,7 @@ const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець
     const col = b > 0 ? '#ffffff' : '#000000', op = b > 0 ? b * 0.7 : -b * 0.85;
     if (op > 0.02) sheen += `<path d="${sector(a - 0.05, a + 2.05, R1, R2)}" fill="${col}" opacity="${op.toFixed(3)}"/>`;
   }
-  const [m1x, m1y] = pt(102, -135), [m2x, m2y] = pt(113, -135), [dx, dy] = pt(JOG_DIMPLE_D, -135);
+  const [dx, dy] = pt(JOG_DIMPLE_D, -135);
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
@@ -1200,13 +1201,12 @@ const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець
     <filter id="jgShadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter>
     <radialGradient id="jgPulse"><stop offset="0" stop-color="#ffd23f" stop-opacity=".22"/><stop offset=".75" stop-color="#ffd23f" stop-opacity=".3"/><stop offset="1" stop-color="#ffd23f" stop-opacity=".55"/></radialGradient>
   </defs>
-  ${dots}
+  ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle">± 0 сек</textPath></text>
   <circle r="${R2}" cx="2" cy="3" fill="#000" opacity=".65" filter="url(#jgShadow)"/>
   <g id="jogRot">
     <circle r="${R2}" fill="#3c4046"/>
     <path d="${knurlHi}" fill="#666c74"/><path d="${knurlMid}" fill="#a3a9b0"/><path d="${knurlLo}" fill="#17191c"/>
     <circle r="${R1}" fill="url(#jgFace)"/>
-    <line x1="${m1x}" y1="${m1y}" x2="${m2x}" y2="${m2y}" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/>
     <circle cx="${dx}" cy="${dy}" r="${JOG_DIMPLE_R}" fill="url(#jgDimple)" stroke="url(#jgDimpleRim)" stroke-width="1.1"/>
   </g>
   <g class="light">
@@ -1366,7 +1366,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
        Біля нуля (±4°) — звичайна швидкість, вправо — швидше вперед до ×4,
        вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
        браузер не вміє грати звук задом наперед). Відпустив — звичайне відтворення. */
-  const svg = $('jog'), val = $('jogVal'), DEAD = 4, MAXR = 4;
+  const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 4;
   let last = null, acc = 0, base = 0, hideT, raf = 0, mode = 'scrub', revT = null, rate = 0, frames = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
@@ -2059,7 +2059,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v60';
+const APP_VER = 'v61';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
