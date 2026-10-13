@@ -1368,7 +1368,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
   let last = null, hideT, revT = null, rate = 0, wasPaused = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
-    val.textContent = rate === 0 ? (wasPaused ? '' : '×' + speed.toFixed(2)) : (rate > 0 ? '×' : '×−') + Math.abs(rate).toFixed(1);   // без стрілочок: назад — зі знаком −
+    val.textContent = rate === 0 ? '' : (rate > 0 ? '+' : '−') + Math.abs(rate).toFixed(1);   // прискорення «+3.1», назад «−1.5»
     val.classList.add('on');
   };
   const shuttleRate = a => Math.abs(a) < DEAD ? 0 : Math.sign(a) * (1 + (Math.abs(a) - DEAD) / (JOG_LIM - DEAD) * (MAXR - 1));
@@ -2045,7 +2045,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v66';
+const APP_VER = 'v67';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
