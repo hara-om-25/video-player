@@ -1159,62 +1159,63 @@ const skip = s => seek(audio.currentTime + s);
    Поки крутиш, «± N сек» показує, на скільки перемотано від початку оберту. */
 const JOG_SEC_PER_DEG = 1 / 3;   // 3° оберту = 1 секунда
 let jogAngle = 0;
-const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець: відстань від центру і радіус
+const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: відстань від центру і радіус
 (function buildJog() {
   const svg = $('jog'), NS = 'http://www.w3.org/2000/svg';
   const pt = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
   // «± N сек» — дугою над колесом навпроти ямки й крутиться разом з нею
   const [a1x, a1y] = pt(104, -172), [a2x, a2y] = pt(104, -98);
   const valArc = `<path id="jgValArc" d="M${a1x.toFixed(2)} ${a1y.toFixed(2)}A104 104 0 0 1 ${a2x.toFixed(2)} ${a2y.toFixed(2)}" fill="none"/>`;
-  // Край — металева рифлена ручка: зубці крутяться разом з колесом, а світло (відблиски й тіні)
-  // нерухоме, як від лампи зверху-зліва, тож при оберті зубці «біжать» крізь відблиск.
-  const R1 = 86.5, R2 = 98;
-  const sector = (a0, a1, r1, r2) => {
+  // Ручка з чорного металу: гладкий верх, а по зовнішній кромці — зубці-ребра, як на фізичному регуляторі.
+  // Зубці й ямка крутяться разом з колесом, а відблиски нерухомі (світло зверху-зліва).
+  const RF = 93, RT = 99.5;                    // верх ручки і вершини зубців
+  const f2 = v => v.toFixed(2);
+  const sector = (a0, a1, r1, r2) => {      // кільцевий сектор (r1 = 0 — клин від центру)
     const [x1, y1] = pt(r2, a0), [x2, y2] = pt(r2, a1), [x3, y3] = pt(r1, a1), [x4, y4] = pt(r1, a0);
-    const f = v => v.toFixed(2);
-    return `M${f(x1)} ${f(y1)}A${r2} ${r2} 0 0 1 ${f(x2)} ${f(y2)}L${f(x3)} ${f(y3)}A${r1} ${r1} 0 0 0 ${f(x4)} ${f(y4)}Z`;
+    return `M${f2(x1)} ${f2(y1)}A${r2} ${r2} 0 0 1 ${f2(x2)} ${f2(y2)}L${f2(x3)} ${f2(y3)}` + (r1 ? `A${r1} ${r1} 0 0 0 ${f2(x4)} ${f2(y4)}Z` : 'Z');
   };
-  let knurlHi = '', knurlLo = '', knurlMid = '';
-  for (let i = 0; i < 120; i++) {          // кожен зубець: освітлена грань, вершина, тіньова грань
-    const a = i * 3;
-    knurlHi += sector(a, a + 1.1, R1, R2);
-    knurlMid += sector(a + 1.1, a + 1.5, R1, R2);
-    knurlLo += sector(a + 1.5, a + 3, R1, R2);
+  let teeth = '', crest = '';
+  for (let i = 0; i < 120; i++) {           // зубець: основа 3° біля верху ручки, вершина 1,4°
+    const a = i * 3, p1 = pt(RF - 1, a), p2 = pt(RT, a + 0.8), p3 = pt(RT, a + 2.2), p4 = pt(RF - 1, a + 3);
+    teeth += `M${f2(p1[0])} ${f2(p1[1])}L${f2(p2[0])} ${f2(p2[1])}L${f2(p3[0])} ${f2(p3[1])}L${f2(p4[0])} ${f2(p4[1])}Z`;
+    // вершина й ліва грань ловлять світло там, де кромка дивиться на лампу (зверху-зліва)
+    const lit = Math.max(0, Math.cos((a + 1.5 + 135) * Math.PI / 180)) ** 1.5;
+    crest += `<path d="M${f2(p1[0])} ${f2(p1[1])}L${f2(p2[0])} ${f2(p2[1])}L${f2(p3[0])} ${f2(p3[1])}" fill="none" stroke="#9aa0a8" stroke-opacity="${(0.1 + lit * 0.6).toFixed(2)}" stroke-width=".6" stroke-linejoin="round"/>`;
   }
-  let sheen = '';                           // «конічний» відблиск металу — смуги світла й тіні по колу
+  let sheen = '';                            // анізотропний відблиск чорного металу: тьмяні смуги світла по колу
   for (let i = 0; i < 180; i++) {
     const a = -180 + i * 2, t = (a + 135) * Math.PI / 180;
-    const b = 0.62 * Math.cos(2 * t) + 0.3 * Math.cos(6 * t + 0.6) - 0.08;
-    const col = b > 0 ? '#ffffff' : '#000000', op = b > 0 ? b * 0.7 : -b * 0.85;
-    if (op > 0.02) sheen += `<path d="${sector(a - 0.05, a + 2.05, R1, R2)}" fill="${col}" opacity="${op.toFixed(3)}"/>`;
+    const b = 0.6 * Math.cos(2 * t) + 0.35 * Math.cos(6 * t + 0.6) - 0.1;
+    const col = b > 0 ? '#ffffff' : '#000000', op = b > 0 ? b * 0.13 : -b * 0.32;
+    if (op > 0.01) sheen += `<path d="${sector(a - 0.05, a + 2.05, 0, RF)}" fill="${col}" opacity="${op.toFixed(3)}"/>`;
   }
   const [dx, dy] = pt(JOG_DIMPLE_D, -135);
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
-    <radialGradient id="jgFace" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#34373c"/><stop offset=".6" stop-color="#1f2124"/><stop offset="1" stop-color="#151618"/></radialGradient>
+    <radialGradient id="jgFace" cx="38%" cy="34%" r="75%"><stop offset="0" stop-color="#1d1e21"/><stop offset=".7" stop-color="#121315"/><stop offset="1" stop-color="#0b0b0d"/></radialGradient>
     <radialGradient id="jgDimple" cx="58%" cy="60%" r="65%"><stop offset="0" stop-color="#26282c"/><stop offset=".7" stop-color="#16171a"/><stop offset="1" stop-color="#08090a"/></radialGradient>
     <linearGradient id="jgDimpleRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".5" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#9aa0a8" stop-opacity=".8"/></linearGradient>
-    <linearGradient id="jgEdgeHi" gradientUnits="userSpaceOnUse" x1="-80" y1="-80" x2="20" y2="20"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".6" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="jgEdgeHi" gradientUnits="userSpaceOnUse" x1="-80" y1="-80" x2="20" y2="20"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".6" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="jgInHi" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="-60" y2="-60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <radialGradient id="jgFaceHi" cx="-40" cy="-40" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="jgFaceHi" cx="-40" cy="-40" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
     <filter id="jgShadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter>
     <radialGradient id="jgPulse"><stop offset="0" stop-color="#ffd23f" stop-opacity=".22"/><stop offset=".75" stop-color="#ffd23f" stop-opacity=".3"/><stop offset="1" stop-color="#ffd23f" stop-opacity=".55"/></radialGradient>
   </defs>
-  <circle r="${R2}" cx="2" cy="3" fill="#000" opacity=".65" filter="url(#jgShadow)"/>
-  <g id="jogRot">
+  <circle r="${RT}" cx="2" cy="3" fill="#000" opacity=".7" filter="url(#jgShadow)"/>
+  <g id="jogRot" class="jrot">
     ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle"></textPath></text>
-    <circle r="${R2}" fill="#3c4046"/>
-    <path d="${knurlHi}" fill="#666c74"/><path d="${knurlMid}" fill="#a3a9b0"/><path d="${knurlLo}" fill="#17191c"/>
-    <circle r="${R1}" fill="url(#jgFace)"/>
-    <circle cx="${dx}" cy="${dy}" r="${JOG_DIMPLE_R}" fill="url(#jgDimple)" stroke="url(#jgDimpleRim)" stroke-width="1.1"/>
+    <path d="${teeth}" fill="#24262a" stroke="#060607" stroke-width=".5"/>${crest}
+    <circle r="${RF}" fill="url(#jgFace)"/>
   </g>
   <g class="light">
     ${sheen}
-    <circle r="${R2 - 0.4}" fill="none" stroke="url(#jgEdgeHi)" stroke-width=".9"/>
-    <circle r="${R1 + 0.5}" fill="none" stroke="#000" stroke-opacity=".75" stroke-width="1.4"/>
-    <circle r="${R1 - 0.6}" fill="none" stroke="url(#jgInHi)" stroke-width=".8"/>
-    <circle r="${R1 - 1}" fill="url(#jgFaceHi)"/>
+    <circle r="${RF - 0.5}" fill="none" stroke="url(#jgEdgeHi)" stroke-width=".9"/>
+    <circle r="${RF - 1.6}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.2"/>
+    <circle r="${RF - 2}" fill="url(#jgFaceHi)"/>
+  </g>
+  <g class="jrot">   <!-- ямка — над відблисками, щоб лишалась темною заглибиною -->
+    <circle cx="${dx}" cy="${dy}" r="${JOG_DIMPLE_R}" fill="url(#jgDimple)" stroke="url(#jgDimpleRim)" stroke-width="1.1"/>
   </g>
   <circle class="hit" r="100" fill="transparent"/>
   <g class="hub" id="btnPlay">
@@ -1368,7 +1369,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
   let last = null, hideT, revT = null, rate = 0, wasPaused = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
-    val.textContent = rate === 0 ? (wasPaused ? '❚❚' : '▶ ×' + speed.toFixed(2)) : (rate > 0 ? '▶▶ ×' : '◀◀ ×') + Math.abs(rate).toFixed(1);
+    val.textContent = rate === 0 ? (wasPaused ? '' : '×' + speed.toFixed(2)) : (rate > 0 ? '×' : '×−') + Math.abs(rate).toFixed(1);   // без стрілочок: назад — зі знаком −
     val.classList.add('on');
   };
   const shuttleRate = a => Math.abs(a) < DEAD ? 0 : Math.sign(a) * (1 + (Math.abs(a) - DEAD) / (JOG_LIM - DEAD) * (MAXR - 1));
@@ -1408,7 +1409,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     const ticks = Math.abs(Math.floor(na / 3) - Math.floor(jogAngle / 3));
     for (let k = 0; k < Math.min(ticks, 3); k++) setTimeout(jogClick, k * 15);
     jogAngle = na;
-    const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
+    for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`; }
     const nr = shuttleRate(jogAngle);
     if (nr !== rate) { rate = nr; applyShuttle(); }
     show();
@@ -1420,9 +1421,9 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     audio.playbackRate = speed;
     if (wasPaused) audio.pause(); else if (audio.paused) audio.play().catch(() => {});
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
-    const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
-    g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
-    g.style.transform = 'rotate(0deg)'; jogAngle = 0;
+    const back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
+    for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`; g.style.transform = 'rotate(0deg)'; }
+    jogAngle = 0;
     hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = ''; }, 1500);
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
@@ -2045,7 +2046,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v64';
+const APP_VER = 'v65';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
