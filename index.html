@@ -1203,7 +1203,7 @@ const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець
   </defs>
   <circle r="${R2}" cx="2" cy="3" fill="#000" opacity=".65" filter="url(#jgShadow)"/>
   <g id="jogRot">
-    ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle">± 0 сек</textPath></text>
+    ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle">◀◀  ▶▶</textPath></text>
     <circle r="${R2}" fill="#3c4046"/>
     <path d="${knurlHi}" fill="#666c74"/><path d="${knurlMid}" fill="#a3a9b0"/><path d="${knurlLo}" fill="#17191c"/>
     <circle r="${R1}" fill="url(#jgFace)"/>
@@ -1360,22 +1360,15 @@ let frameDur = 1 / 30, frameMeasured = false;
 // Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
 const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math.PI;
 (function jogDrag() {
-  /* Два режими:
-     • пауза — покрокова перемотка: поділка (3°) = 1 с, а для відео — 1 кадр;
-     • відтворення — човник (shuttle): кут = швидкість і напрямок.
-       Біля нуля (±4°) — звичайна швидкість, вправо — швидше вперед до ×4,
-       вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
-       браузер не вміє грати звук задом наперед). Відпустив — звичайне відтворення. */
+  /* Один режим — човник (shuttle): кут = швидкість і напрямок, і на паузі, і під час відтворення.
+     Біля нуля (±4°) — звичайна швидкість (на паузі — стоїть), вправо — швидше вперед до ×4,
+     вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
+     браузер не вміє грати звук задом наперед). Відпустив — як було до того: пауза чи відтворення. */
   const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 4;
-  let last = null, acc = 0, base = 0, hideT, raf = 0, mode = 'scrub', revT = null, rate = 0, frames = false;
+  let last = null, hideT, revT = null, rate = 0, wasPaused = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
-    if (mode === 'scrub') {
-      const n = Math.round(acc * JOG_SEC_PER_DEG);
-      val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + (frames ? ' кадр.' : ' сек');
-    } else {
-      val.textContent = rate === 0 ? '▶ ×' + speed.toFixed(2) : (rate > 0 ? '▶▶ ×' : '◀◀ ×') + Math.abs(rate).toFixed(1);
-    }
+    val.textContent = rate === 0 ? (wasPaused ? '❚❚' : '▶ ×' + speed.toFixed(2)) : (rate > 0 ? '▶▶ ×' : '◀◀ ×') + Math.abs(rate).toFixed(1);
     val.classList.add('on');
   };
   const shuttleRate = a => Math.abs(a) < DEAD ? 0 : Math.sign(a) * (1 + (Math.abs(a) - DEAD) / (JOG_LIM - DEAD) * (MAXR - 1));
@@ -1383,8 +1376,10 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
   const applyShuttle = () => {
     if (rate >= 0) {
       stopReverse();
-      if (Rev.active) Rev.stop(true);
+      if (Rev.active) Rev.stop(!(wasPaused && rate === 0));
       audio.playbackRate = rate === 0 ? speed : Math.max(rate, speed);
+      if (rate === 0 && wasPaused) audio.pause();            // на паузі в нулі — стоїть
+      else if (audio.paused && !Rev.active) audio.play().catch(() => {});
     } else if (audio.videoWidth && Rev.supported) {
       Rev.active ? Rev.setRate(-rate) : Rev.start(-rate);
     } else if (!revT) {
@@ -1400,9 +1395,8 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     if (e.target.closest('.hub') || !e.target.closest('.hit')) return;
     if (!hasTrack()) return toast('Спочатку відкрийте файл');
     e.preventDefault(); svg.setPointerCapture(e.pointerId);
-    mode = audio.paused ? 'scrub' : 'shuttle';
-    frames = mode === 'scrub' && !!audio.videoWidth;     // відео на паузі — покадрово
-    last = ang(e); acc = 0; rate = 0; base = audio.currentTime; clipStopAt = null; clearTimeout(hideT); show();
+    wasPaused = audio.paused && !Rev.active;
+    last = ang(e); rate = 0; clipStopAt = null; clearTimeout(hideT); show();
   });
   svg.addEventListener('pointermove', e => {
     if (last === null) return;
@@ -1413,31 +1407,23 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     if (!d) return;
     const ticks = Math.abs(Math.floor(na / 3) - Math.floor(jogAngle / 3));
     for (let k = 0; k < Math.min(ticks, 3); k++) setTimeout(jogClick, k * 15);
-    acc += d; jogAngle = na;
+    jogAngle = na;
     const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
-    if (mode === 'scrub') {
-      if (!raf) raf = requestAnimationFrame(() => {
-        raf = 0;
-        const n = Math.round(acc * JOG_SEC_PER_DEG);
-        if (!frames) return seek(base + acc * JOG_SEC_PER_DEG);
-        // поділка = кадр; цілимось у середину кадру, щоб браузер точно показав саме його
-        const f0 = Math.floor(base / frameDur + 1e-6);
-        seek((f0 + n) * frameDur + frameDur / 2);
-      });
-    } else {
-      rate = shuttleRate(jogAngle); applyShuttle();
-    }
+    const nr = shuttleRate(jogAngle);
+    if (nr !== rate) { rate = nr; applyShuttle(); }
     show();
   });
   const end = () => {
     if (last === null) return;
     last = null;
-    if (mode === 'shuttle') { rate = 0; stopReverse(); if (Rev.active) Rev.stop(true); audio.playbackRate = speed; }
+    rate = 0; stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
+    audio.playbackRate = speed;
+    if (wasPaused) audio.pause(); else if (audio.paused) audio.play().catch(() => {});
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
     g.style.transform = 'rotate(0deg)'; jogAngle = 0;
-    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = '± 0 сек'; }, 1500);
+    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = '◀◀  ▶▶'; }, 1500);
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
@@ -2059,7 +2045,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v62';
+const APP_VER = 'v63';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
