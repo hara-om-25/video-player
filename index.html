@@ -1210,7 +1210,6 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   </g>
   <g class="light">
     ${sheen}
-    <circle r="${RF - 0.5}" fill="none" stroke="url(#jgEdgeHi)" stroke-width=".9"/>
     <circle r="${RF - 1.6}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.2"/>
     <circle r="${RF - 2}" fill="url(#jgFaceHi)"/>
   </g>
@@ -2046,7 +2045,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v65';
+const APP_VER = 'v66';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
