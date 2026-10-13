@@ -1174,13 +1174,10 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
     const [x1, y1] = pt(r2, a0), [x2, y2] = pt(r2, a1), [x3, y3] = pt(r1, a1), [x4, y4] = pt(r1, a0);
     return `M${f2(x1)} ${f2(y1)}A${r2} ${r2} 0 0 1 ${f2(x2)} ${f2(y2)}L${f2(x3)} ${f2(y3)}` + (r1 ? `A${r1} ${r1} 0 0 0 ${f2(x4)} ${f2(y4)}Z` : 'Z');
   };
-  let teeth = '', crest = '';
+  let teeth = '';
   for (let i = 0; i < 120; i++) {           // зубець: основа 3° біля верху ручки, вершина 1,4°
     const a = i * 3, p1 = pt(RF - 1, a), p2 = pt(RT, a + 0.8), p3 = pt(RT, a + 2.2), p4 = pt(RF - 1, a + 3);
     teeth += `M${f2(p1[0])} ${f2(p1[1])}L${f2(p2[0])} ${f2(p2[1])}L${f2(p3[0])} ${f2(p3[1])}L${f2(p4[0])} ${f2(p4[1])}Z`;
-    // вершина й ліва грань ловлять світло там, де кромка дивиться на лампу (зверху-зліва)
-    const lit = Math.max(0, Math.cos((a + 1.5 + 135) * Math.PI / 180)) ** 1.5;
-    crest += `<path d="M${f2(p1[0])} ${f2(p1[1])}L${f2(p2[0])} ${f2(p2[1])}L${f2(p3[0])} ${f2(p3[1])}" fill="none" stroke="#9aa0a8" stroke-opacity="${(0.1 + lit * 0.6).toFixed(2)}" stroke-width=".6" stroke-linejoin="round"/>`;
   }
   let sheen = '';                            // анізотропний відблиск чорного металу: тьмяні смуги світла по колу
   for (let i = 0; i < 180; i++) {
@@ -1193,24 +1190,23 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
-    <radialGradient id="jgFace" cx="38%" cy="34%" r="75%"><stop offset="0" stop-color="#1d1e21"/><stop offset=".7" stop-color="#121315"/><stop offset="1" stop-color="#0b0b0d"/></radialGradient>
+    <radialGradient id="jgFace" gradientUnits="userSpaceOnUse" cx="-25" cy="-30" r="150"><stop offset="0" stop-color="#1d1e21"/><stop offset=".7" stop-color="#121315"/><stop offset="1" stop-color="#0b0b0d"/></radialGradient>
     <radialGradient id="jgDimple" cx="58%" cy="60%" r="65%"><stop offset="0" stop-color="#26282c"/><stop offset=".7" stop-color="#16171a"/><stop offset="1" stop-color="#08090a"/></radialGradient>
     <linearGradient id="jgDimpleRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".5" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#9aa0a8" stop-opacity=".8"/></linearGradient>
     <linearGradient id="jgEdgeHi" gradientUnits="userSpaceOnUse" x1="-80" y1="-80" x2="20" y2="20"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".6" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="jgInHi" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="-60" y2="-60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <radialGradient id="jgFaceHi" cx="-40" cy="-40" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="jgTeethHi" gradientUnits="userSpaceOnUse" x1="-90" y1="-90" x2="40" y2="40"><stop offset="0" stop-color="#a7adb5" stop-opacity=".6"/><stop offset=".5" stop-color="#a7adb5" stop-opacity=".15"/><stop offset="1" stop-color="#a7adb5" stop-opacity="0"/></linearGradient>
     <filter id="jgShadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter>
     <radialGradient id="jgPulse"><stop offset="0" stop-color="#ffd23f" stop-opacity=".22"/><stop offset=".75" stop-color="#ffd23f" stop-opacity=".3"/><stop offset="1" stop-color="#ffd23f" stop-opacity=".55"/></radialGradient>
   </defs>
   <circle r="${RT}" cx="2" cy="3" fill="#000" opacity=".7" filter="url(#jgShadow)"/>
   <g id="jogRot" class="jrot">
     ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle"></textPath></text>
-    <path d="${teeth}" fill="#24262a" stroke="#060607" stroke-width=".5"/>${crest}
-    <circle r="${RF}" fill="url(#jgFace)"/>
+    <path d="${teeth}" fill="url(#jgFace)" stroke="url(#jgTeethHi)" stroke-width=".6" stroke-linejoin="round"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
   </g>
   <g class="light">
     ${sheen}
-    <circle r="${RF - 1.6}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.2"/>
     <circle r="${RF - 2}" fill="url(#jgFaceHi)"/>
   </g>
   <g class="jrot">   <!-- ямка — над відблисками, щоб лишалась темною заглибиною -->
@@ -2045,7 +2041,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v67';
+const APP_VER = 'v68';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
