@@ -1203,7 +1203,7 @@ const JOG_DIMPLE_D = 74.5, JOG_DIMPLE_R = 11;    // ямка під палець
   </defs>
   <circle r="${R2}" cx="2" cy="3" fill="#000" opacity=".65" filter="url(#jgShadow)"/>
   <g id="jogRot">
-    ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle">◀◀  ▶▶</textPath></text>
+    ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle"></textPath></text>
     <circle r="${R2}" fill="#3c4046"/>
     <path d="${knurlHi}" fill="#666c74"/><path d="${knurlMid}" fill="#a3a9b0"/><path d="${knurlLo}" fill="#17191c"/>
     <circle r="${R1}" fill="url(#jgFace)"/>
@@ -1423,7 +1423,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
     g.style.transform = 'rotate(0deg)'; jogAngle = 0;
-    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = '◀◀  ▶▶'; }, 1500);
+    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = ''; }, 1500);
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
@@ -2045,7 +2045,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v63';
+const APP_VER = 'v64';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
