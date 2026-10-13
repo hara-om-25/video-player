@@ -1168,7 +1168,7 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   const valArc = `<path id="jgValArc" d="M${a1x.toFixed(2)} ${a1y.toFixed(2)}A104 104 0 0 1 ${a2x.toFixed(2)} ${a2y.toFixed(2)}" fill="none"/>`;
   // Ручка з чорного металу: гладкий верх, а по зовнішній кромці — зубці-ребра, як на фізичному регуляторі.
   // Зубці й ямка крутяться разом з колесом, а відблиски нерухомі (світло зверху-зліва).
-  const RF = 93, RT = 99.5;                    // верх ручки і вершини зубців
+  const RF = 94.5, RT = 97.5;            // зуби неглибокі                    // верх ручки і вершини зубців
   const f2 = v => v.toFixed(2);
   const sector = (a0, a1, r1, r2) => {      // кільцевий сектор (r1 = 0 — клин від центру)
     const [x1, y1] = pt(r2, a0), [x2, y2] = pt(r2, a1), [x3, y3] = pt(r1, a1), [x4, y4] = pt(r1, a0);
@@ -1196,14 +1196,13 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
     <linearGradient id="jgEdgeHi" gradientUnits="userSpaceOnUse" x1="-80" y1="-80" x2="20" y2="20"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".6" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="jgInHi" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="-60" y2="-60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <radialGradient id="jgFaceHi" cx="-40" cy="-40" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-    <linearGradient id="jgTeethHi" gradientUnits="userSpaceOnUse" x1="-90" y1="-90" x2="40" y2="40"><stop offset="0" stop-color="#a7adb5" stop-opacity=".6"/><stop offset=".5" stop-color="#a7adb5" stop-opacity=".15"/><stop offset="1" stop-color="#a7adb5" stop-opacity="0"/></linearGradient>
     <filter id="jgShadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter>
     <radialGradient id="jgPulse"><stop offset="0" stop-color="#ffd23f" stop-opacity=".22"/><stop offset=".75" stop-color="#ffd23f" stop-opacity=".3"/><stop offset="1" stop-color="#ffd23f" stop-opacity=".55"/></radialGradient>
   </defs>
   <circle r="${RT}" cx="2" cy="3" fill="#000" opacity=".7" filter="url(#jgShadow)"/>
   <g id="jogRot" class="jrot">
     ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle"></textPath></text>
-    <path d="${teeth}" fill="url(#jgFace)" stroke="url(#jgTeethHi)" stroke-width=".6" stroke-linejoin="round"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
+    <path d="${teeth}" fill="url(#jgFace)" stroke="#000" stroke-width=".6" stroke-linejoin="round"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
   </g>
   <g class="light">
     ${sheen}
@@ -2041,7 +2040,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v68';
+const APP_VER = 'v69';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
