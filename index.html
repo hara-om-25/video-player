@@ -418,7 +418,9 @@ body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, aut
 .vspeed .vsbox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 56px; padding: 8px 4px; border-radius: 8px; white-space: nowrap;
   background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
   touch-action: none; cursor: ns-resize; user-select: none; }
-body.fs.f-vslider .vspeed { position: fixed; left: 12px; right: auto; top: 15vh; bottom: 15vh; z-index: 16; }
+/* повний екран (відеоплеєр): віконце швидкості й ★ — праворуч, над регулятором, як у звичайному вигляді */
+body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh; bottom: calc(var(--jogR) * 1.15 + 84px); z-index: 16; }
+body.fs.f-vslider #btnMark { position: fixed; top: auto; left: auto; right: 14px; bottom: calc(var(--jogR) * 1.15 + 20px); }
 body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 /* свайп-видалення; у списках вертикальна прокрутка лишається */
 #playlist .item, #markList .item, #clipList .item { touch-action: pan-y; }
@@ -2188,7 +2190,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v88';
+const APP_VER = 'v89';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
