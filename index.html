@@ -1268,7 +1268,7 @@ const Rev = (() => {
         hv.requestVideoFrameCallback(cb);
       };
       hv.requestVideoFrameCallback(cb);
-      hv.playbackRate = Math.min(4, Math.max(1.5, R.rate * 1.6));   // готуємо швидше, ніж показуємо
+      hv.playbackRate = Math.min(8, Math.max(1.5, R.rate * 1.6));   // готуємо швидше, ніж показуємо
       hv.play().catch(() => res());
       setTimeout(res, (b - a) * 1000 / hv.playbackRate + 4000);
     });
@@ -1357,10 +1357,10 @@ let frameDur = 1 / 30, frameMeasured = false;
 const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math.PI;
 (function jogDrag() {
   /* Один режим — човник (shuttle): кут = швидкість і напрямок, і на паузі, і під час відтворення.
-     Біля нуля (±4°) — звичайна швидкість (на паузі — стоїть), вправо — швидше вперед до ×4,
-     вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
+     Біля нуля (±4°) — звичайна швидкість (на паузі — стоїть), вправо — швидше вперед до +5,
+     вліво — відтворення назад до −5 (кадри назад; звук на цей час вимикається —
      браузер не вміє грати звук задом наперед). Відпустив — як було до того: пауза чи відтворення. */
-  const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 4;
+  const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 5;   // діапазон −5.0…+5.0
   // «+2.4»: крапка точно навпроти ямки, ціла частина ліворуч, дробова праворуч
   const setVal = t => { const [a, b] = t.split('.'); $('jvA').textContent = a || ''; $('jvP').textContent = b == null ? '' : '.'; $('jvB').textContent = b || ''; };
   let last = null, hideT, revT = null, rate = 0, wasPaused = false;
@@ -2043,7 +2043,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v71';
+const APP_VER = 'v72';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
