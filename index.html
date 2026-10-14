@@ -1062,9 +1062,9 @@ function openTrack(i, autoplay) {
   clipStopAt = null;
   saveSession();
   audio.src = t.url;
-  audio.playbackRate = speed;
+  setRate(speed);
   audio.onloadedmetadata = () => {
-    audio.playbackRate = speed;
+    setRate(speed);
     if (data.pos && data.pos < dur() - 2) audio.currentTime = Math.max(data.pos, T0());
     else if (T0()) audio.currentTime = T0();
     $('btnUntrim').classList.toggle('on', !!T0()); layoutActions();
@@ -1157,9 +1157,13 @@ document.addEventListener('drop', e => { e.preventDefault(); document.body.class
 
 /* ═════════ відтворення ═════════ */
 let speed = getSetting('speed', 1);
+// Швидкість відтворення ставимо лише через setRate: після помилки декодування проблемне місце
+// проходимо на ×1 (rateCap до capUntil), потім повертаємо бажану швидкість.
+let wantRate = 1, rateCap = Infinity, capUntil = 0;
+function setRate(r) { wantRate = r; audio.playbackRate = Math.min(r, rateCap); }
 function setSpeed(v) {
   speed = FEAT.vslider ? Math.min(10, Math.max(1, Math.round(v * 100) / 100)) : Math.min(4, Math.max(0.5, Math.round(v * 100) / 100));
-  audio.playbackRate = audio.defaultPlaybackRate = speed;
+  setRate(speed); audio.defaultPlaybackRate = speed;
   audio.preservesPitch = audio.mozPreservesPitch = audio.webkitPreservesPitch = true;
   $('spVal').textContent = '×' + speed.toFixed(2);
   setSetting('speed', speed);
@@ -1210,7 +1214,10 @@ function togglePlay() {
 // Помилка декодування (код 3) на Android: декодер «падає» під навантаженням або на пошкодженому кадрі.
 // Самі відновлюємося: перезавантажуємо файл і продовжуємо з того ж місця; повторно — трохи перескакуємо вперед.
 let goodT = 0, goodPlaying = false, recovering = false, recov = { n: 0, t0: 0 };
-audio.addEventListener('timeupdate', () => { if (!audio.error && !recovering) { goodT = audio.currentTime; goodPlaying = !audio.paused; } });
+audio.addEventListener('timeupdate', () => {
+  if (!audio.error && !recovering) { goodT = audio.currentTime; goodPlaying = !audio.paused; }
+  if (capUntil && !recovering && audio.currentTime > capUntil) { capUntil = 0; rateCap = Infinity; setRate(wantRate); }
+});
 audio.addEventListener('error', () => {
   const err = audio.error; if (!err || !hasTrack()) return;
   const now = Date.now(); if (now - recov.t0 > 20000) { recov.n = 0; recov.t0 = now; }
@@ -1218,8 +1225,9 @@ audio.addEventListener('error', () => {
     recov.n++;
     try { if (Rev.active) Rev.stop(false); } catch {}
     const t = Math.min(dur() || 1e9, goodT + (recov.n - 1) * 0.5), play = goodPlaying, h = audio.onloadedmetadata;
+    rateCap = 1; capUntil = t + 3;                  // проблемне місце — на звичайній швидкості
     recovering = true;
-    audio.onloadedmetadata = () => { audio.onloadedmetadata = h; audio.playbackRate = speed; audio.currentTime = t;
+    audio.onloadedmetadata = () => { audio.onloadedmetadata = h; setRate(wantRate); audio.currentTime = t;
       audio.addEventListener('seeked', () => { recovering = false; if (play) playSafe(); }, { once: true }); };
     audio.src = tracks[cur].url; audio.load();
     return;
@@ -1469,13 +1477,13 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     if (rate >= 0) {
       stopReverse();
       if (Rev.active) Rev.stop(!(wasPaused && rate === 0));
-      audio.playbackRate = rate === 0 ? speed : Math.max(rate, speed);
+      setRate(rate === 0 ? speed : Math.max(rate, speed));
       if (rate === 0 && wasPaused) audio.pause();            // на паузі в нулі — стоїть
       else if (audio.paused && !Rev.active) playSafe();
     } else if (audio.videoWidth && Rev.supported) {
       Rev.active ? Rev.setRate(-rate) : Rev.start(-rate);
     } else if (!revT) {
-      audio.muted = true; audio.playbackRate = 0.25;
+      audio.muted = true; setRate(0.25);
       revT = setInterval(() => {
         const t = audio.currentTime - (Math.abs(rate) * 0.1 + 0.025);
         if (t <= T0()) { audio.currentTime = T0(); return; }
@@ -1512,7 +1520,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     last = null;
     const tap = turned < 2;                          // дотик без оберту — пуск / пауза (нижче)
     rate = 0; shuttleDir = 0; shuttleK = 0; renderStatus(); stopReverse(); if (Rev.active) Rev.stop(!wasPaused && !revSpeed);
-    audio.playbackRate = speed;
+    setRate(speed);
     if (wasPaused) audio.pause(); else resumePlay();
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
@@ -2149,7 +2157,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v82';
+const APP_VER = 'v83';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
