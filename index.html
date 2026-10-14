@@ -282,8 +282,8 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 #jogVal { display: none !important; }
 /* Статус посередині екрана (не кнопка, але зона реагує на клік — пуск/пауза):
    ❚❚ блимає — пауза; ▶ рівно — відтворення; ▶▶ / ◀◀ — перемотка РП. Жовтий з темною обводкою, як час. */
-.bigplay { position: absolute; inset: 0; margin: auto; z-index: 3;   /* без transform — :active кнопок його перебиває */
-  width: 96px; height: 96px; padding: 14px; color: var(--accent); background: none; border: 0; border-radius: 50%; }
+.bigplay { position: absolute; top: 12px; right: 12px; z-index: 3;   /* правий верхній кут відео */
+  width: 64px; height: 64px; padding: 10px; color: var(--accent); background: none; border: 0; border-radius: 50%; }
 .bigplay svg { width: 100%; height: 100%; display: block; pointer-events: none; overflow: visible;
   filter: drop-shadow(0 0 6px rgba(0,0,0,.8)); }
 .bigplay svg * { stroke: #000; stroke-width: 1.6px; stroke-linejoin: round; paint-order: stroke; }
@@ -291,7 +291,7 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .bigplay.paused { animation: bigPulse 1.6s ease-in-out infinite; }
 .bigplay.shuttle { animation: bigPulse var(--blink, .8s) ease-in-out infinite; }   /* ▶▶ / ◀◀: швидше паузи, ще швидше з коефіцієнтом */
 @keyframes bigPulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
-@media (max-width: 860px) { .bigplay { width: 72px; height: 72px; padding: 10px; } }
+@media (max-width: 860px) { .bigplay { width: 48px; height: 48px; padding: 6px; right: 62px; top: 8px; } }   /* праворуч — кнопка «на весь екран» */
 .speed { display: flex; align-items: center; gap: 4px; }
 .speed { gap: 0; }
 .speed .arr { border-radius: 8px 0 0 8px; }
@@ -1390,7 +1390,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
   const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 5;   // діапазон −5.0…+5.0
   // «+2.4»: крапка точно навпроти ямки, ціла частина ліворуч, дробова праворуч
   const setVal = t => { const [a, b] = t.split('.'); $('jvA').textContent = a || ''; $('jvP').textContent = b == null ? '' : '.'; $('jvB').textContent = b || ''; };
-  let last = null, hideT, revT = null, rate = 0, wasPaused = false;
+  let last = null, hideT, revT = null, rate = 0, wasPaused = false, turned = 0;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
     setVal(rate === 0 ? '' : (rate > 0 ? '+' : '−') + Math.abs(rate).toFixed(1));   // прискорення «+3.1», назад «−1.5»
@@ -1421,12 +1421,13 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     if (!hasTrack()) return toast('Спочатку відкрийте файл');
     e.preventDefault(); svg.setPointerCapture(e.pointerId);
     wasPaused = audio.paused && !Rev.active;
-    last = ang(e); rate = 0; clipStopAt = null; clearTimeout(hideT); show();
+    last = ang(e); rate = 0; turned = 0; clipStopAt = null; clearTimeout(hideT); show();
   });
   svg.addEventListener('pointermove', e => {
     if (last === null) return;
     const a = ang(e); let d = a - last; last = a;
     if (d > 180) d -= 360; else if (d < -180) d += 360;
+    turned += Math.abs(d);
     const na = Math.max(-JOG_LIM, Math.min(JOG_LIM, jogAngle + d));
     d = na - jogAngle;
     if (!d) return;
@@ -1442,6 +1443,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
   const end = () => {
     if (last === null) return;
     last = null;
+    const tap = turned < 2;                          // дотик без оберту — пуск / пауза (нижче)
     rate = 0; shuttleDir = 0; shuttleK = 0; renderStatus(); stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
     audio.playbackRate = speed;
     if (wasPaused) audio.pause(); else if (audio.paused) playSafe();
@@ -1458,6 +1460,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     }
     jogAngle = 0;
     clearTimeout(hideT); val.classList.remove('on'); setVal('');      // відпустив — цифри одразу зникають
+    if (tap) togglePlay();
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
@@ -2079,7 +2082,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v79';
+const APP_VER = 'v80';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
