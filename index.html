@@ -289,6 +289,7 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .bigplay svg * { stroke: #000; stroke-width: 1.6px; stroke-linejoin: round; paint-order: stroke; }
 .bigplay, .bigplay:hover, .bigplay:active, .bigplay:focus, .bigplay:focus-visible { background: none !important; border: 0 !important; box-shadow: none !important; outline: none; -webkit-tap-highlight-color: transparent; }
 .bigplay.paused { animation: bigPulse 1.6s ease-in-out infinite; }
+.bigplay.shuttle { animation: bigPulse var(--blink, .8s) ease-in-out infinite; }   /* ▶▶ / ◀◀: швидше паузи, ще швидше з коефіцієнтом */
 @keyframes bigPulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 @media (max-width: 860px) { .bigplay { width: 72px; height: 72px; padding: 10px; } }
 .speed { display: flex; align-items: center; gap: 4px; }
@@ -1229,7 +1230,7 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   `;
 })();
 // Статус посередині екрана: ❚❚ (блимає) — пауза, ▶ — відтворення, ▶▶ / ◀◀ — перемотка РП (shuttleDir)
-let shuttleDir = 0, isPlaying = false;
+let shuttleDir = 0, shuttleK = 0, isPlaying = false;   // shuttleK — коефіцієнт перемотки 1…5
 const ICO = {
   pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z"/>',
@@ -1238,7 +1239,9 @@ const ICO = {
 };
 function renderStatus() {
   const k = shuttleDir > 0 ? 'ff' : shuttleDir < 0 ? 'rew' : isPlaying ? 'play' : 'pause';
-  const b = $('bigPlay'); b.classList.toggle('paused', k === 'pause');
+  const b = $('bigPlay'); b.classList.toggle('paused', k === 'pause'); b.classList.toggle('shuttle', !!shuttleDir);
+  // період блимання: ×1.0 — 0,8 с … ×5.0 — 0,2 с (пауза — 1,6 с)
+  if (shuttleDir) b.style.setProperty('--blink', (0.8 - (Math.min(5, Math.max(1, shuttleK)) - 1) * 0.15).toFixed(2) + 's');
   if (b.dataset.k !== k) { b.dataset.k = k; $('bigIco').innerHTML = ICO[k]; }
 }
 function setPlayIcon(playing) { isPlaying = playing; renderStatus(); }
@@ -1433,13 +1436,13 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`; }
     const nr = shuttleRate(jogAngle);
     if (nr !== rate) { rate = nr; applyShuttle(); }
-    if (Math.sign(rate) !== shuttleDir) { shuttleDir = Math.sign(rate); renderStatus(); }
+    if (Math.sign(rate) !== shuttleDir || Math.abs(Math.abs(rate) - shuttleK) > 0.2) { shuttleDir = Math.sign(rate); shuttleK = Math.abs(rate); renderStatus(); }
     show();
   });
   const end = () => {
     if (last === null) return;
     last = null;
-    rate = 0; shuttleDir = 0; renderStatus(); stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
+    rate = 0; shuttleDir = 0; shuttleK = 0; renderStatus(); stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
     audio.playbackRate = speed;
     if (wasPaused) audio.pause(); else if (audio.paused) playSafe();
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
@@ -2076,7 +2079,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v78';
+const APP_VER = 'v79';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
