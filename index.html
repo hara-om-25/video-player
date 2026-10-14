@@ -402,7 +402,19 @@ body:not(.f-last) .actions .r1 { display: none !important; }
 /* відеоплеєр (f-vslider): шкала швидкості −10…+10 біля правого краю, під нею ★; «Останні» — стовпчиком 60/30/10 */
 .vspeed, .actions .lastcol { display: none; }
 body.f-vslider .panel.side { position: relative; }
-body.f-vslider { --cols: minmax(236px, 1fr) minmax(0, 4.4fr) minmax(236px, 1fr); }   /* відео ширше; бокові панелі однакової ширини */
+body.f-vslider { --cols: 150px minmax(0, 1fr) 150px; }   /* відео якомога ширше; бокові панелі вузькі й однакові */
+/* «Останні» 60/30/10 — у рядку зі шкалою часу, ліворуч від регулятора */
+.lastrow { display: none; }
+body.f-vslider .footer { display: flex; align-items: center; }
+body.f-vslider .timeline { flex: 1; min-width: 0; padding-right: 12px; }
+body.f-vslider .lastrow { display: flex; gap: 6px; margin-right: calc(var(--jogR) * 1.15 + 8px); padding-bottom: 8px; }
+body.f-vslider .lastrow .act { padding: 6px 9px; font-size: 13px; font-weight: 700; color: var(--accent); border-color: var(--accent); }
+body.f-vslider .actions .lastcol { display: none !important; }
+/* вузька панель «Мітки»: час і ✎ у першому рядку, назва — під ними */
+body.f-vslider #markList .item { flex-wrap: wrap; row-gap: 2px; }
+body.f-vslider #markList .item .name { order: 5; flex: 1 1 100%; padding-left: 1.6em; white-space: normal; overflow-wrap: anywhere; }
+body.f-vslider #markList .item .acts { margin-left: auto; }
+@media (max-width: 860px) { body.f-vslider .panel.side .sec { padding-right: 66px; } }   /* відео ширше; бокові панелі однакової ширини */
 body.f-vslider .vspeed { pointer-events: none; }        /* стовпчик не заважає міткам; реагує лише віконце */
 body.f-vslider .vspeed .vsbox { pointer-events: auto; }
 body.f-vslider .actions { border-top: 0; }
@@ -534,6 +546,11 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       <div class="fill" id="fill"></div>
       <div class="knob" id="knob"></div>
     </div>
+  </div>
+  <div class="lastrow">
+    <button class="act last" data-last="60" title="Останні 60 секунд — і відтворити">60с</button>
+    <button class="act last" data-last="30" title="Останні 30 секунд — і відтворити">30с</button>
+    <button class="act last" data-last="10" title="Останні 10 секунд — і відтворити">10с</button>
   </div>
 </div>
 
@@ -2195,7 +2212,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v96';
+const APP_VER = 'v98';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
