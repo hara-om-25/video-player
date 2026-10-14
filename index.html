@@ -1353,8 +1353,8 @@ let frameDur = 1 / 30, frameMeasured = false;
   v.addEventListener('seeking', () => { lastT = null; });
   v.requestVideoFrameCallback(cb);
 })();
-// Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
-const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math.PI;
+// Межі оберту: ±45° — палець від середини до краю екрана; на упорі ямка ховається за край
+const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить за край екрана
 (function jogDrag() {
   /* Один режим — човник (shuttle): кут = швидкість і напрямок, і на паузі, і під час відтворення.
      Біля нуля (±4°) — звичайна швидкість (на паузі — стоїть), вправо — швидше вперед до +5,
@@ -2043,7 +2043,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v72';
+const APP_VER = 'v73';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
