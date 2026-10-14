@@ -176,12 +176,12 @@ html, body { touch-action: pan-x pan-y; }
 .vidbox.on > #audio, #revCanvas { filter: brightness(var(--vbri, 1)); }
 /* показник гучності / яскравості, поки ведеш пальцем біля краю */
 .gest { position: fixed; z-index: 30; left: 50%; top: 42%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 12px;
-  padding: 12px 18px; border-radius: 14px; background: rgba(0,0,0,.6); color: var(--accent); font-size: 22px; font-weight: 700; pointer-events: none; }
+  padding: 12px 18px; border-radius: 14px; background: rgba(0,0,0,.6); color: var(--accent); font-size: 22px; font-weight: 400; pointer-events: none; }
 .gest.on { display: flex; }
 .gest svg { width: 30px; height: 30px; flex: none; }
 .gest .gbar { width: 150px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
 .gest .gbar i { display: block; height: 100%; background: var(--accent); }
-.gest b { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+.gest b { font-weight: 400; min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
 .vidbox:fullscreen { background: #000; }
 /* допоміжне відео, з якого беруться кадри для відтворення назад (має бути на сторінці, але не видно) */
 #revVideo { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
@@ -2376,7 +2376,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v105';
+const APP_VER = 'v106';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
