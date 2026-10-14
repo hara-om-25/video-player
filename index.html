@@ -422,7 +422,17 @@ body.f-vslider .actions .r1, body.f-vslider .spdrow { display: none !important; 
 /* «Обрізать» — ліворуч від ★, у стилі кнопок шапки (жовта); ↺ — над нею, коли є обрізка */
 body.f-vslider .actions .r2 { position: absolute; left: 8px; bottom: calc(var(--vsb, 80px) - 60px); flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
 body.f-vslider .actions #btnTrim { background: var(--accent); border-color: var(--accent); color: #111; font-size: 12px; padding: 0 6px; height: 52px; letter-spacing: 0; }
-body.f-vslider .actions #btnUntrim { padding: 6px 10px; }
+/* ↺ — поруч із віконцем швидкості, такого ж розміру: жовта, жирна кругова стрілка */
+body.f-vslider #vspeed #btnUntrim { position: absolute; right: calc(100% + 6px); bottom: 0; width: 44px; height: 37px; padding: 0; pointer-events: auto;
+  background: var(--accent); border: 1px solid var(--accent); border-radius: 8px; color: #111; }
+body.f-vslider #vspeed #btnUntrim:not(.on) { display: none; }
+body.f-vslider #vspeed #btnUntrim svg { width: 26px; height: 26px; display: block; margin: auto; pointer-events: none; }
+body.f-vslider #vspeed.drag #btnUntrim { visibility: hidden; }
+/* плейлист-дерево: обрізані шматки — під своїм файлом, зі зміщенням */
+.item .tog { flex: none; width: 1.1em; text-align: center; color: var(--accent); font-size: 14px; cursor: pointer; }
+.item.sub { padding-left: 30px; gap: 4px; }
+.item.sub .name { font-size: .85em; text-overflow: clip; }
+.item.sub .num { min-width: 0; color: var(--accent); }
 @media (max-width: 860px) { body.f-vslider .actions .r2 { bottom: 14px; } }
 body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; align-self: flex-start; margin: 0; }   /* 60/30/10 — біля лівого краю панелі, якомога нижче */
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
@@ -526,7 +536,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       </div>
       <div class="arow r2">
         <button id="btnTrim" class="act" title="Прибрати все від початку до поточного місця">Обрізать</button>
-        <button id="btnUntrim" class="act untrim" title="Повернути обрізане">↺</button>
+        <button id="btnUntrim" class="act untrim" title="Повернути обрізане"><span class="ut-txt">↺</span></button>
         <div class="jogval" id="jogVal">± 0 сек</div>
       </div>
       <div class="lastcol">
@@ -1016,6 +1026,8 @@ async function restoreSession() {
   const ses = getSetting(FEAT.session, null);
   if (!ses || !ses.keys || !ses.keys.length) return;
   for (const key of ses.keys) {
+    const sub = SUBS && subOf(key);
+    if (sub) { const p = tracks.find(t => t.key === sub.parent); if (p) tracks.push(mkSub(p, sub.start)); continue; }
     try {
       const f = await idb.get(key);
       if (f) tracks.push({ file: f, url: URL.createObjectURL(f), key });
@@ -1039,18 +1051,52 @@ function addFiles(files) {
   renderPlaylist();
   if (cur < 0 && tracks.length > first) openTrack(first);
 }
+/* Відеоплеєр (обрізка без «Фрагментів»): обрізаний шматок — окремий рядок плейлиста
+   під своїм файлом (той самий файл, починається з місця обрізки; свої мітки й позиція).
+   Ключ — <ключ файлу>#<секунда>, тож після перезапуску відновлюється з того ж файлу. */
+const SUBS = FEAT.trim && !FEAT.clips;
+const subKey = (key, t) => key + '#' + t.toFixed(1);
+function subOf(key) { const m = /^(.*\|\d+)#(\d+(?:\.\d+)?)$/.exec(key); return m && { parent: m[1], start: +m[2] }; }
+function mkSub(p, t) { return { file: p.file, url: p.url, key: subKey(p.key, t), parent: p.key, start: t }; }
+const rootOf = t => (t.parent && tracks.find(x => x.key === t.parent)) || t;
+function addSub(t) {                       // повертає індекс рядка-шматка
+  const root = rootOf(tracks[cur]), key = subKey(root.key, t);
+  let i = tracks.findIndex(x => x.key === key);
+  if (i >= 0) return i;
+  const d = load(key);
+  d.trim = t; d.pos = t;
+  d.marks = data.marks.filter(m => m.t >= t).map(m => Object.assign({}, m));   // мітки шматка — ті, що в ньому
+  d.name = root.file.name; d.size = root.file.size;
+  try { localStorage.setItem(key, JSON.stringify(d)); } catch {}
+  i = tracks.indexOf(root) + 1;
+  while (i < tracks.length && tracks[i].parent === root.key && tracks[i].start < t) i++;
+  tracks.splice(i, 0, mkSub(root, t));
+  root.closed = false;
+  if (i <= cur) cur++;
+  return i;
+}
 function renderPlaylist() {
   const el = $('playlist');
   if (!tracks.length) {
     el.innerHTML = '<div class="empty">Натисніть «+» або перетягніть сюди аудіофайли.<br><br>Мітки та фрагменти запам\'ятовуються для кожного файлу.</div>';
     return;
   }
+  let num = 0;
   el.innerHTML = tracks.map((t, i) => {
+    if (!t.parent) num++;
+    else if (rootOf(t).closed && i !== cur) return '';
     const d = i === cur ? data : load(t.key);
     const n = d.marks.length, c = FEAT.clips ? d.clips.length : 0;
     const badge = (n ? '★' + n : '') + (c ? ' ✂' + c : '');
+    if (t.parent) return `<div class="item sub ${i === cur ? 'active' : ''}" data-i="${i}">
+      <span class="num">↳</span>
+      <span class="name" title="${esc(t.file.name)} з ${hms(t.start)}">${hms(t.start)}</span>
+      <span class="badge">${badge}</span>
+    </div>`;
+    const kids = tracks.some(x => x.parent === t.key);
     return `<div class="item ${i === cur ? 'active' : ''}" data-i="${i}">
-      <span class="num">${i + 1}</span>
+      <span class="num">${num}</span>
+      ${kids ? `<span class="tog" data-tog="${i}">${t.closed ? '▸' : '▾'}</span>` : ''}
       <span class="name" title="${esc(t.file.name)}">${isVideo(t) ? '🎬 ' : ''}${esc(t.file.name)}</span>
       <span class="badge">${badge}</span>
     </div>`;
@@ -1058,18 +1104,27 @@ function renderPlaylist() {
 }
 function removeTrack(i) {
     save();
-    URL.revokeObjectURL(tracks[i].url);
-    Slicer.cache.delete(tracks[i].key);
-    idb.del(tracks[i].key).catch(() => {});
-    tracks.splice(i, 1);
-    if (i === cur) {
+    const t = tracks[i], curT = tracks[cur];
+    // файл забирає з собою й свої обрізані шматки; шматок — лише себе (файл лишається)
+    const gone = t.parent ? [t] : tracks.filter(x => x === t || x.parent === t.key);
+    if (!t.parent) { URL.revokeObjectURL(t.url); idb.del(t.key).catch(() => {}); }
+    for (const x of gone) {
+      Slicer.cache.delete(x.key);
+      if (x.parent) try { localStorage.removeItem(x.key); } catch {}
+      tracks.splice(tracks.indexOf(x), 1);
+    }
+    if (gone.includes(curT)) {
+      if (Rev.active) Rev.stop(false);
       audio.pause(); audio.removeAttribute('src'); audio.load();
       cur = -1; data = null;
-      if (tracks.length) openTrack(Math.min(i, tracks.length - 1)); else renderAll();
-    } else { if (i < cur) cur--; renderPlaylist(); }
+      const p = t.parent ? tracks.findIndex(x => x.key === t.parent) : -1;
+      if (tracks.length) openTrack(p >= 0 ? p : Math.min(i, tracks.length - 1)); else renderAll();
+    } else { cur = tracks.indexOf(curT); renderPlaylist(); }
     saveSession();
 }
 $('playlist').addEventListener('click', e => {
+  const tg = e.target.closest('[data-tog]');
+  if (tg) { const t = tracks[+tg.dataset.tog]; t.closed = !t.closed; return renderPlaylist(); }
   const it = e.target.closest('.item');
   if (it) openTrack(+it.dataset.i, true);
 });
@@ -1166,6 +1221,13 @@ $('btnTrim').onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
   if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
+  if (SUBS) {                       // шматок — у плейлист під файлом, і граємо далі вже його
+    const playing = !audio.paused || Rev.active;
+    if (Rev.active) Rev.stop(false);
+    data.pos = t; save();
+    openTrack(addSub(t), playing); saveSession();
+    return toast('Шматок з ' + hms(t) + ' — у плейлисті під файлом. ↺ — прибрати');
+  }
   data.trim = t;
   // шматок, що лишився (від обрізки до кінця), одразу йде у «Фрагменти» — можна зберегти ⬇ / 🎬
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
@@ -1176,12 +1238,30 @@ $('btnTrim').onclick = () => {
 };
 $('btnUntrim').onclick = () => {
   if (!data) return;
+  const st = hasTrack() && tracks[cur];
+  if (st && st.parent) {            // шматок прибирається, далі — сам файл з того ж місця
+    const playing = !audio.paused || Rev.active, t = audio.currentTime;
+    if (Rev.active) Rev.stop(false);
+    const root = rootOf(st), d = load(root.key);
+    d.pos = t; try { localStorage.setItem(root.key, JSON.stringify(d)); } catch {}
+    try { localStorage.removeItem(st.key); } catch {}
+    data = null; tracks.splice(cur, 1); cur = -1;
+    openTrack(tracks.indexOf(root), playing); saveSession();
+    return toast('Шматок прибрано');
+  }
   const t = data.trim;              // прибираємо фрагмент, який додала ця обрізка
   data.clips = data.clips.filter(c => !(c.fromTrim && Math.abs(c.start - t) < 1e-3));
   data.trim = 0; save();
   $('btnUntrim').classList.remove('on'); layoutActions();
   renderAll(); toast('Обрізане повернуто');
 };
+// відеоплеєр: ↺ — поруч із віконцем швидкості, жирна кругова стрілка
+if (FEAT.vslider) {
+  const u = $('btnUntrim');
+  u.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.6A7.2 7.2 0 1 1 8.6 18.6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'
+    + '<path d="M0.9 10.9H9.1L5 16.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  $('vspeed').appendChild(u);
+}
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
@@ -1574,7 +1654,11 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
 
 audio.onplay = () => setPlayIcon(true);
 audio.onpause = () => { if (Rev.active) return; setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
-audio.onended = () => { if (data) { data.pos = 0; save(); } if (cur < tracks.length - 1) openTrack(cur + 1, true); };
+audio.onended = () => {
+  if (data) { data.pos = 0; save(); }
+  let n = cur + 1; while (n < tracks.length && tracks[n].parent) n++;      // обрізані шматки — не підряд за файлом
+  if (n < tracks.length) openTrack(n, true);
+};
 audio.ontimeupdate = () => {
   if (T0() && audio.currentTime < T0() - 0.05 && !Rev.active) audio.currentTime = T0();
   if (clipStopAt != null && audio.currentTime >= clipStopAt) { audio.pause(); clipStopAt = null; }
@@ -2226,7 +2310,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v101';
+const APP_VER = 'v102';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
