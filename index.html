@@ -1445,8 +1445,16 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`; g.style.transform = 'rotate(0deg)'; }
+    // повертаючись, ямка клацає на кожній поділці (3°) — у такт кривій повернення
+    const ease = x => { let lo = 0, hi = 1; for (let k = 0; k < 20; k++) { const m = (lo + hi) / 2, bx = 3 * m * (1 - m) ** 2 * .2 + 3 * m * m * (1 - m) * .3 + m ** 3; if (bx < x) lo = m; else hi = m; }
+      const m = (lo + hi) / 2; return 3 * m * (1 - m) ** 2 * .8 + 3 * m * m * (1 - m) + m ** 3; };
+    const a0 = jogAngle; let prev = Math.floor(a0 / 3);
+    for (let i = 1; i <= 40; i++) {
+      const cur = Math.floor(a0 * (1 - ease(i / 40)) / 3);
+      if (cur !== prev) { prev = cur; setTimeout(jogClick, back * i / 40); }
+    }
     jogAngle = 0;
-    hideT = setTimeout(() => { val.classList.remove('on'); setVal(''); }, 1500);
+    clearTimeout(hideT); val.classList.remove('on'); setVal('');      // відпустив — цифри одразу зникають
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
@@ -2068,7 +2076,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v77';
+const APP_VER = 'v78';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
