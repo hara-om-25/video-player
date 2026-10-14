@@ -402,7 +402,7 @@ body:not(.f-last) .actions .r1 { display: none !important; }
 /* відеоплеєр (f-vslider): шкала швидкості −10…+10 біля правого краю, під нею ★; «Останні» — стовпчиком 60/30/10 */
 .vspeed, .actions .lastcol { display: none; }
 body.f-vslider .panel.side { position: relative; }
-body.f-vslider { --cols: minmax(200px, 1fr) minmax(0, 4.4fr) 196px; }   /* відео ширше, панель «Мітки» вузька */
+body.f-vslider { --cols: minmax(196px, 1fr) minmax(0, 4.4fr) minmax(196px, 1fr); }   /* відео ширше; бокові панелі однакової ширини */
 body.f-vslider .vspeed { pointer-events: none; }        /* стовпчик не заважає міткам; реагує лише віконце */
 body.f-vslider .vspeed .vsbox { pointer-events: auto; }
 body.f-vslider .actions { border-top: 0; }
@@ -1093,9 +1093,12 @@ $('btnAdd').onclick = () => $('fileInput').click();
 function layoutActions() {
   const sp = $('aspacer'); if (!sp) return;
   sp.style.height = '0px';
-  const R = $('jog').getBoundingClientRect().width / 2, W = innerWidth, H = innerHeight;   // з написом «± N сек» над колесом
+  const RR = $('jog').getBoundingClientRect().width / 2, W = innerWidth, H = innerHeight;   // з написом «± N сек» над колесом
+  const R = RR;
   let need = 0;
   for (const row of document.querySelectorAll('.actions .r1, .actions .r2, .actions .lastcol')) {
+    // напис «± N» над колесом є лише навпроти ямки; для стовпчика 60/30/10 досить краю самого колеса
+    const R = row.classList.contains('lastcol') ? RR * 0.87 : RR;
     let right = 0;
     for (const c of row.children) if (c.offsetParent) right = Math.max(right, c.getBoundingClientRect().right);
     const free = W - 8 - right;                       // скільки місця праворуч від рядка
@@ -2192,7 +2195,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v94';
+const APP_VER = 'v95';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
