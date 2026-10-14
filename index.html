@@ -1727,7 +1727,7 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
 // подвійний дотик — на весь екран і назад. Сторінка сама при цьому не масштабується.
 (() => {
   const box = $('vidbox'), MAX = 8, pts = new Map();
-  let s = 1, tx = 0, ty = 0, g = null, lastTap = 0, lastXY = null, moved = false;
+  let s = 1, tx = 0, ty = 0, g = null, lastTap = 0, lastXY = null, moved = false, tapT = 0;
   // розмір картинки на екрані при s = 1 (з урахуванням cover/contain)
   const img = () => {
     const r = box.getBoundingClientRect(), vw = audio.videoWidth || r.width, vh = audio.videoHeight || r.height;
@@ -1779,7 +1779,13 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
     if (pts.size === 1) moved = true;
     if (pts.size === 0 && !moved) {            // дотик без руху — можливо, подвійний
       const now = performance.now();
-      if (now - lastTap < 350) { lastTap = 0; setFs(!document.body.classList.contains('fs')); } else lastTap = now;
+      if (now - lastTap < 350) { lastTap = 0; clearTimeout(tapT); setFs(!document.body.classList.contains('fs')); }
+      else {
+        // одинарний дотик на паузі: права половина — +1 с, ліва — −1 с (чекаємо, чи не буде другого дотику)
+        lastTap = now; const r = box.getBoundingClientRect(), right = lastXY[0] > r.left + r.width / 2;
+        clearTimeout(tapT);
+        tapT = setTimeout(() => { if (audio.paused && !Rev.active && hasTrack()) { clipStopAt = null; seek(audio.currentTime + (right ? 1 : -1)); } }, 360);
+      }
     }
   };
   box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
@@ -2215,7 +2221,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v99';
+const APP_VER = 'v100';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
