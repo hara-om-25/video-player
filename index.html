@@ -429,6 +429,9 @@ body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 /* довгий дотик не виділяє текст і не відкриває меню «Копіювати / Вибрати все» */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+/* на весь екран: ★ — ліворуч від РП унизу, кнопка виходу — над РП праворуч (поміняні місцями) */
+body.fs #btnMark, body.fs.f-vslider #btnMark { top: auto; left: auto; right: calc(var(--jogR) * 1.15 + 12px); bottom: calc(12px + env(safe-area-inset-bottom)); }
+body.fs .fsexit { top: auto; left: auto; right: 14px; bottom: calc(var(--jogR) * 1.15 + 20px); }
 </style>
 </head>
 <body class="f-video f-last f-vslider app-video">
@@ -2190,7 +2193,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v89';
+const APP_VER = 'v90';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
