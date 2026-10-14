@@ -1160,7 +1160,25 @@ function togglePlay() {
   if (!hasTrack()) { $('fileInput').click(); return; }
   if (audio.paused) playSafe(); else audio.pause();
 }
-audio.addEventListener('error', () => { if (audio.error && hasTrack()) toast('Файл не відтворюється (код ' + audio.error.code + ')', 2500); });
+// Помилка декодування (код 3) на Android: декодер «падає» під навантаженням або на пошкодженому кадрі.
+// Самі відновлюємося: перезавантажуємо файл і продовжуємо з того ж місця; повторно — трохи перескакуємо вперед.
+let goodT = 0, goodPlaying = false, recovering = false, recov = { n: 0, t0: 0 };
+audio.addEventListener('timeupdate', () => { if (!audio.error && !recovering) { goodT = audio.currentTime; goodPlaying = !audio.paused; } });
+audio.addEventListener('error', () => {
+  const err = audio.error; if (!err || !hasTrack()) return;
+  const now = Date.now(); if (now - recov.t0 > 20000) { recov.n = 0; recov.t0 = now; }
+  if ((err.code === 3 || err.code === 2) && recov.n < 4) {
+    recov.n++;
+    try { if (Rev.active) Rev.stop(false); } catch {}
+    const t = Math.min(dur() || 1e9, goodT + (recov.n - 1) * 0.5), play = goodPlaying, h = audio.onloadedmetadata;
+    recovering = true;
+    audio.onloadedmetadata = () => { audio.onloadedmetadata = h; audio.playbackRate = speed; audio.currentTime = t;
+      audio.addEventListener('seeked', () => { recovering = false; if (play) playSafe(); }, { once: true }); };
+    audio.src = tracks[cur].url; audio.load();
+    return;
+  }
+  toast('Файл не відтворюється (код ' + err.code + ')', 2500);
+});
 const T0 = () => (FEAT.trim && data && data.trim) || 0;     // початок після «Обрізать»
 const span = () => Math.max(0.001, dur() - T0());
 function seek(t) {
@@ -1293,7 +1311,7 @@ const Rev = (() => {
         hv.requestVideoFrameCallback(cb);
       };
       hv.requestVideoFrameCallback(cb);
-      hv.playbackRate = Math.min(8, Math.max(1.5, R.rate * 1.6));   // готуємо швидше, ніж показуємо
+      hv.playbackRate = Math.min(4, Math.max(1.5, R.rate * 1.6));   // більше — декодер Android не витримує   // готуємо швидше, ніж показуємо
       hv.play().catch(() => res());
       setTimeout(res, (b - a) * 1000 / hv.playbackRate + 4000);
     });
@@ -2082,7 +2100,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v80';
+const APP_VER = 'v81';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
