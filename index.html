@@ -1165,6 +1165,7 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   const pt = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
   // «± N сек» — дугою над колесом навпроти ямки й крутиться разом з нею
   const [a1x, a1y] = pt(104, -172), [a2x, a2y] = pt(104, -98);
+  const VAL_MID = 104 * 37 * Math.PI / 180;   // середина дуги (навпроти ямки) — тут стоїть десяткова крапка
   const valArc = `<path id="jgValArc" d="M${a1x.toFixed(2)} ${a1y.toFixed(2)}A104 104 0 0 1 ${a2x.toFixed(2)} ${a2y.toFixed(2)}" fill="none"/>`;
   // Ручка з чорного металу: гладкий верх, а по зовнішній кромці — зубці-ребра, як на фізичному регуляторі.
   // Зубці й ямка крутяться разом з колесом, а відблиски нерухомі (світло зверху-зліва).
@@ -1201,7 +1202,7 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   </defs>
   <circle r="${RT}" cx="2" cy="3" fill="#000" opacity=".7" filter="url(#jgShadow)"/>
   <g id="jogRot" class="jrot">
-    ${valArc}<text class="jogtxt"><textPath id="jogValTxt" href="#jgValArc" startOffset="50%" text-anchor="middle"></textPath></text>
+    ${valArc}<text class="jogtxt" id="jogValTxt"><textPath id="jvA" href="#jgValArc" startOffset="${(VAL_MID - 1.4).toFixed(2)}" text-anchor="end"></textPath><textPath id="jvP" href="#jgValArc" startOffset="${VAL_MID.toFixed(2)}" text-anchor="middle"></textPath><textPath id="jvB" href="#jgValArc" startOffset="${(VAL_MID + 1.4).toFixed(2)}" text-anchor="start"></textPath></text>
     <path d="${teeth}" fill="url(#jgFace)" stroke="#000" stroke-width=".6" stroke-linejoin="round"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
   </g>
   <g class="light">
@@ -1360,10 +1361,12 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
      вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
      браузер не вміє грати звук задом наперед). Відпустив — як було до того: пауза чи відтворення. */
   const svg = $('jog'), val = $('jogValTxt'), DEAD = 4, MAXR = 4;
+  // «+2.4»: крапка точно навпроти ямки, ціла частина ліворуч, дробова праворуч
+  const setVal = t => { const [a, b] = t.split('.'); $('jvA').textContent = a || ''; $('jvP').textContent = b == null ? '' : '.'; $('jvB').textContent = b || ''; };
   let last = null, hideT, revT = null, rate = 0, wasPaused = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
-    val.textContent = rate === 0 ? '' : (rate > 0 ? '+' : '−') + Math.abs(rate).toFixed(1);   // прискорення «+3.1», назад «−1.5»
+    setVal(rate === 0 ? '' : (rate > 0 ? '+' : '−') + Math.abs(rate).toFixed(1));   // прискорення «+3.1», назад «−1.5»
     val.classList.add('on');
   };
   const shuttleRate = a => Math.abs(a) < DEAD ? 0 : Math.sign(a) * (1 + (Math.abs(a) - DEAD) / (JOG_LIM - DEAD) * (MAXR - 1));
@@ -1418,7 +1421,7 @@ const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math
     const back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`; g.style.transform = 'rotate(0deg)'; }
     jogAngle = 0;
-    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = ''; }, 1500);
+    hideT = setTimeout(() => { val.classList.remove('on'); setVal(''); }, 1500);
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
@@ -2040,7 +2043,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v69';
+const APP_VER = 'v70';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
