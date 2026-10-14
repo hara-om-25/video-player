@@ -172,6 +172,16 @@ body.fs #btnMark { position: fixed; z-index: 16; right: 12px; bottom: calc(var(-
 html, body { touch-action: pan-x pan-y; }
 .vidbox.on { touch-action: none; }
 .vidbox.on > #audio, #revCanvas { transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1)); transform-origin: 50% 50%; }
+/* яскравість відео (відеоплеєр, на весь екран — вертикальний свайп біля правого краю) */
+.vidbox.on > #audio, #revCanvas { filter: brightness(var(--vbri, 1)); }
+/* показник гучності / яскравості, поки ведеш пальцем біля краю */
+.gest { position: fixed; z-index: 30; left: 50%; top: 42%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 12px;
+  padding: 12px 18px; border-radius: 14px; background: rgba(0,0,0,.6); color: var(--accent); font-size: 22px; font-weight: 700; pointer-events: none; }
+.gest.on { display: flex; }
+.gest svg { width: 30px; height: 30px; flex: none; }
+.gest .gbar { width: 150px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+.gest .gbar i { display: block; height: 100%; background: var(--accent); }
+.gest b { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
 .vidbox:fullscreen { background: #000; }
 /* допоміжне відео, з якого беруться кадри для відтворення назад (має бути на сторінці, але не видно) */
 #revVideo { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
@@ -506,6 +516,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
       <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
     </div>
+    <div class="gest" id="gest"><svg viewBox="0 0 24 24" id="gestIco"></svg><span class="gbar"><i id="gestBar"></i></span><b id="gestVal"></b></div>
     <button id="bigPlay" class="bigplay" title="Пауза / відтворення  ( пробіл )"><svg viewBox="0 0 24 24" fill="currentColor"><g id="bigIco"></g></svg></button>
     <button id="btnFs" class="fsbtn" title="На весь екран  ( F )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button>
     <div class="markctl ovl">
@@ -1815,10 +1826,33 @@ async function newClip(title) {
 }
 $('btnSaveClip').onclick = async () => { const c = await newClip('Зберегти фрагмент MP3'); if (c) await exportClip(c); };
 $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегти фрагмент відео'); if (c) await exportVideo(c); };
+/* Гучність і яскравість (відеоплеєр, на весь екран: свайп угору/вниз біля лівого / правого краю).
+   Гучність — гучність відео (0…100% від системної), яскравість — фільтр картинки (30…200%). Обидві запам'ятовуються. */
+const BRI_MIN = 0.3, BRI_MAX = 2;
+let bri = 1, gestT = 0;
+const ICO_VOL = '<path fill="currentColor" d="M3 9h4l5-4v14l-5-4H3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+const ICO_BRI = '<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+function gestShow(kind, frac, txt) {
+  const el = $('gest'); clearTimeout(gestT);
+  if (!kind) return el.classList.remove('on');
+  $('gestIco').innerHTML = kind === 'vol' ? ICO_VOL : ICO_BRI;
+  $('gestBar').style.width = Math.round(frac * 100) + '%'; $('gestVal').textContent = txt;
+  el.classList.add('on'); gestT = setTimeout(() => el.classList.remove('on'), 1500);
+}
+function setVol(v, quiet) {
+  v = Math.max(0, Math.min(1, v)); audio.volume = v; audio.muted = false;
+  if (!quiet) { setSetting('vvol', v); gestShow('vol', v, Math.round(v * 100) + '%'); }
+}
+function setBri(v, quiet) {
+  bri = Math.max(BRI_MIN, Math.min(BRI_MAX, v)); $('vidbox').style.setProperty('--vbri', bri);
+  if (!quiet) { setSetting('vbri', bri); gestShow('bri', (bri - BRI_MIN) / (BRI_MAX - BRI_MIN), Math.round(bri * 100) + '%'); }
+}
+if (FEAT.vslider) { setVol(getSetting('vvol', 1), true); setBri(getSetting('vbri', 1), true); }
 // zoomReset. Відео: два пальці (або коліщатко миші) — більше/менше, один палець — посунути збільшене,
 // подвійний дотик — на весь екран і назад. Сторінка сама при цьому не масштабується.
 (() => {
-  const box = $('vidbox'), MAX = 8, pts = new Map();
+  const box = $('vidbox'), MAX = 8, pts = new Map(), EDGE = 0.15;
+  let edge = null;
   let s = 1, tx = 0, ty = 0, g = null, lastTap = 0, lastXY = null, moved = false, tapT = 0;
   // розмір картинки на екрані при s = 1 (з урахуванням cover/contain)
   const img = () => {
@@ -1847,8 +1881,14 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
     if (!box.classList.contains('on')) return;
     box.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 1) { moved = false; lastXY = [e.clientX, e.clientY]; }
-    if (pts.size === 2) { const p = pinch(); g = { d: p.d, m: p.m, s }; moved = true; }
+    if (pts.size === 1) {
+      moved = false; lastXY = [e.clientX, e.clientY];
+      // відеоплеєр на весь екран: свайп угору/вниз біля лівого краю — гучність, біля правого — яскравість
+      const ex = innerWidth * EDGE, inFs = FEAT.vslider && document.body.classList.contains('fs');
+      edge = inFs && (e.clientX < ex || e.clientX > innerWidth - ex)
+        ? { kind: e.clientX < ex ? 'vol' : 'bri', y0: e.clientY, v0: e.clientX < ex ? audio.volume : bri, on: false } : null;
+    }
+    if (pts.size === 2) { const p = pinch(); g = { d: p.d, m: p.m, s }; moved = true; edge = null; gestShow(null); }
   });
   box.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
@@ -1861,12 +1901,22 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
       apply();
     } else if (pts.size === 1) {
       if (Math.hypot(e.clientX - lastXY[0], e.clientY - lastXY[1]) > 8) moved = true;
+      if (edge) {
+        if (!edge.on && Math.abs(e.clientY - edge.y0) > 10) edge.on = true;
+        if (edge.on) {
+          const k = (edge.y0 - e.clientY) / (innerHeight * 0.6);       // 60% висоти екрана — увесь діапазон
+          if (edge.kind === 'vol') setVol(edge.v0 + k); else setBri(edge.v0 + k * (BRI_MAX - BRI_MIN));
+        }
+        return;
+      }
       if (moved && s !== 1) { tx += e.clientX - prev.x; ty += e.clientY - prev.y; apply(); }
     }
   });
   const up = e => {
     if (!pts.has(e.pointerId)) return;
     pts.delete(e.pointerId);
+    if (edge && edge.on) { edge = null; pts.clear(); setTimeout(() => gestShow(null), 600); return; }
+    edge = null;
     if (pts.size < 2) g = null;
     if (pts.size === 1) moved = true;
     if (pts.size === 0 && !moved) {            // дотик без руху — можливо, подвійний
@@ -2313,7 +2363,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v103';
+const APP_VER = 'v104';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
