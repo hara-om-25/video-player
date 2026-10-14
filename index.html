@@ -416,7 +416,7 @@ body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, aut
 .vspeed.drag .vsl, .vspeed.drag .vstrack { opacity: 1; }      /* шкалу видно лише поки тиснеш на віконце */
 /* віконце з числом; поки тягнеш — їде по шкалі разом зі значенням, відпустив — назад у середину */
 .vspeed .vsbox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 56px; padding: 8px 4px; border-radius: 8px; white-space: nowrap;
-  background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
+  background: var(--surf2); border: 1px solid var(--surf3);   /* без жовтої рамки */ color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
   touch-action: none; cursor: ns-resize; user-select: none; }
 /* повний екран (відеоплеєр): віконце швидкості й ★ — праворуч, над регулятором, як у звичайному вигляді */
 body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh; bottom: calc(var(--jogR) * 1.15 + 84px); z-index: 16; }
@@ -429,6 +429,9 @@ body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 /* довгий дотик не виділяє текст і не відкриває меню «Копіювати / Вибрати все» */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+/* на весь екран — регулятор менший, кнопки біля нього підсуваються самі (усі відступи рахуються від --jogR) */
+body.fs { --jogR: min(160px, 24vh); }
+@media (max-width: 860px) { body.fs { --jogR: min(95px, 14vh); } }
 </style>
 </head>
 <body class="f-video f-last f-vslider app-video">
@@ -2190,7 +2193,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v91';
+const APP_VER = 'v92';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
