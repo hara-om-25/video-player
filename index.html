@@ -1152,7 +1152,10 @@ document.fonts && document.fonts.ready.then(layoutActions);
 setTimeout(layoutActions, 300);
 document.querySelectorAll('[data-last]').forEach(b => b.onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
-  clipStopAt = null; if (Rev.active) Rev.stop(false); seek(Math.max(T0(), dur() - +b.dataset.last)); playSafe();
+  // стан не міняється: на паузі — лише перехід, під час відтворення — відтворення далі
+  const playing = !audio.paused || Rev.active;
+  clipStopAt = null; if (Rev.active) Rev.stop(false); seek(Math.max(T0(), dur() - +b.dataset.last));
+  if (playing) resumePlay();
 });
 $('btnTrim').onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
@@ -2212,7 +2215,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v98';
+const APP_VER = 'v99';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
