@@ -1203,7 +1203,7 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   <circle r="${RT}" cx="2" cy="3" fill="#000" opacity=".7" filter="url(#jgShadow)"/>
   <g id="jogRot" class="jrot">
     ${valArc}<text class="jogtxt" id="jogValTxt"><textPath id="jvA" href="#jgValArc" startOffset="${(VAL_MID - 1.4).toFixed(2)}" text-anchor="end"></textPath><textPath id="jvP" href="#jgValArc" startOffset="${VAL_MID.toFixed(2)}" text-anchor="middle"></textPath><textPath id="jvB" href="#jgValArc" startOffset="${(VAL_MID + 1.4).toFixed(2)}" text-anchor="start"></textPath></text>
-    <path d="${teeth}" fill="url(#jgFace)" stroke="#000" stroke-width=".6" stroke-linejoin="round"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
+    <path d="${teeth}" fill="url(#jgFace)"/><circle r="${RF}" fill="url(#jgFace)"/>   <!-- верх і ребра — одна поверхня -->
   </g>
   <g class="light">
     ${sheen}
@@ -2043,7 +2043,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v70';
+const APP_VER = 'v71';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
