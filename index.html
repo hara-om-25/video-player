@@ -1142,10 +1142,15 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#speedMenu') && !e.target.closest('#spVal')) $('speedMenu').classList.remove('on');
 });
 
+// play() з повідомленням, якщо браузер відмовив (раніше помилку мовчки ковтали)
+function playSafe() {
+  return audio.play().catch(e => { if (e && e.name !== 'AbortError') toast('Не вдалося відтворити: ' + (e.name || e) + (audio.error ? ' (код ' + audio.error.code + ')' : ''), 2500); });
+}
 function togglePlay() {
   if (!hasTrack()) { $('fileInput').click(); return; }
-  if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  if (audio.paused) playSafe(); else audio.pause();
 }
+audio.addEventListener('error', () => { if (audio.error && hasTrack()) toast('Файл не відтворюється (код ' + audio.error.code + ')', 2500); });
 const T0 = () => (FEAT.trim && data && data.trim) || 0;     // початок після «Обрізать»
 const span = () => Math.max(0.001, dur() - T0());
 function seek(t) {
@@ -1324,13 +1329,15 @@ const Rev = (() => {
   R.stop = resume => {
     if (!R.active) return;
     gen++; cancelAnimationFrame(raf); raf = 0; hv.pause();
+    // звільняємо допоміжне відео: на Android воно тримає апаратний декодер, і основне відео потім не грає
+    hv.removeAttribute('src'); hv.load();
     chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); chunks = [];
     const t = cursor;
     audio.currentTime = t;
     const hide = () => { cv.classList.remove('on'); };
     audio.addEventListener('seeked', hide, { once: true }); setTimeout(hide, 600);
     R.active = false;
-    if (resume) audio.play().catch(() => {}); else { setPlayIcon(false); if (data) { data.pos = t; save(); } }
+    if (resume) playSafe(); else { setPlayIcon(false); if (data) { data.pos = t; save(); } }
   };
   return R;
 })();
@@ -1377,7 +1384,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
       if (Rev.active) Rev.stop(!(wasPaused && rate === 0));
       audio.playbackRate = rate === 0 ? speed : Math.max(rate, speed);
       if (rate === 0 && wasPaused) audio.pause();            // на паузі в нулі — стоїть
-      else if (audio.paused && !Rev.active) audio.play().catch(() => {});
+      else if (audio.paused && !Rev.active) playSafe();
     } else if (audio.videoWidth && Rev.supported) {
       Rev.active ? Rev.setRate(-rate) : Rev.start(-rate);
     } else if (!revT) {
@@ -1416,7 +1423,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     last = null;
     rate = 0; stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
     audio.playbackRate = speed;
-    if (wasPaused) audio.pause(); else if (audio.paused) audio.play().catch(() => {});
+    if (wasPaused) audio.pause(); else if (audio.paused) playSafe();
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`; g.style.transform = 'rotate(0deg)'; }
@@ -2043,7 +2050,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v73';
+const APP_VER = 'v74';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
