@@ -410,11 +410,12 @@ body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
 body.f-vslider .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
 body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, auto); }
+.vspeed:not(.drag) .vsbox { top: auto; bottom: 0; transform: translateX(-50%); }   /* у спокої — внизу, над ★ */
 .vspeed .vsl { font-size: 13px; font-weight: 700; color: var(--accent); opacity: 0; transition: opacity .15s; }
 .vspeed .vstrack { position: relative; flex: 1; width: 6px; border-radius: 3px; background: var(--accent); opacity: 0; transition: opacity .15s; pointer-events: none; }
 .vspeed .vsmid { position: absolute; left: -8px; right: -8px; top: 50%; height: 2px; margin-top: -1px; background: var(--accent); }
 .vspeed.drag .vsl, .vspeed.drag .vstrack { opacity: 1; }      /* шкалу видно лише поки тиснеш на віконце */
-/* віконце з числом — посередині стовпчика; поки тягнеш — їде по шкалі разом зі значенням, відпустив — назад у середину */
+/* віконце з числом; поки тягнеш — їде по шкалі разом зі значенням, відпустив — назад у середину */
 .vspeed .vsbox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 52px; padding: 8px 4px; border-radius: 8px;
   background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
   touch-action: none; cursor: ns-resize; user-select: none; }
@@ -2154,7 +2155,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v85';
+const APP_VER = 'v86';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
