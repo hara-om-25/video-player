@@ -198,7 +198,6 @@ html, body { touch-action: pan-x pan-y; }
 .item .acts [data-a="play"] { color: #4caf50; }
 .item .acts [data-a="dl"]   { color: var(--accent); }
 .item .acts [data-a="ren"]  { color: #42a5f5; }
-.item .acts [data-a="del"], .item .acts [data-rm] { color: #e53935; }
 .item.active .name { color: var(--accent2); }
 
 /* clips panel */
@@ -421,6 +420,13 @@ body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, aut
   touch-action: none; cursor: ns-resize; user-select: none; }
 body.fs.f-vslider .vspeed { position: fixed; left: 12px; right: auto; top: 15vh; bottom: 15vh; z-index: 16; }
 body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
+/* свайп-видалення; у списках вертикальна прокрутка лишається */
+#playlist .item, #markList .item, #clipList .item { touch-action: pan-y; }
+.item.swiping { transition: none !important; position: relative; z-index: 2; }
+#playlist, #markList, #clipList { overflow-x: hidden; }
+/* довгий дотик не виділяє текст і не відкриває меню «Копіювати / Вибрати все» */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 </style>
 </head>
 <body class="f-video f-last f-vslider app-video">
@@ -1021,14 +1027,10 @@ function renderPlaylist() {
       <span class="num">${i + 1}</span>
       <span class="name" title="${esc(t.file.name)}">${isVideo(t) ? '🎬 ' : ''}${esc(t.file.name)}</span>
       <span class="badge">${badge}</span>
-      <span class="acts"><button data-rm="${i}" title="Прибрати зі списку">✕</button></span>
     </div>`;
   }).join('');
 }
-$('playlist').addEventListener('click', e => {
-  const rm = e.target.closest('[data-rm]');
-  if (rm) {
-    const i = +rm.dataset.rm;
+function removeTrack(i) {
     save();
     URL.revokeObjectURL(tracks[i].url);
     Slicer.cache.delete(tracks[i].key);
@@ -1040,8 +1042,8 @@ $('playlist').addEventListener('click', e => {
       if (tracks.length) openTrack(Math.min(i, tracks.length - 1)); else renderAll();
     } else { if (i < cur) cur--; renderPlaylist(); }
     saveSession();
-    return;
-  }
+}
+$('playlist').addEventListener('click', e => {
   const it = e.target.closest('.item');
   if (it) openTrack(+it.dataset.i, true);
 });
@@ -1599,7 +1601,6 @@ function renderMarks() {
       <span class="name" title="${esc(m.name)}">${esc(m.name)}</span>
       <span class="acts">
         <button data-a="ren" title="Перейменувати">✎</button>
-        <button data-a="del" title="Видалити">✕</button>
       </span>
     </div>`).join('');
 }
@@ -1610,12 +1611,48 @@ $('markList').addEventListener('click', async e => {
   if (a === 'ren') {
     const n = await ask('Перейменувати мітку', fmt(m.t, true), m.name);
     if (n) { m.name = n; save(); renderMarks(); renderBar(); }
-  } else if (a === 'del') {
-    if (!confirm('Видалити мітку «' + m.name + '»?')) return;
-    data.marks.splice(+it.dataset.i, 1); save(); renderMarks(); renderBar(); renderPlaylist();
   } else { clipStopAt = null; seek(m.t); }
 });
 $('btnMark').onclick = addMark;
+
+/* Видалення свайпом: рядок плейлиста, мітки чи фрагмента тягнеш убік — і якщо відвів далеко
+   (за 40% ширини), він вилітає за екран і видаляється; інакше вертається на місце. */
+function swipeDelete(list, onDelete) {
+  let st = null;
+  list.addEventListener('pointerdown', e => {
+    const it = e.target.closest('.item'); if (!it || e.button > 0) return;
+    st = { it, x: e.clientX, y: e.clientY, dx: 0, on: false, id: e.pointerId };
+  });
+  list.addEventListener('pointermove', e => {
+    if (!st || e.pointerId !== st.id) return;
+    const dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { st = null; return; }   // прокрутка списку
+      if (Math.abs(dx) < 12) return;
+      st.on = true; st.it.setPointerCapture(e.pointerId); st.it.classList.add('swiping');
+    }
+    st.dx = dx; st.it.style.transform = `translateX(${dx}px)`; st.it.style.opacity = Math.max(.25, 1 - Math.abs(dx) / st.it.offsetWidth);
+  });
+  const end = () => {
+    if (!st) return;
+    const { it, dx, on } = st; st = null;
+    if (!on) return;
+    it.classList.remove('swiping');
+    const w = it.offsetWidth;
+    if (Math.abs(dx) > w * 0.4) {
+      it.style.transition = 'transform .18s ease-in, opacity .18s'; it.style.transform = `translateX(${Math.sign(dx) * innerWidth}px)`; it.style.opacity = 0;
+      setTimeout(() => onDelete(+it.dataset.i), 180);
+    } else { it.style.transition = 'transform .2s, opacity .2s'; it.style.transform = ''; it.style.opacity = ''; setTimeout(() => { it.style.transition = ''; }, 220); }
+    // клік, що йде слідом за свайпом, не повинен відкривати/перемотувати
+    const stop = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    list.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => list.removeEventListener('click', stop, { capture: true }), 300);
+  };
+  list.addEventListener('pointerup', end); list.addEventListener('pointercancel', end);
+}
+document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea')) e.preventDefault(); });
+swipeDelete($('playlist'), i => removeTrack(i));
+swipeDelete($('markList'), i => { data.marks.splice(i, 1); save(); renderMarks(); renderBar(); renderPlaylist(); toast('Мітку видалено'); });
+swipeDelete($('clipList'), i => { data.clips.splice(i, 1); save(); renderClips(); renderBar(); renderPlaylist(); toast('Фрагмент видалено'); });
 
 /* ═════════ фрагменти ═════════ */
 function setSel(s, e) {
@@ -1763,7 +1800,6 @@ function renderClips() {
         <button data-a="play" title="Прослухати фрагмент">▶</button>
         <button data-a="dl" title="Зберегти MP3">⬇</button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
-        <button data-a="del" title="Видалити зі списку">✕</button>
       </span>
     </div>`).join('');
 }
@@ -1777,9 +1813,6 @@ $('clipList').addEventListener('click', async e => {
   else if (a === 'ren') {
     const n = await ask('Перейменувати фрагмент', fmt(c.start, true) + ' – ' + fmt(c.end, true), c.name);
     if (n) { c.name = n; save(); renderClips(); renderBar(); }
-  } else if (a === 'del') {
-    if (!confirm('Видалити фрагмент «' + c.name + '» зі списку?')) return;
-    data.clips.splice(i, 1); save(); renderClips(); renderBar(); renderPlaylist();
   } else { selStart = c.start; selEnd = c.end; renderSel(); clipStopAt = null; seek(c.start); }
 });
 
@@ -2155,7 +2188,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v86';
+const APP_VER = 'v87';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
