@@ -1,5 +1,5 @@
 // Офлайн-кеш застосунку (збирає build.py). Діє лише в його папці.
-const CACHE = 'video-player-v100';
+const CACHE = 'video-player-v101';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './fonts/tektur-cyrillic.woff2', './fonts/tektur-cyrillic-ext.woff2', './fonts/tektur-latin.woff2', './fonts/tektur-latin-ext.woff2'];
 

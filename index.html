@@ -418,7 +418,12 @@ body.f-vslider #markList .item .acts { margin-left: auto; }
 body.f-vslider .vspeed { pointer-events: none; }        /* стовпчик не заважає міткам; реагує лише віконце */
 body.f-vslider .vspeed .vsbox { pointer-events: auto; }
 body.f-vslider .actions { border-top: 0; }
-body.f-vslider .actions .r1, body.f-vslider .actions .r2, body.f-vslider .spdrow { display: none !important; }
+body.f-vslider .actions .r1, body.f-vslider .spdrow { display: none !important; }
+/* «Обрізать» — ліворуч від ★, у стилі кнопок шапки (жовта); ↺ — над нею, коли є обрізка */
+body.f-vslider .actions .r2 { position: absolute; left: 8px; bottom: calc(var(--vsb, 80px) - 60px); flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
+body.f-vslider .actions #btnTrim { background: var(--accent); border-color: var(--accent); color: #111; font-size: 12px; padding: 0 6px; height: 52px; letter-spacing: 0; }
+body.f-vslider .actions #btnUntrim { padding: 6px 10px; }
+@media (max-width: 860px) { body.f-vslider .actions .r2 { bottom: 14px; } }
 body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; align-self: flex-start; margin: 0; }   /* 60/30/10 — біля лівого краю панелі, якомога нижче */
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
 body.f-vslider .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
@@ -445,7 +450,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 </style>
 </head>
-<body class="f-video f-last f-vslider app-video">
+<body class="f-video f-trim f-last f-vslider app-video">
 
 <header>
   <div class="hc1">
@@ -916,7 +921,7 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
    Файл ідентифікується за назвою та розміром — тому при повторному
    відкритті того самого файлу мітки й фрагменти підтягуються автоматично. */
 // Можливості цього застосунку (підставляє build.py): аудіоплеєр, відеоплеєр чи відеоредактор
-const FEAT = {"id": "video", "video": true, "clips": false, "trim": false, "last": true, "vslider": true, "db": "markplayer-video", "session": "session.video"};
+const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "db": "markplayer-video", "session": "session.video"};
 const PREFIX = 'markplayer:';
 const fileKey = f => PREFIX + f.name + '|' + f.size;
 function load(key) {
@@ -2221,7 +2226,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v100';
+const APP_VER = 'v101';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
