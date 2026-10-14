@@ -410,20 +410,18 @@ body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
 body.f-vslider .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
 body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, auto); }
-.vspeed .vsl { font-size: 13px; font-weight: 700; color: var(--dim); }
-.vspeed .vstrack { position: relative; flex: 1; width: 10px; border-radius: 5px; background: var(--surf3); touch-action: none; cursor: pointer; }
-.vspeed .vstrack::before { content: ''; position: absolute; left: -22px; right: -22px; top: 0; bottom: 0; }   /* ширша зона дотику */
-.vspeed .vsmid { position: absolute; left: -8px; right: -8px; top: 50%; height: 2px; margin-top: -1px; background: var(--dim); }
-.vspeed .vsthumb { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 48px; padding: 6px 4px; border-radius: 8px;
-  background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); font-size: 14px; font-weight: 700; text-align: center; pointer-events: none; }
-@media (max-width: 860px) {     /* телефон: панель «Мітки» в стовпчик — шкала фіксованої висоти, ★ під нею */
-  body.f-vslider .panel.side { min-height: 400px; }
-  body.f-vslider main { padding-bottom: calc(var(--jogR) * 1.3); }   /* щоб панель можна було прокрутити вище регулятора */
-  body.f-vslider .vspeed { bottom: 76px; }
-  body.f-vslider #btnMark { top: auto; bottom: 14px; }
-}
+.vspeed .vsl { font-size: 13px; font-weight: 700; color: var(--accent); opacity: 0; transition: opacity .15s; }
+.vspeed .vstrack { position: relative; flex: 1; width: 6px; border-radius: 3px; background: var(--accent); opacity: 0; transition: opacity .15s; pointer-events: none; }
+.vspeed .vsmid { position: absolute; left: -8px; right: -8px; top: 50%; height: 2px; margin-top: -1px; background: var(--accent); }
+.vspeed .vsdot { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--surface); }
+.vspeed.drag .vsl, .vspeed.drag .vstrack { opacity: 1; }      /* шкалу видно лише поки тиснеш на віконце */
+/* віконце з числом — нерухоме, посередині стовпчика; тягни вгору/вниз */
+.vspeed .vsbox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 52px; padding: 8px 4px; border-radius: 8px;
+  background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
+  touch-action: none; cursor: ns-resize; user-select: none; }
+.vspeed.drag .vsbox { background: var(--accent); color: #111; }
 body.fs.f-vslider .vspeed { position: fixed; left: 12px; right: auto; top: 15vh; bottom: 15vh; z-index: 16; }
-body.fs.f-vslider .vspeed .vsthumb { background: rgba(0,0,0,.55); }
+body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 </style>
 </head>
 <body class="f-video f-last f-vslider app-video">
@@ -482,8 +480,9 @@ body.fs.f-vslider .vspeed .vsthumb { background: rgba(0,0,0,.55); }
 
   <!-- праворуч: мітки, під ними фрагменти, унизу кнопки -->
   <section class="panel side">
-    <div class="vspeed" id="vspeed" title="Швидкість: вгору — швидше (до +10), вниз — назад (до −10), посередині ×1">
-      <span class="vsl top">+10</span><div class="vstrack" id="vsTrack"><i class="vsmid"></i><b class="vsthumb" id="vsThumb">1</b></div><span class="vsl bot">−10</span>
+    <div class="vspeed" id="vspeed">
+      <span class="vsl top">10</span><div class="vstrack" id="vsTrack"><i class="vsmid"></i><i class="vsdot" id="vsDot"></i></div><span class="vsl bot">0.1</span>
+      <b class="vsbox" id="vsThumb" title="Швидкість: натисніть і ведіть вгору (до ×10) чи вниз (до ×0.1); подвійний дотик — ×1">1</b>
     </div>
     <div class="sec">
       <h2>
@@ -1162,7 +1161,7 @@ let speed = getSetting('speed', 1);
 let wantRate = 1, rateCap = Infinity, capUntil = 0;
 function setRate(r) { wantRate = r; audio.playbackRate = Math.min(r, rateCap); }
 function setSpeed(v) {
-  speed = FEAT.vslider ? Math.min(10, Math.max(1, Math.round(v * 100) / 100)) : Math.min(4, Math.max(0.5, Math.round(v * 100) / 100));
+  speed = FEAT.vslider ? Math.min(10, Math.max(0.1, Math.round(v * 100) / 100)) : Math.min(4, Math.max(0.5, Math.round(v * 100) / 100));
   setRate(speed); audio.defaultPlaybackRate = speed;
   audio.preservesPitch = audio.mozPreservesPitch = audio.webkitPreservesPitch = true;
   $('spVal').textContent = '×' + speed.toFixed(2);
@@ -2157,7 +2156,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v83';
+const APP_VER = 'v84';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -2227,33 +2226,41 @@ if ('launchQueue' in window) {
 }
 
 setSpeed(speed);
-/* Шкала швидкості відеоплеєра: позиція v ∈ [−1, 1]; посередині ×1, вгору 10^v до ×10,
-   вниз — назад: −10^|v| до −10. Біля середини прилипає до ×1. */
+/* Шкала швидкості відеоплеєра: ×0.1 … ×10, посередині ×1 (логарифмічно: v ∈ [−1, 1], швидкість 10^v).
+   Віконце з числом нерухоме: натиснув — з'являється жовта шкала, ведеш вгору/вниз — швидкість міняється;
+   подвійний дотик — назад до ×1. */
 (() => {
   if (!FEAT.vslider) return;
-  const tr = $('vsTrack'), th = $('vsThumb');
-  const toV = sp => sp >= 1 ? Math.log10(Math.min(10, sp)) : -Math.log10(Math.min(10, Math.max(1, -sp)));
-  const toSp = v => Math.abs(v) < 0.05 ? 1 : (v > 0 ? 1 : -1) * Math.round(Math.pow(10, Math.abs(v)) * 10) / 10;
+  const box = $('vsThumb'), col = $('vspeed'), tr = $('vsTrack'), dot = $('vsDot');
+  const toV = sp => Math.log10(Math.min(10, Math.max(0.1, sp)));
+  const toSp = v => { const x = Math.pow(10, Math.max(-1, Math.min(1, v))); return Math.abs(v) < 0.04 ? 1 : x < 1 ? Math.max(0.1, Math.round(x * 20) / 20) : Math.round(x * 10) / 10; };
+  const fmt = sp => sp === 1 ? '1' : sp < 1 ? sp.toFixed(2).replace(/0$/, '') : sp.toFixed(1);
+  let cur = 1;
   function apply(sp, save = true) {
-    th.textContent = sp === 1 ? '1' : (sp > 0 ? '+' : '−') + Math.abs(sp).toFixed(1);
-    th.style.top = (50 - toV(sp) * 50) + '%';
+    cur = sp; box.textContent = fmt(sp); dot.style.top = (50 - toV(sp) * 50) + '%';
     if (save) setSetting('vspeed', sp);
-    const playing = !audio.paused || Rev.active;
-    if (sp > 0) {
-      revSpeed = 0; setSpeed(sp);
-      if (Rev.active && !shuttleDir) Rev.stop(true);           // назад → уперед
-    } else {
-      revSpeed = -sp; setSpeed(1);
-      if (playing && !shuttleDir) resumePlay();
-    }
-    renderStatus();
+    revSpeed = 0; setSpeed(sp);
   }
-  let drag = false;
-  const at = e => { const r = tr.getBoundingClientRect(); return Math.max(-1, Math.min(1, 1 - 2 * (e.clientY - r.top) / r.height)); };
-  tr.addEventListener('pointerdown', e => { drag = true; tr.setPointerCapture(e.pointerId); apply(toSp(at(e))); });
-  tr.addEventListener('pointermove', e => { if (drag) apply(toSp(at(e))); });
-  tr.addEventListener('pointerup', () => { drag = false; }); tr.addEventListener('pointercancel', () => { drag = false; });
-  apply(getSetting('vspeed', 1), false);
+  let drag = null, lastTap = 0;
+  box.addEventListener('pointerdown', e => {
+    e.preventDefault(); box.setPointerCapture(e.pointerId);
+    drag = { y: e.clientY, v: toV(cur), moved: false }; col.classList.add('drag');
+  });
+  box.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dy = drag.y - e.clientY; if (Math.abs(dy) > 4) drag.moved = true;
+    const half = tr.getBoundingClientRect().height / 2 || 150;
+    if (drag.moved) apply(toSp(drag.v + dy / half));
+  });
+  const up = () => {
+    if (!drag) return;
+    const tap = !drag.moved; drag = null; col.classList.remove('drag');
+    if (!tap) return;
+    const now = performance.now();
+    if (now - lastTap < 350) { lastTap = 0; if (cur !== 1) apply(1); } else lastTap = now;   // подвійний дотик — ×1
+  };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  const sv = getSetting('vspeed', 1); apply(sv > 0 ? sv : 1, false);
 })();
 renderAll();
 restoreSession();
