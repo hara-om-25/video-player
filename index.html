@@ -284,13 +284,13 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .bigplay { position: absolute; inset: 0; margin: auto; z-index: 3;   /* без transform — :active кнопок його перебиває */
   width: 96px; height: 96px; border-radius: 50%; padding: 22px; color: var(--accent);
   background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
-  opacity: 0; pointer-events: none; transition: opacity .25s; }
+  opacity: 0; transition: opacity .25s; }   /* схована, але її зона завжди реагує на клік */
 .bigplay svg { width: 100%; height: 100%; display: block; pointer-events: none; }
-.bigplay.show { opacity: 1; pointer-events: auto; }
-.bigplay.paused { opacity: 1; pointer-events: auto; animation: bigPulse 2.4s ease-in-out infinite; }
+.bigplay.show { opacity: 1; }
+.bigplay.paused { opacity: 1; animation: bigPulse 2.4s ease-in-out infinite; }
 @keyframes bigPulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 @media (max-width: 860px) { .bigplay { width: 72px; height: 72px; padding: 16px; } }
-body:not(.f-video) .bigplay { opacity: 1; pointer-events: auto; }   /* в аудіоплеєрі відео немає — кнопка видна завжди */
+body:not(.f-video) .bigplay { opacity: 1; }   /* в аудіоплеєрі відео немає — кнопка видна завжди */
 .speed { display: flex; align-items: center; gap: 4px; }
 .speed { gap: 0; }
 .speed .arr { border-radius: 8px 0 0 8px; }
@@ -2066,7 +2066,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v75';
+const APP_VER = 'v76';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
