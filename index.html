@@ -430,8 +430,11 @@ body.f-vslider .vspeed .vsbox { pointer-events: auto; }
 body.f-vslider .actions { border-top: 0; }
 body.f-vslider .actions .r1, body.f-vslider .spdrow { display: none !important; }
 /* «Обрізать» — ліворуч від ★, у стилі кнопок шапки (жовта); ↺ — над нею, коли є обрізка */
-body.f-vslider .actions .r2 { position: absolute; left: 8px; bottom: calc(var(--vsb, 80px) - 60px); flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
-body.f-vslider .actions #btnTrim { background: var(--accent); border-color: var(--accent); color: #111; font-size: 12px; padding: 0 6px; height: 52px; letter-spacing: 0; }
+body.f-vslider .actions .r2 { position: absolute; left: 8px; bottom: calc(var(--vsb, 80px) - 60px); flex-direction: column; align-items: stretch; gap: 4px; }
+/* «Обрізати» / «Зберегти» — одна кнопка, розділена навпіл по горизонталі */
+#btnSaveTrim { display: none; }
+body.f-vslider .actions #btnTrim, body.f-vslider .actions #btnSaveTrim { display: block; background: var(--accent); border-color: var(--accent); color: #111;
+  font-size: 11px; padding: 0 6px; height: 24px; letter-spacing: 0; }
 /* ↺ — поруч із віконцем швидкості, такого ж розміру: жовта, жирна кругова стрілка */
 body.f-vslider #vspeed #btnUntrim { position: absolute; right: calc(100% + 6px); bottom: 0; width: 44px; height: 37px; padding: 0; pointer-events: auto;
   background: var(--accent); border: 1px solid var(--accent); border-radius: 8px; color: #111; }
@@ -462,8 +465,8 @@ body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh;
 body.fs.f-vslider #btnMark { position: fixed; top: auto; left: auto; right: 14px; bottom: calc(var(--jogR) * 1.15 + 20px); }
 body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 /* «Обрізать» і ↺ — і на весь екран: «Обрізать» ліворуч від ★, ↺ ліворуч від віконця швидкості; трохи прозорі */
-body.fs.f-vslider .actions #btnTrim { position: fixed; z-index: 16; right: 72px; bottom: calc(var(--jogR) * 1.15 + 20px); }
-body.fs.f-vslider .actions #btnTrim, body.fs.f-vslider #vspeed #btnUntrim { opacity: .7; }
+body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: 72px; bottom: calc(var(--jogR) * 1.15 + 20px); }
+body.fs.f-vslider .actions #btnTrim, body.fs.f-vslider .actions #btnSaveTrim, body.fs.f-vslider #vspeed #btnUntrim { opacity: .7; }
 /* свайп-видалення; у списках вертикальна прокрутка лишається */
 #playlist .item, #markList .item, #clipList .item { touch-action: pan-y; }
 .item.swiping { transition: none !important; position: relative; z-index: 2; }
@@ -550,6 +553,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       </div>
       <div class="arow r2">
         <button id="btnTrim" class="act" title="Прибрати все від початку до поточного місця">Обрізать</button>
+        <button id="btnSaveTrim" class="act" title="Зберегти обрізаний шматок (від обрізки до кінця) у файл">Зберегти</button>
         <button id="btnUntrim" class="act untrim" title="Повернути обрізане"><span class="ut-txt">↺</span></button>
         <div class="jogval" id="jogVal">± 0 сек</div>
       </div>
@@ -1111,7 +1115,7 @@ function renderPlaylist() {
     return `<div class="item ${i === cur ? 'active' : ''}" data-i="${i}">
       <span class="num">${num}</span>
       ${kids ? `<span class="tog" data-tog="${i}">${t.closed ? '▸' : '▾'}</span>` : ''}
-      <span class="name" title="${esc(t.file.name)}">${isVideo(t) ? '🎬 ' : ''}${esc(t.file.name)}</span>
+      <span class="name" title="${esc(t.file.name)}">${isVideo(t) && !FEAT.vslider ? '🎬 ' : ''}${esc(t.file.name)}</span>
       <span class="badge">${badge}</span>
     </div>`;
   }).join('');
@@ -1275,7 +1279,16 @@ if (FEAT.vslider) {
   u.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.6A7.2 7.2 0 1 1 8.6 18.6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'
     + '<path d="M0.9 10.9H9.1L5 16.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   $('vspeed').appendChild(u);
+  $('btnTrim').textContent = 'Обрізати';
+  $('playlist').after($('progress'));          // «Фрагментів» немає — хід запису видно під плейлистом
 }
+// «Зберегти»: шматок від обрізки до кінця — у файл (записується в реальному часі, як ⬇ВІДЕО)
+$('btnSaveTrim').onclick = () => {
+  if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
+  if (!T0()) return toast('Спочатку натисніть «Обрізати» там, звідки має починатися шматок', 2000);
+  const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
+  exportVideo({ name: base + ' з ' + hms(T0()).replace(/:/g, '-'), start: T0(), end: dur() });
+};
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
@@ -2209,7 +2222,7 @@ async function exportVideo(clip) {
   if (busy) return toast('Зачекайте, йде збереження…');
   const v = audio, cap = v.captureStream || v.mozCaptureStream;
   if (!cap || !window.MediaRecorder) return toast('Цей браузер не вміє записувати відео');
-  busy = true; $('btnSaveVid').disabled = $('btnSaveClip').disabled = true;
+  busy = true; $('btnSaveVid').disabled = $('btnSaveClip').disabled = $('btnSaveTrim').disabled = true;
   const rate = v.playbackRate;
   let stream;
   try {
@@ -2249,7 +2262,7 @@ async function exportVideo(clip) {
   } finally {
     if (stream) stream.getTracks().forEach(t => t.stop());
     v.playbackRate = rate;
-    busy = false; $('btnSaveVid').disabled = $('btnSaveClip').disabled = false; progress('');
+    busy = false; $('btnSaveVid').disabled = $('btnSaveClip').disabled = $('btnSaveTrim').disabled = false; progress('');
   }
 }
 async function exportClip(clip) {
@@ -2363,7 +2376,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v104';
+const APP_VER = 'v105';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
