@@ -451,6 +451,9 @@ body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, aut
 body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh; bottom: calc(var(--jogR) * 1.15 + 84px); z-index: 16; }
 body.fs.f-vslider #btnMark { position: fixed; top: auto; left: auto; right: 14px; bottom: calc(var(--jogR) * 1.15 + 20px); }
 body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
+/* «Обрізать» і ↺ — і на весь екран: «Обрізать» ліворуч від ★, ↺ ліворуч від віконця швидкості; трохи прозорі */
+body.fs.f-vslider .actions #btnTrim { position: fixed; z-index: 16; right: 72px; bottom: calc(var(--jogR) * 1.15 + 20px); }
+body.fs.f-vslider .actions #btnTrim, body.fs.f-vslider #vspeed #btnUntrim { opacity: .7; }
 /* свайп-видалення; у списках вертикальна прокрутка лишається */
 #playlist .item, #markList .item, #clipList .item { touch-action: pan-y; }
 .item.swiping { transition: none !important; position: relative; z-index: 2; }
@@ -2310,7 +2313,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v102';
+const APP_VER = 'v103';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
