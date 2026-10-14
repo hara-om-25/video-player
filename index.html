@@ -280,17 +280,17 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .jog .jogtxt { font: 700 10.5px 'Tektur', system-ui, sans-serif; fill: var(--dim); letter-spacing: .02em; }
 .jog .jogtxt .on, .jog #jogValTxt.on { fill: var(--accent); }
 #jogVal { display: none !important; }
-/* ▶ / ❚❚ посередині екрана (замість жовтого центру РП) */
+/* Статус посередині екрана (не кнопка, але зона реагує на клік — пуск/пауза):
+   ❚❚ блимає — пауза; ▶ рівно — відтворення; ▶▶ / ◀◀ — перемотка РП. Жовтий з темною обводкою, як час. */
 .bigplay { position: absolute; inset: 0; margin: auto; z-index: 3;   /* без transform — :active кнопок його перебиває */
-  width: 96px; height: 96px; border-radius: 50%; padding: 22px; color: var(--accent);
-  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
-  opacity: 0; transition: opacity .25s; }   /* схована, але її зона завжди реагує на клік */
-.bigplay svg { width: 100%; height: 100%; display: block; pointer-events: none; }
-.bigplay.show { opacity: 1; }
-.bigplay.paused { opacity: 1; animation: bigPulse 2.4s ease-in-out infinite; }
-@keyframes bigPulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
-@media (max-width: 860px) { .bigplay { width: 72px; height: 72px; padding: 16px; } }
-body:not(.f-video) .bigplay { opacity: 1; }   /* в аудіоплеєрі відео немає — кнопка видна завжди */
+  width: 96px; height: 96px; padding: 14px; color: var(--accent); background: none; border: 0; border-radius: 50%; }
+.bigplay svg { width: 100%; height: 100%; display: block; pointer-events: none; overflow: visible;
+  filter: drop-shadow(0 0 6px rgba(0,0,0,.8)); }
+.bigplay svg * { stroke: #000; stroke-width: 1.6px; stroke-linejoin: round; paint-order: stroke; }
+.bigplay, .bigplay:hover, .bigplay:active, .bigplay:focus, .bigplay:focus-visible { background: none !important; border: 0 !important; box-shadow: none !important; outline: none; -webkit-tap-highlight-color: transparent; }
+.bigplay.paused { animation: bigPulse 1.6s ease-in-out infinite; }
+@keyframes bigPulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@media (max-width: 860px) { .bigplay { width: 72px; height: 72px; padding: 10px; } }
 .speed { display: flex; align-items: center; gap: 4px; }
 .speed { gap: 0; }
 .speed .arr { border-radius: 8px 0 0 8px; }
@@ -444,7 +444,7 @@ body:not(.f-last) .actions .r1 { display: none !important; }
       <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
       <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
     </div>
-    <button id="bigPlay" class="bigplay" title="Відтворити / пауза  ( пробіл )"><svg viewBox="0 0 24 24" fill="currentColor"><g id="bigIco"></g></svg></button>
+    <button id="bigPlay" class="bigplay" title="Пауза / відтворення  ( пробіл )"><svg viewBox="0 0 24 24" fill="currentColor"><g id="bigIco"></g></svg></button>
     <button id="btnFs" class="fsbtn" title="На весь екран  ( F )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button>
     <div class="markctl ovl">
       <div class="grp">
@@ -1228,19 +1228,20 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
   <circle class="hit" r="100" fill="transparent"/>
   `;
 })();
-// ▶ / ❚❚ посередині екрана: на паузі ▶ лагідно блимає; під час відтворення ❚❚ видно лише якийсь час
-// після запуску чи дотику до відео (showBigPlay), потім ховається
-let bigT = 0;
-function showBigPlay() {
-  const b = $('bigPlay'); b.classList.add('show'); clearTimeout(bigT);
-  let rev = false; try { rev = Rev.active; } catch {}          // Rev ще може бути не створений
-  if (!audio.paused || rev) bigT = setTimeout(() => b.classList.remove('show'), 2000);
+// Статус посередині екрана: ❚❚ (блимає) — пауза, ▶ — відтворення, ▶▶ / ◀◀ — перемотка РП (shuttleDir)
+let shuttleDir = 0, isPlaying = false;
+const ICO = {
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+  ff: '<path d="M2.5 6v12l9-6z"/><path d="M12.5 6v12l9-6z"/>',
+  rew: '<path d="M21.5 6v12l-9-6z"/><path d="M11.5 6v12l-9-6z"/>',
+};
+function renderStatus() {
+  const k = shuttleDir > 0 ? 'ff' : shuttleDir < 0 ? 'rew' : isPlaying ? 'play' : 'pause';
+  const b = $('bigPlay'); b.classList.toggle('paused', k === 'pause');
+  if (b.dataset.k !== k) { b.dataset.k = k; $('bigIco').innerHTML = ICO[k]; }
 }
-function setPlayIcon(playing) {
-  const b = $('bigPlay'); b.classList.toggle('paused', !playing);
-  $('bigIco').innerHTML = playing ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>' : '<path d="M8 5.5v13l10.5-6.5z"/>';
-  showBigPlay();
-}
+function setPlayIcon(playing) { isPlaying = playing; renderStatus(); }
 setPlayIcon(false);
 $('bigPlay').addEventListener('click', togglePlay);
 // Тихе механічне клацання — на кожну поділку (3° = 1 с)
@@ -1432,12 +1433,13 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
     for (const g of svg.querySelectorAll('.jrot')) { g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`; }
     const nr = shuttleRate(jogAngle);
     if (nr !== rate) { rate = nr; applyShuttle(); }
+    if (Math.sign(rate) !== shuttleDir) { shuttleDir = Math.sign(rate); renderStatus(); }
     show();
   });
   const end = () => {
     if (last === null) return;
     last = null;
-    rate = 0; stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
+    rate = 0; shuttleDir = 0; renderStatus(); stopReverse(); if (Rev.active) Rev.stop(!wasPaused);
     audio.playbackRate = speed;
     if (wasPaused) audio.pause(); else if (audio.paused) playSafe();
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
@@ -1626,7 +1628,7 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
     if (pts.size === 1) moved = true;
     if (pts.size === 0 && !moved) {            // дотик без руху — можливо, подвійний
       const now = performance.now();
-      if (now - lastTap < 350) { lastTap = 0; setFs(!document.body.classList.contains('fs')); } else { lastTap = now; showBigPlay(); }
+      if (now - lastTap < 350) { lastTap = 0; setFs(!document.body.classList.contains('fs')); } else lastTap = now;
     }
   };
   box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
@@ -2066,7 +2068,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v76';
+const APP_VER = 'v77';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
