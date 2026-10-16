@@ -1226,12 +1226,15 @@ function renderAll() { renderPlaylist(); renderMarks(); renderClips(); renderSel
 
 $('btnAdd').onclick = async () => {
   // обрано папку в налаштуваннях — показуємо її відео у своєму вікні (Android ігнорує startIn системного вікна)
-  if (FEAT.edit) {
-    const dir = await idb.get('dir:open').catch(() => null);
-    if (dir && await dirAllowedRead(dir)) return showFolder(dir, []);
+  if (FEAT.edit && dirOpenH) {
+    if (await dirAllowedRead(dirOpenH)) return showFolder(dirOpenH, []);
+    toast('Немає доступу до папки «' + dirOpenH.name + '» — відкриваю звичайне вікно. Оберіть папку в ⚙ ще раз', 3500);
   }
   sysPick();
 };
+// обрані папки тримаємо в пам'яті, щоб дозвіл питати одразу при дотику (без очікувань перед ним)
+let dirOpenH = null;
+if (FEAT.edit) idb.get('dir:open').then(h => { dirOpenH = h || null; }).catch(() => {});
 /* «+» з обраної папки: список відео (і вкладених папок), відмічаєш — «Додати» */
 const VEXT = /\.(mp4|m4v|webm|mkv|mov|3gp|avi|mp3|m4a|aac|ogg|opus|wav|flac|amr)$/i;
 async function dirAllowedRead(dir) {
@@ -1251,7 +1254,7 @@ async function showFolder(dir, path) {
       if (h.kind === 'directory') dirs.push(h);
       else if (VEXT.test(h.name)) files.push(h);
     }
-  } catch (err) { list.innerHTML = '<div class="empty">Не вдалося прочитати папку</div>'; return; }
+  } catch (err) { list.innerHTML = '<div class="empty">Не вдалося прочитати папку: ' + esc(err && err.message || err) + '</div>'; return; }
   const byName = (a, b) => a.name.localeCompare(b.name, 'uk', { numeric: true });
   dirs.sort(byName); files.sort(byName);
   const had = new Set(tracks.map(t => t.file.name));
@@ -1313,7 +1316,7 @@ async function showSet() {
 async function pickDir(key, mode) {
   try {
     const d = await showDirectoryPicker({ id: key.replace(':', '-'), mode });
-    await idb.put(key, d); showSet();
+    await idb.put(key, d); if (key === 'dir:open') dirOpenH = d; showSet();
   } catch (err) { if (err.name !== 'AbortError') toast('Не вдалося обрати папку: ' + (err.message || err), 2500); }
 }
 $('btnSet').onclick = showSet;
@@ -2536,7 +2539,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v111';
+const APP_VER = 'v112';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
