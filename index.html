@@ -331,6 +331,18 @@ dialog {
   border-radius: 14px; padding: 16px 18px; width: min(640px, calc(100vw - 32px));
 }
 dialog::backdrop { background: rgba(0,0,0,.6); }
+/* відеоредактор: шестерня в шапці й вікно налаштувань */
+#btnSet { display: none; flex: none; width: 40px; height: 34px; padding: 4px; background: none; border: 0; color: var(--accent); }
+body.f-edit #btnSet { display: inline-block; }
+#btnSet svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+#dlgSet { width: min(440px, calc(100vw - 32px)); }
+#dlgSet .srow { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+#dlgSet .srow .sl { flex: 1; min-width: 0; font-size: 14px; }
+#dlgSet .srow .sl small { display: block; color: var(--accent2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#dlgSet .srow button { flex: none; padding: 8px 12px; font-size: 14px; }
+#dlgSet label.srow { cursor: pointer; font-size: 14px; }
+#dlgSet label.srow input { width: 24px; height: 24px; flex: none; accent-color: var(--accent); }
+#dlgSet .snote { margin-top: 12px; font-size: 12px; color: var(--dim); }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
 dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
@@ -444,7 +456,7 @@ body.f-vslider #vspeed.drag #btnUntrim { visibility: hidden; }
 /* плейлист-дерево: обрізані шматки — під своїм файлом, зі зміщенням */
 .item .tog { flex: none; width: 1.1em; text-align: center; color: var(--accent); font-size: 14px; cursor: pointer; }
 .item.sub { padding-left: 30px; gap: 4px; }
-.item.sub .name { font-size: .85em; text-overflow: clip; }
+.item.sub .name { font-size: .85em; text-overflow: clip; white-space: normal; line-height: 1.25; }
 .item.sub .num { min-width: 0; color: var(--accent); }
 @media (max-width: 860px) { body.f-vslider .actions .r2 { bottom: 14px; } }
 body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; align-self: flex-start; margin: 0; }   /* 60/30/10 — біля лівого краю панелі, якомога нижче */
@@ -489,6 +501,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button>
   <input type="file" id="restoreInput" accept=".json,application/json" hidden>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
+  <button id="btnSet" title="Налаштування"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.4"/></svg></button>
   <button class="ver" id="ver" title="Скопіювати посилання на плеєр"></button>
   </div>
 </header>
@@ -616,6 +629,15 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <li>Ярлик зі <b>значком Chrome</b> на іконці («Створити ярлик») завжди відкривається в браузері — його краще видалити.</li>
   </ol>
   <div class="row"><button class="accent" id="dlgInfoOk">Зрозуміло</button></div>
+</dialog>
+
+<dialog id="dlgSet">
+  <h3>Налаштування</h3>
+  <div class="srow"><span class="sl">Папка, яку відкриває «+»<small id="setOpenName">не обрано</small></span><button class="accent" id="setOpenBtn">Обрати</button></div>
+  <div class="srow"><span class="sl">Папка для збережених шматків<small id="setSaveName">не обрано — у «Завантаження»</small></span><button class="accent" id="setSaveBtn">Обрати</button></div>
+  <label class="srow"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
+  <div class="snote" id="setNote"></div>
+  <div class="row"><button class="accent" id="setOk">Готово</button></div>
 </dialog>
 
 <div class="toast" id="toast"></div>
@@ -1045,7 +1067,7 @@ async function restoreSession() {
   if (!ses || !ses.keys || !ses.keys.length) return;
   for (const key of ses.keys) {
     const sub = SUBS && subOf(key);
-    if (sub) { const p = tracks.find(t => t.key === sub.parent); if (p) tracks.push(mkSub(p, sub.start)); continue; }
+    if (sub) { const p = tracks.find(t => t.key === sub.parent); if (p) tracks.push(mkSub(p, sub.start, sub.end)); continue; }
     try {
       const f = await idb.get(key);
       if (f) tracks.push({ file: f, url: URL.createObjectURL(f), key });
@@ -1073,22 +1095,22 @@ function addFiles(files) {
    під своїм файлом (той самий файл, починається з місця обрізки; свої мітки й позиція).
    Ключ — <ключ файлу>#<секунда>, тож після перезапуску відновлюється з того ж файлу. */
 const SUBS = FEAT.trim && !FEAT.clips;
-const subKey = (key, t) => key + '#' + t.toFixed(1);
-function subOf(key) { const m = /^(.*\|\d+)#(\d+(?:\.\d+)?)$/.exec(key); return m && { parent: m[1], start: +m[2] }; }
-function mkSub(p, t) { return { file: p.file, url: p.url, key: subKey(p.key, t), parent: p.key, start: t }; }
+const subKey = (key, t, e) => key + '#' + t.toFixed(1) + (e ? '-' + e.toFixed(1) : '');
+function subOf(key) { const m = /^(.*\|\d+)#(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?$/.exec(key); return m && { parent: m[1], start: +m[2], end: m[3] ? +m[3] : 0 }; }
+function mkSub(p, t, e) { return { file: p.file, url: p.url, key: subKey(p.key, t, e), parent: p.key, start: t, end: e || 0 }; }
 const rootOf = t => (t.parent && tracks.find(x => x.key === t.parent)) || t;
-function addSub(t) {                       // повертає індекс рядка-шматка
-  const root = rootOf(tracks[cur]), key = subKey(root.key, t);
+function addSub(t, e) {                    // повертає індекс рядка-шматка; e — кінець (★), 0 — до кінця файлу
+  const root = rootOf(tracks[cur]), key = subKey(root.key, t, e);
   let i = tracks.findIndex(x => x.key === key);
   if (i >= 0) return i;
   const d = load(key);
-  d.trim = t; d.pos = t;
-  d.marks = data.marks.filter(m => m.t >= t).map(m => Object.assign({}, m));   // мітки шматка — ті, що в ньому
+  d.trim = t; d.pos = t; if (e) d.end = e;
+  d.marks = data.marks.filter(m => m.t >= t && (!e || m.t <= e)).map(m => Object.assign({}, m));   // мітки шматка — ті, що в ньому
   d.name = root.file.name; d.size = root.file.size;
   try { localStorage.setItem(key, JSON.stringify(d)); } catch {}
   i = tracks.indexOf(root) + 1;
   while (i < tracks.length && tracks[i].parent === root.key && tracks[i].start < t) i++;
-  tracks.splice(i, 0, mkSub(root, t));
+  tracks.splice(i, 0, mkSub(root, t, e));
   root.closed = false;
   if (i <= cur) cur++;
   return i;
@@ -1108,7 +1130,7 @@ function renderPlaylist() {
     const badge = (n ? '★' + n : '') + (c ? ' ✂' + c : '');
     if (t.parent) return `<div class="item sub ${i === cur ? 'active' : ''}" data-i="${i}">
       <span class="num">↳</span>
-      <span class="name" title="${esc(t.file.name)} з ${hms(t.start)}">${hms(t.start)}</span>
+      <span class="name" title="${esc(t.file.name)} з ${hms(t.start)}${t.end ? ' до ' + hms(t.end) : ''}">${hms(t.start)}${t.end ? '<br>–' + hms(t.end) : ''}</span>
       <span class="badge">${badge}</span>
     </div>`;
     const kids = tracks.some(x => x.parent === t.key);
@@ -1182,7 +1204,50 @@ function openTrack(i, autoplay) {
 }
 function renderAll() { renderPlaylist(); renderMarks(); renderClips(); renderSel(); renderBar(); updateTime(); }
 
-$('btnAdd').onclick = () => $('fileInput').click();
+$('btnAdd').onclick = async () => {
+  // відеоредактор: вікно вибору файлів одразу відкривається у вибраній папці
+  if (FEAT.edit && window.showOpenFilePicker) {
+    const exts = $('fileInput').accept.split(',').filter(x => x.startsWith('.'));
+    const opt = { multiple: true, types: [{ description: 'Відео', accept: { 'video/*': exts } }] };
+    const dir = await idb.get('dir:open').catch(() => null);
+    try {
+      let hs;
+      try { hs = await showOpenFilePicker(dir ? Object.assign({ startIn: dir }, opt) : opt); }
+      catch (err) { if (err.name === 'AbortError') return; hs = await showOpenFilePicker(opt); }
+      return addFiles(await Promise.all(hs.map(h => h.getFile())));
+    } catch (err) { if (err.name === 'AbortError') return; }
+  }
+  $('fileInput').click();
+};
+/* ── налаштування відеоредактора: папки для «+» і для збережених шматків, «★ — кінець шматка» ── */
+const editCfg = Object.assign({ starEnd: false }, getSetting('editcfg', {}));
+async function dirAllowed(dir, ask) {
+  try {
+    if (await dir.queryPermission({ mode: 'readwrite' }) === 'granted') return true;
+    return ask && await dir.requestPermission({ mode: 'readwrite' }) === 'granted';
+  } catch { return false; }
+}
+async function showSet() {
+  const o = await idb.get('dir:open').catch(() => null), sv = await idb.get('dir:save').catch(() => null);
+  $('setOpenName').textContent = o ? o.name : 'не обрано';
+  $('setSaveName').textContent = sv ? sv.name : 'не обрано — у «Завантаження»';
+  $('setStar').checked = !!editCfg.starEnd;
+  const can = !!window.showDirectoryPicker;
+  $('setOpenBtn').disabled = $('setSaveBtn').disabled = !can;
+  $('setNote').textContent = can ? '' : 'Цей браузер не дає обирати папки: «+» відкриває звичайне вікно вибору, а шматки зберігаються в «Завантаження».';
+  if (!$('dlgSet').open) $('dlgSet').showModal();
+}
+async function pickDir(key, mode) {
+  try {
+    const d = await showDirectoryPicker({ id: key.replace(':', '-'), mode });
+    await idb.put(key, d); showSet();
+  } catch (err) { if (err.name !== 'AbortError') toast('Не вдалося обрати папку: ' + (err.message || err), 2500); }
+}
+$('btnSet').onclick = showSet;
+$('setOpenBtn').onclick = () => pickDir('dir:open', 'read');
+$('setSaveBtn').onclick = () => pickDir('dir:save', 'readwrite');
+$('setStar').onchange = e => { editCfg.starEnd = e.target.checked; setSetting('editcfg', editCfg); };
+$('setOk').onclick = () => $('dlgSet').close();
 // Рядки «Останні» і «Обрізать ↺ ± сек» піднімаються рівно настільки, щоб регулятор
 // у куті (коло радіусом R з центром у правому нижньому куті вікна) їх не перекривав.
 function layoutActions() {
@@ -1232,19 +1297,25 @@ document.querySelectorAll('[data-last]').forEach(b => b.onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   // стан не міняється: на паузі — лише перехід, під час відтворення — відтворення далі
   const playing = !audio.paused || Rev.active;
-  clipStopAt = null; if (Rev.active) Rev.stop(false); seek(Math.max(T0(), dur() - +b.dataset.last));
+  clipStopAt = null; if (Rev.active) Rev.stop(false); seek(Math.max(T0(), T1() - +b.dataset.last));
   if (playing) resumePlay();
 });
 $('btnTrim').onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
-  if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
+  // відеоредактор, «★ — кінець»: шматок від курсора до найближчої ★ після нього
+  let e = 0;
+  if (SUBS && FEAT.edit && editCfg.starEnd) {
+    if (!data.marks.length) return toast('Поставте ★ там, де шматок має закінчитися', 2500);
+    e = data.marks.map(m => m.t).filter(x => x > t + 0.5 && x <= T1()).sort((a, b) => a - b)[0] || 0;
+    if (!e) return toast('★ стоїть перед курсором — кінець шматка (★) має бути після курсора', 3000);
+  } else if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
   if (SUBS) {                       // шматок — у плейлист під файлом, і граємо далі вже його
     const playing = !audio.paused || Rev.active;
     if (Rev.active) Rev.stop(false);
     data.pos = t; save();
-    openTrack(addSub(t), playing); saveSession();
-    return toast('Шматок з ' + hms(t) + ' — у плейлисті під файлом. ↺ — прибрати');
+    openTrack(addSub(t, e), playing); saveSession();
+    return toast('Шматок ' + hms(t) + (e ? '–' + hms(e) : '') + ' — у плейлисті під файлом. ↺ — прибрати', 2000);
   }
   data.trim = t;
   // шматок, що лишився (від обрізки до кінця), одразу йде у «Фрагменти» — можна зберегти ⬇ / 🎬
@@ -1283,11 +1354,18 @@ if (FEAT.vslider) {
   $('playlist').after($('progress'));          // «Фрагментів» немає — хід запису видно під плейлистом
 }
 // «Зберегти»: шматок від обрізки до кінця — у файл (записується в реальному часі, як ⬇ВІДЕО)
-$('btnSaveTrim').onclick = () => {
+$('btnSaveTrim').onclick = async () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
-  if (!T0()) return toast('Спочатку натисніть «Обрізати» там, звідки має починатися шматок', 2000);
+  if (!tracks[cur].parent && !T0()) return toast('Спочатку натисніть «Обрізати» там, звідки має починатися шматок', 2000);
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
-  exportVideo({ name: base + ' з ' + hms(T0()).replace(/:/g, '-'), start: T0(), end: dur() });
+  const name = base + ' з ' + hms(T0()).replace(/:/g, '-') + (T1() < dur() ? ' до ' + hms(T1()).replace(/:/g, '-') : '');
+  // відеоредактор: у вибрану папку (дозвіл питаємо зараз, поки є дотик; після запису його вже не дадуть)
+  let dir = null;
+  if (FEAT.edit) {
+    dir = await idb.get('dir:save').catch(() => null) || null;
+    if (dir && !await dirAllowed(dir, true)) { toast('Немає дозволу писати в «' + dir.name + '» — збережу в «Завантаження»', 2500); dir = null; }
+  }
+  exportVideo({ name, start: T0(), end: T1() }, dir);
 };
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
@@ -1374,10 +1452,11 @@ audio.addEventListener('error', () => {
   toast('Файл не відтворюється (код ' + err.code + ')', 2500);
 });
 const T0 = () => (FEAT.trim && data && data.trim) || 0;     // початок після «Обрізать»
-const span = () => Math.max(0.001, dur() - T0());
+const T1 = () => (FEAT.trim && data && data.end && data.end < dur()) ? data.end : dur();   // кінець шматка (★ — кінець)
+const span = () => Math.max(0.001, T1() - T0());
 function seek(t) {
   if (!hasTrack() || !dur()) return;
-  audio.currentTime = Math.max(T0(), Math.min(dur() - 0.05, t));
+  audio.currentTime = Math.max(T0(), Math.min(T1() - 0.05, t));
   updateTime();
 }
 const skip = s => seek(audio.currentTime + s);
@@ -1688,6 +1767,7 @@ audio.onended = () => {
 };
 audio.ontimeupdate = () => {
   if (T0() && audio.currentTime < T0() - 0.05 && !Rev.active) audio.currentTime = T0();
+  if (T1() < dur() && audio.currentTime >= T1() && !Rev.active) { audio.pause(); audio.currentTime = T1(); }   // шматок до ★ скінчився
   if (clipStopAt != null && audio.currentTime >= clipStopAt) { audio.pause(); clipStopAt = null; }
   updateTime();
 };
@@ -1697,7 +1777,7 @@ function updateTime(tt) {
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
   $('tCur').textContent = hms(t - T0());
-  $('tDur').textContent = hms(d - T0());
+  $('tDur').textContent = hms(T1() - T0());
   if (data && Date.now() - lastPosSave > 5000 && !audio.paused) { data.pos = t; save(); lastPosSave = Date.now(); }
 }
 setInterval(() => { if (!audio.paused) updateTime(); }, 250);
@@ -2218,7 +2298,7 @@ function toInt16(f32, from, to) {
 }
 /* ── фрагмент відео: програється від [ до ] і записується з екрана плеєра ──
    (MediaRecorder, у реальному часі; MP4, якщо браузер уміє, інакше WebM) */
-async function exportVideo(clip) {
+async function exportVideo(clip, dir) {
   if (busy) return toast('Зачекайте, йде збереження…');
   const v = audio, cap = v.captureStream || v.mozCaptureStream;
   if (!cap || !window.MediaRecorder) return toast('Цей браузер не вміє записувати відео');
@@ -2250,12 +2330,19 @@ async function exportVideo(clip) {
     v.pause(); rec.stop(); await stopped;
     const ext = (rec.mimeType || mime).includes('mp4') ? 'mp4' : 'webm';
     const blob = new Blob(chunks, { type: rec.mimeType || mime || 'video/webm' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = clip.name.replace(/[\\/:*?"<>|]+/g, '_') + '.' + ext;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-    toast((why === 'paused' ? 'Запис зупинено, збережено частину: ' : 'Збережено: ') + a.download);
+    const fname = clip.name.replace(/[\\/:*?"<>|]+/g, '_') + '.' + ext;
+    if (dir) {                                  // у вибрану в налаштуваннях папку
+      const fh = await dir.getFileHandle(fname, { create: true }), w = await fh.createWritable();
+      await w.write(blob); await w.close();
+      toast((why === 'paused' ? 'Запис зупинено, збережено частину в «' : 'Збережено в «') + dir.name + '»: ' + fname, 3000);
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      toast((why === 'paused' ? 'Запис зупинено, збережено частину: ' : 'Збережено: ') + fname);
+    }
   } catch (err) {
     console.error(err);
     toast('Не вдалося записати відео: ' + (err && err.message || err));
@@ -2376,7 +2463,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v108';
+const APP_VER = 'v109';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
