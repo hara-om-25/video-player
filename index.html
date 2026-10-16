@@ -342,6 +342,20 @@ body.f-edit #btnSet { display: inline-block; }
 #dlgSet .srow button { flex: none; padding: 8px 12px; font-size: 14px; }
 #dlgSet label.srow { cursor: pointer; font-size: 14px; }
 #dlgSet label.srow input { width: 24px; height: 24px; flex: none; accent-color: var(--accent); }
+/* вікно «+»: відео з обраної папки */
+#dlgFiles { width: min(560px, calc(100vw - 32px)); }
+#dlgFiles .dflist { max-height: 60vh; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+#dlgFiles .df { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; background: var(--surf2); cursor: pointer; font-size: 15px; }
+#dlgFiles .df .ck { flex: none; width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; color: #111; font-weight: 700; }
+#dlgFiles .df.on .ck { background: var(--accent); }
+#dlgFiles .df.on .ck::after { content: '✓'; }
+#dlgFiles .df .fn { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#dlgFiles .df .fs { flex: none; color: var(--dim); font-size: 13px; }
+#dlgFiles .df.dir .fn { color: var(--accent2); }
+#dlgFiles .df.dir .ck { border: 0; color: var(--accent); }
+#dlgFiles .df.dir .ck::after { content: '▸'; }
+#dlgFiles .df.had { opacity: .5; }
+#dlgFiles .row { flex-wrap: wrap; }
 #dlgSet .snote { margin-top: 12px; font-size: 12px; color: var(--dim); }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
@@ -638,6 +652,12 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <label class="srow"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
   <div class="snote" id="setNote"></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
+</dialog>
+
+<dialog id="dlgFiles">
+  <h3 id="dfTitle"></h3>
+  <div class="dflist" id="dfList"></div>
+  <div class="row"><button id="dfOther">Інша папка…</button><button id="dfCancel">Скасувати</button><button class="accent" id="dfAdd">Додати</button></div>
 </dialog>
 
 <div class="toast" id="toast"></div>
@@ -1205,7 +1225,60 @@ function openTrack(i, autoplay) {
 function renderAll() { renderPlaylist(); renderMarks(); renderClips(); renderSel(); renderBar(); updateTime(); }
 
 $('btnAdd').onclick = async () => {
-  // відеоредактор: вікно вибору файлів одразу відкривається у вибраній папці
+  // обрано папку в налаштуваннях — показуємо її відео у своєму вікні (Android ігнорує startIn системного вікна)
+  if (FEAT.edit) {
+    const dir = await idb.get('dir:open').catch(() => null);
+    if (dir && await dirAllowedRead(dir)) return showFolder(dir, []);
+  }
+  sysPick();
+};
+/* «+» з обраної папки: список відео (і вкладених папок), відмічаєш — «Додати» */
+const VEXT = /\.(mp4|m4v|webm|mkv|mov|3gp|avi|mp3|m4a|aac|ogg|opus|wav|flac|amr)$/i;
+async function dirAllowedRead(dir) {
+  try {
+    if (await dir.queryPermission({ mode: 'read' }) === 'granted') return true;
+    return await dir.requestPermission({ mode: 'read' }) === 'granted';
+  } catch { return false; }
+}
+async function showFolder(dir, path) {
+  const list = $('dfList'), d = $('dlgFiles');
+  $('dfTitle').textContent = [dir.name, ...path.map(p => p.name)].join(' › ');
+  list.innerHTML = '<div class="empty">Читаю папку…</div>';
+  if (!d.open) d.showModal();
+  const here = path.length ? path[path.length - 1] : dir, dirs = [], files = [];
+  try {
+    for await (const h of here.values()) {
+      if (h.kind === 'directory') dirs.push(h);
+      else if (VEXT.test(h.name)) files.push(h);
+    }
+  } catch (err) { list.innerHTML = '<div class="empty">Не вдалося прочитати папку</div>'; return; }
+  const byName = (a, b) => a.name.localeCompare(b.name, 'uk', { numeric: true });
+  dirs.sort(byName); files.sort(byName);
+  const had = new Set(tracks.map(t => t.file.name));
+  const sel = new Set();
+  list.innerHTML = (path.length ? '<div class="df dir" data-up="1"><span class="ck"></span><span class="fn">.. назад</span></div>' : '')
+    + dirs.map((h, i) => `<div class="df dir" data-d="${i}"><span class="ck"></span><span class="fn">${esc(h.name)}</span></div>`).join('')
+    + files.map((h, i) => `<div class="df ${had.has(h.name) ? 'had' : ''}" data-f="${i}"><span class="ck"></span><span class="fn">${esc(h.name)}</span><span class="fs" data-fs="${i}"></span></div>`).join('')
+    || '<div class="empty">У цій папці немає відео</div>';
+  files.forEach((h, i) => h.getFile().then(f => { const e = list.querySelector(`[data-fs="${i}"]`); if (e) e.textContent = (f.size / 1048576).toFixed(1) + ' МБ'; }).catch(() => {}));
+  const upd = () => { $('dfAdd').textContent = sel.size ? 'Додати (' + sel.size + ')' : 'Додати'; };
+  upd();
+  list.onclick = e => {
+    const r = e.target.closest('.df'); if (!r) return;
+    if (r.dataset.up) return showFolder(dir, path.slice(0, -1));
+    if (r.dataset.d != null) return showFolder(dir, path.concat(dirs[+r.dataset.d]));
+    const i = +r.dataset.f; if (sel.has(i)) sel.delete(i); else sel.add(i);
+    r.classList.toggle('on', sel.has(i)); upd();
+  };
+  $('dfAdd').onclick = async () => {
+    if (!sel.size) return toast('Відмітьте файли');
+    d.close();
+    addFiles(await Promise.all([...sel].sort((a, b) => a - b).map(i => files[i].getFile())));
+  };
+  $('dfCancel').onclick = () => d.close();
+  $('dfOther').onclick = () => { d.close(); sysPick(); };
+}
+async function sysPick() {
   if (FEAT.edit && window.showOpenFilePicker) {
     const exts = $('fileInput').accept.split(',').filter(x => x.startsWith('.'));
     const opt = { multiple: true, types: [{ description: 'Відео', accept: { 'video/*': exts } }] };
@@ -2463,7 +2536,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v110';
+const APP_VER = 'v111';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
