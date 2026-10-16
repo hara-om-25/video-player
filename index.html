@@ -488,7 +488,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 </style>
 </head>
-<body class="f-video f-trim f-last f-vslider app-video">
+<body class="f-video f-trim f-last f-vslider f-edit app-video">
 
 <header>
   <div class="hc1">
@@ -971,7 +971,7 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
    Файл ідентифікується за назвою та розміром — тому при повторному
    відкритті того самого файлу мітки й фрагменти підтягуються автоматично. */
 // Можливості цього застосунку (підставляє build.py): аудіоплеєр, відеоплеєр чи відеоредактор
-const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "db": "markplayer-video", "session": "session.video"};
+const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "edit": true, "db": "markplayer-video", "session": "session.video"};
 const PREFIX = 'markplayer:';
 const fileKey = f => PREFIX + f.name + '|' + f.size;
 function load(key) {
@@ -2463,7 +2463,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v109';
+const APP_VER = 'v110';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
