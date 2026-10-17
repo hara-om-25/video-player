@@ -1641,10 +1641,175 @@ const jogClick = (() => {
    відео (#revVideo) програє шматок ~1 с перед поточним місцем, кадри зберігаються
    (ImageBitmap) і показуються на #revCanvas у зворотному порядку. Поки показується
    один шматок, готується наступний. Звук на цей час вимкнено. */
+/* ── відеодоріжка MP4/MOV для WebCodecs: кодек, зсуви кадрів, час показу, ключові кадри (групи GOP) ── */
+const VTrack = (() => {
+  const bytes = async (file, a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer());
+  const u32 = (d, i) => ((d[i] << 24) >>> 0) + (d[i + 1] << 16) + (d[i + 2] << 8) + d[i + 3];
+  const i32 = (d, i) => u32(d, i) | 0;
+  const typ = (d, i) => String.fromCharCode(d[i], d[i + 1], d[i + 2], d[i + 3]);
+  const hx = v => v.toString(16).toUpperCase().padStart(2, '0');
+  const kids = (d, a, b) => {
+    const out = [];
+    for (let p = a; p + 8 <= b;) {
+      let sz = u32(d, p); const t = typ(d, p + 4); let hs = 8;
+      if (sz === 1) { sz = u32(d, p + 8) * 4294967296 + u32(d, p + 12); hs = 16; }
+      if (sz < 8 || p + sz > b) break;
+      out.push({ t, a: p + hs, b: p + sz }); p += sz;
+    }
+    return out;
+  };
+  const find = (d, a, b, path) => {
+    let cur = [{ a, b }];
+    for (const name of path) { const nx = []; for (const c of cur) nx.push(...kids(d, c.a, c.b).filter(k => k.t === name)); cur = nx; if (!cur.length) return []; }
+    return cur;
+  };
+  function codecOf(d, ent) {          // рядок кодека й description для VideoDecoder.configure
+    const fmt = typ(d, ent.a - 4), ch = kids(d, ent.a + 78, ent.b), box = n => ch.find(k => k.t === n);
+    let c;
+    if ((fmt === 'avc1' || fmt === 'avc3') && (c = box('avcC')))
+      return { codec: fmt + '.' + hx(d[c.a + 1]) + hx(d[c.a + 2]) + hx(d[c.a + 3]), description: d.slice(c.a, c.b) };
+    if ((fmt === 'hvc1' || fmt === 'hev1') && (c = box('hvcC'))) {
+      const b1 = d[c.a + 1], sp = b1 >> 6, tier = (b1 >> 5) & 1, prof = b1 & 31;
+      let comp = u32(d, c.a + 2), rev = 0; for (let i = 0; i < 32; i++) { rev = (rev << 1) | (comp & 1); comp >>>= 1; }
+      const cons = []; for (let i = 0; i < 6; i++) cons.push(d[c.a + 6 + i]);
+      while (cons.length && !cons[cons.length - 1]) cons.pop();
+      return { codec: fmt + '.' + (sp ? 'ABC'[sp - 1] : '') + prof + '.' + (rev >>> 0).toString(16).toUpperCase() + '.' + (tier ? 'H' : 'L') + d[c.a + 12]
+        + cons.map(x => '.' + x.toString(16).toUpperCase()).join(''), description: d.slice(c.a, c.b) };
+    }
+    if (fmt === 'vp09' && (c = box('vpcC'))) {
+      const v = c.a + 4, pad = x => String(x).padStart(2, '0');
+      return { codec: 'vp09.' + pad(d[v]) + '.' + pad(d[v + 1]) + '.' + pad(d[v + 2] >> 4) };
+    }
+    if (fmt === 'av01' && (c = box('av1C'))) {
+      const b1 = d[c.a + 1], b2 = d[c.a + 2], depth = (b2 & 0x40) ? ((b2 & 0x20) ? 12 : 10) : 8;
+      return { codec: 'av01.' + (b1 >> 5) + '.' + String(b1 & 31).padStart(2, '0') + ((b2 & 0x80) ? 'H' : 'M') + '.' + String(depth).padStart(2, '0'), description: d.slice(c.a, c.b) };
+    }
+    return null;
+  }
+  async function parse(file) {
+    let pos = 0, moov = null;
+    while (pos + 8 <= file.size) {
+      const h = await bytes(file, pos, pos + 16);
+      let size = u32(h, 0); const t = typ(h, 4);
+      if (size === 1) size = u32(h, 8) * 4294967296 + u32(h, 12); else if (size === 0) size = file.size - pos;
+      if (size < 8) break;
+      if (t === 'moov') { moov = await bytes(file, pos, pos + size); break; }
+      pos += size;
+    }
+    if (!moov) return null;
+    const d = moov;
+    for (const trak of find(d, 8, d.length, ['trak'])) {
+      const hdlr = find(d, trak.a, trak.b, ['mdia', 'hdlr'])[0];
+      if (!hdlr || typ(d, hdlr.a + 8) !== 'vide') continue;
+      const mdhd = find(d, trak.a, trak.b, ['mdia', 'mdhd'])[0];
+      const ts = d[mdhd.a] === 1 ? u32(d, mdhd.a + 20) : u32(d, mdhd.a + 12);
+      let shift = 0;                                   // edit list: з якого місця доріжки починається показ
+      const elst = find(d, trak.a, trak.b, ['edts', 'elst'])[0];
+      if (elst) {
+        const v1 = d[elst.a] === 1, ne = u32(d, elst.a + 4);
+        for (let e = 0, q = elst.a + 8; e < ne; e++, q += v1 ? 20 : 12) {
+          const mt = v1 ? u32(d, q + 8) * 4294967296 + u32(d, q + 12) : i32(d, q + 4);
+          if (mt >= 0) { shift = mt; break; }
+        }
+      }
+      const stbl = find(d, trak.a, trak.b, ['mdia', 'minf', 'stbl'])[0];
+      const box = n => kids(d, stbl.a, stbl.b).find(k => k.t === n);
+      const stsd = box('stsd'), ent = kids(d, stsd.a + 8, stsd.b)[0];
+      const cc = ent && codecOf(d, ent);
+      if (!cc) return null;
+      const stsz = box('stsz'), fixed = u32(d, stsz.a + 4), n = u32(d, stsz.a + 8);
+      const len = new Uint32Array(n); for (let k = 0; k < n; k++) len[k] = fixed || u32(d, stsz.a + 12 + 4 * k);
+      const stco = box('stco') || box('co64'), big = stco.t === 'co64', nc = u32(d, stco.a + 4);
+      const chunkOff = k => big ? u32(d, stco.a + 8 + 8 * k) * 4294967296 + u32(d, stco.a + 12 + 8 * k) : u32(d, stco.a + 8 + 4 * k);
+      const stsc = box('stsc'), ne = u32(d, stsc.a + 4), off = new Float64Array(n);
+      for (let e = 0, sI = 0; e < ne; e++) {
+        const first = u32(d, stsc.a + 8 + 12 * e), spc = u32(d, stsc.a + 12 + 12 * e);
+        const last = e + 1 < ne ? u32(d, stsc.a + 20 + 12 * e) - 1 : nc;
+        for (let c = first; c <= last && sI < n; c++) { let o = chunkOff(c - 1); for (let j = 0; j < spc && sI < n; j++) { off[sI] = o; o += len[sI]; sI++; } }
+      }
+      const dts = new Float64Array(n), du = new Float64Array(n);
+      const stts = box('stts'), nt = u32(d, stts.a + 4);
+      for (let e = 0, k = 0, acc = 0; e < nt; e++) {
+        const cnt = u32(d, stts.a + 8 + 8 * e), dl = u32(d, stts.a + 12 + 8 * e);
+        for (let j = 0; j < cnt && k < n; j++) { dts[k] = acc; du[k++] = dl; acc += dl; }
+      }
+      const pts = new Float64Array(n);                 // час показу, с
+      const ctts = box('ctts');
+      if (ctts) {
+        const v1 = d[ctts.a] === 1, nct = u32(d, ctts.a + 4);
+        for (let e = 0, k = 0; e < nct; e++) {
+          const cnt = u32(d, ctts.a + 8 + 8 * e), o = v1 ? i32(d, ctts.a + 12 + 8 * e) : u32(d, ctts.a + 12 + 8 * e);
+          for (let j = 0; j < cnt && k < n; j++, k++) pts[k] = dts[k] + o;
+        }
+      } else pts.set(dts);
+      for (let k = 0; k < n; k++) pts[k] = (pts[k] - shift) / ts;
+      const stss = box('stss'); let keys;
+      if (stss) { const nk = u32(d, stss.a + 4); keys = []; for (let k = 0; k < nk; k++) keys.push(u32(d, stss.a + 8 + 4 * k) - 1); }
+      else keys = Array.from({ length: Math.ceil(n / 30) }, (_, k) => k * 30);
+      const gops = keys.map((s0, g) => {
+        const e0 = g + 1 < keys.length ? keys[g + 1] : n; let a = Infinity;
+        for (let k = s0; k < e0; k++) a = Math.min(a, pts[k]);
+        return { s: s0, e: e0, a };
+      });
+      for (let g = 0; g < gops.length; g++) gops[g].b = g + 1 < gops.length ? gops[g + 1].a : Infinity;
+      return Object.assign(cc, { ts, n, off, len, pts, du, gops });
+    }
+    return null;
+  }
+  const cache = new Map();
+  return { get: (key, file) => { if (!cache.has(key)) cache.set(key, parse(file).catch(() => null)); return cache.get(key); }, bytes };
+})();
 const Rev = (() => {
   const cv = $('revCanvas'), hv = $('revVideo'), CH = 1.5;
   const R = { active: false, rate: 1, supported: 'requestVideoFrameCallback' in hv && 'createImageBitmap' in window };
   let cursor = 0, chunks = [], loading = null, raf = 0, lastTs = 0, gen = 0, ctx = null, W = 0, H = 0;
+  /* WebCodecs: група кадрів (від ключового до наступного) розпаковується напряму з файлу — швидко й без
+     другого відеоплеєра; кадри зменшуються до розміру екрана. Коли розпаковка не встигає за швидкістю —
+     показуємо лише ключові кадри. Немає WebCodecs / не MP4 / кодек не підтримано — старий спосіб (hv). */
+  let wc = null, keyOnly = false, lastRatio = 0;
+  async function wcInit(t) {
+    if (!window.VideoDecoder || !t) return null;
+    const vt = await VTrack.get(t.key, t.file);
+    if (!vt) return null;
+    const cfg = { codec: vt.codec, hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true };
+    if (vt.description) cfg.description = vt.description;
+    try { if (!(await VideoDecoder.isConfigSupported(cfg)).supported) { delete cfg.hardwareAcceleration; if (!(await VideoDecoder.isConfigSupported(cfg)).supported) return null; } }
+    catch { return null; }
+    let sink = null, failed = false;
+    const dec = new VideoDecoder({
+      output: f => { if (sink) sink(f); else f.close(); },
+      error: () => { failed = true; },
+    });
+    dec.configure(cfg);
+    return { vt, dec, setSink: fn => { sink = fn; }, failed: () => failed };
+  }
+  const gopAt = (vt, t) => { let lo = 0, hi = vt.gops.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (vt.gops[m].a <= t + 1e-6) lo = m; else hi = m - 1; } return lo; };
+  async function wcDecode(g, myGen) {
+    const { vt, dec } = wc, G = vt.gops[g], last = keyOnly ? G.s + 1 : G.e;
+    const t0 = performance.now();
+    const a = vt.off[G.s]; let b = a;
+    for (let k = G.s; k < last; k++) b = Math.max(b, vt.off[k] + vt.len[k]);
+    const buf = await VTrack.bytes(tracks[cur].file, a, b);
+    const frames = [], jobs = [];
+    wc.setSink(f => {
+      const t = f.timestamp / 1e6;
+      jobs.push(createImageBitmap(f, { resizeWidth: W, resizeHeight: H }).then(bmp => { frames.push({ t, bmp }); }).catch(() => {}).finally(() => f.close()));
+    });
+    try {
+      for (let k = G.s; k < last; k++) {
+        if (myGen !== gen) break;
+        const o = vt.off[k] - a;
+        dec.decode(new EncodedVideoChunk({ type: k === G.s ? 'key' : 'delta', timestamp: Math.round(vt.pts[k] * 1e6), duration: Math.round(vt.du[k] / vt.ts * 1e6), data: buf.subarray(o, o + vt.len[k]) }));
+      }
+      await dec.flush();
+    } catch {}
+    await Promise.all(jobs);
+    frames.sort((x, y) => x.t - y.t);
+    if (!keyOnly) lastRatio = (performance.now() - t0) / 1000 / Math.max(0.05, Math.min(G.b, dur()) - G.a);
+    return { a: Math.max(T0(), G.a), b: G.b, g, frames };
+  }
+  // чи встигає розпаковка: частка часу на групу × швидкість; із запасом
+  const pickMode = () => { if (!keyOnly && lastRatio * R.rate > 0.85) keyOnly = true; else if (keyOnly && lastRatio * R.rate < 0.5) keyOnly = false; };
   const seekHv = t => new Promise(r => { const done = () => r(); hv.addEventListener('seeked', done, { once: true }); hv.currentTime = Math.max(0, t); setTimeout(done, 2000); });
   // кадри відрізка [a, b], за зростанням часу
   async function capture(a, b, myGen) {
@@ -1673,6 +1838,12 @@ const Rev = (() => {
   const prefetch = () => {
     const first = chunks[0];
     if (loading || !first || first.a <= T0()) return;
+    if (wc) {
+      if (first.g <= 0) return;
+      const g = gen; pickMode();
+      loading = wcDecode(first.g - 1, g).then(c => { if (g === gen) chunks.unshift(c); else c.frames.forEach(f => f.bmp.close()); loading = null; });
+      return;
+    }
     const a = Math.max(T0(), first.a - CH), b = first.a, g = gen;
     loading = capture(a, b, g).then(c => { if (g === gen) chunks.unshift(c); else c.frames.forEach(f => f.bmp.close()); loading = null; });
   };
@@ -1691,14 +1862,14 @@ const Rev = (() => {
     updateTime(cursor);
     // звільняємо пам'ять від уже показаних шматків
     while (chunks.length > 1 && chunks[chunks.length - 1].a > cursor + 0.1) chunks.pop().frames.forEach(f => f.bmp.close());
-    if (cursor - first.a < CH * 1.9) prefetch();   // наступний шматок — заздалегідь
+    if (wc ? (cursor - first.a < (keyOnly ? 4 : 1.5) * Math.max(0.3, first.b - first.a)) : cursor - first.a < CH * 1.9) prefetch();   // наступний шматок — заздалегідь
     if (cursor <= T0() + 0.001 && first.a <= T0()) { R.stop(false); }
   }
   R.start = async rate => {
     R.active = true; R.rate = rate; gen++;
     const g = gen;
     cursor = audio.currentTime; lastTs = 0;
-    const box = $('vidbox').getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    const box = $('vidbox').getBoundingClientRect(), dpr = Math.min(1.5, devicePixelRatio || 1);   // менше пам'яті на кадри
     const vw = audio.videoWidth, vh = audio.videoHeight, k = Math.min(Math.max(box.width * dpr / vw, box.height * dpr / vh), 1);
     W = Math.max(2, Math.round(vw * k)); H = Math.max(2, Math.round(vh * k));
     cv.width = W; cv.height = H; ctx = cv.getContext('2d');
@@ -1706,18 +1877,23 @@ const Rev = (() => {
     try { ctx.drawImage(audio, 0, 0, W, H); } catch {}
     cv.style.objectFit = fitMode; cv.classList.add('on');
     audio.pause();
-    chunks = [];
-    const c = await capture(Math.max(T0(), cursor - CH), cursor, g);
+    chunks = []; keyOnly = false; lastRatio = 0;
+    if (wc) { try { wc.dec.close(); } catch {} wc = null; }
+    wc = await wcInit(tracks[cur]).catch(() => null);
+    if (g !== gen) { if (wc) { try { wc.dec.close(); } catch {} wc = null; } return; }
+    const c = wc ? await wcDecode(gopAt(wc.vt, cursor), g) : await capture(Math.max(T0(), cursor - CH), cursor, g);
     if (g !== gen) { c.frames.forEach(f => f.bmp.close()); return; }
     chunks = [c];
     prefetch();
     raf = requestAnimationFrame(draw);
   };
   R.setRate = rate => { R.rate = rate; };
+  R.dbg = () => ({ cursor, chunks: chunks.map(c => c.g + ':' + c.frames.length), keyOnly, lastRatio, wc: !!wc, codec: wc && wc.vt.codec });
   // stop(resume): кінець відтворення назад; resume — грати далі вперед з цього місця
   R.stop = resume => {
     if (!R.active) return;
     gen++; cancelAnimationFrame(raf); raf = 0; hv.pause();
+    if (wc) { try { wc.dec.close(); } catch {} wc = null; } loading = null;
     // звільняємо допоміжне відео: на Android воно тримає апаратний декодер, і основне відео потім не грає
     hv.removeAttribute('src'); hv.load();
     chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); chunks = [];
@@ -2539,7 +2715,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v112';
+const APP_VER = 'v113';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
