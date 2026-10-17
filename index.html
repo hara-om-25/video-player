@@ -161,9 +161,12 @@ main {
 body.fs .vidbox ~ .fsbtn { display: none; }
 .fsexit { position: fixed; display: none; z-index: 16; right: calc(var(--jogR) * 1.15 + 12px); bottom: calc(12px + env(safe-area-inset-bottom)); }
 body.fs .fsexit { display: block; }
+/* шкала часу — і на весь екран: унизу ліворуч, до кнопки виходу; [ час ] — над нею */
+body.fs .footer { position: static; }
+body.fs .timeline { position: fixed; z-index: 16; left: 12px; right: calc(var(--jogR) * 1.15 + 76px); bottom: calc(10px + env(safe-area-inset-bottom)); padding: 0; }
+body.fs .markctl.ovl { bottom: calc(56px + env(safe-area-inset-bottom)); }
 body.fs .panel.stage { position: fixed; inset: 0; z-index: 12; border: 0; border-radius: 0; max-height: none; background: #000; }
 body.fs .vidbox { flex: 1; aspect-ratio: auto; max-height: none; background: #000; }
-body.fs .markctl.ovl { bottom: calc(14px + env(safe-area-inset-bottom)); }
 body.fs .spdrow { position: fixed; z-index: 16; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 0; border: 0; background: none; }
 body.fs .spdrow .speed button, body.fs #btnMark { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.18); }
 body.fs .spdrow .speed { background: none; border: 0; box-shadow: none; }
@@ -1887,8 +1890,8 @@ const Rev = (() => {
   }
   /* Заздалегідь (на паузі, після перемотки, при дотику до РП): розпаковуємо групу кадрів до поточного місця
      і попередню — тоді відтворення назад починається одразу, без очікування. */
-  let pre = null, prepping = null, sid = 0;
-  const freePre = () => { if (pre) { pre.chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); pre = null; } };
+  let pre = null, prepping = null, preMore = null, sid = 0;
+  const freePre = () => { if (pre) { pre.chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); pre = null; } preMore = null; };
   R.prepare = () => {
     if (R.active || prepping || !audio.videoWidth || !hasTrack() || !window.VideoDecoder) return prepping;
     const t = audio.currentTime, key = tracks[cur].key;
@@ -1898,13 +1901,19 @@ const Rev = (() => {
     prepping = (async () => {
       sizeCanvas();
       const w = await ensureWc(); if (!w || g0 !== gen) return;
-      const g = gopAt(w.vt, t), out = [];
-      try {
-        out.push(await wcDecode(g, g0, t));
-        if (g0 === gen && g > 0 && out[0].a > T0()) out.unshift(await wcDecode(g - 1, g0));
-      } catch {}
-      if (g0 !== gen || !tracks[cur] || tracks[cur].key !== key) { out.forEach(c => c.frames.forEach(f => f.bmp.close())); return; }
-      pre = { key, upto: t, g, chunks: out };
+      const g = gopAt(w.vt, t);
+      // 1) кадри до поточного місця — цього досить, щоб рушити назад одразу
+      const c1 = await wcDecode(g, g0, t);
+      if (g0 !== gen || !tracks[cur] || tracks[cur].key !== key) { c1.frames.forEach(f => f.bmp.close()); return; }
+      const arr = [c1];
+      pre = { key, upto: t, g, chunks: arr };
+      // 2) попередня група — у фоні; якщо назад уже почалось, вона просто додається попереду
+      if (g > 0 && c1.a > T0()) {
+        const mine = pre;
+        preMore = wcDecode(g - 1, g0).then(c0 => {
+          if (g0 === gen && (pre === mine || chunks === arr)) arr.unshift(c0); else c0.frames.forEach(f => f.bmp.close());
+        }).catch(() => {}).finally(() => { if (loading === preMore) loading = null; if (pre === mine) preMore = null; });
+      }
     })().catch(() => {}).finally(() => {
       prepping = null;
       if (!R.active && audio.paused && pre && Math.abs(pre.upto - audio.currentTime) > 0.02) R.prepareSoon();   // поки готували — перемотали
@@ -1926,16 +1935,24 @@ const Rev = (() => {
     cv.style.objectFit = fitMode; cv.classList.add('on');
     audio.pause();
     raf = requestAnimationFrame(draw);              // лічильник і показ — одразу; кадри підтягуються
-    if (prepping) await prepping;                   // підготовка вже йде — не починаємо заново
+    if (prepping) await prepping;                   // підготовка вже йде — чекаємо лише перші кадри
     if (my !== sid || !R.active) return;
+    keyOnly = false; lastRatio = 0;
+    const key = tracks[cur] && tracks[cur].key;
+    const w0 = wc && wc.key === key && wc.dec.state === 'configured' ? wc : null;
+    if (w0 && pre && pre.key === key && pre.g === gopAt(w0.vt, cursor) && pre.upto >= cursor - 0.3) {
+      // готові кадри — беремо як є; попередня група, що ще готується, доллється сама
+      chunks = pre.chunks; loading = preMore; pre = null; preMore = null;
+      const lc = chunks[chunks.length - 1], lf = lc.frames[lc.frames.length - 1];
+      if (lf) cursor = Math.min(cursor, lf.t);
+      prefetch();
+      return;
+    }
     gen++; const g = gen;
-    chunks = []; keyOnly = false; lastRatio = 0;
+    chunks = [];
     const w = await ensureWc();
     if (g !== gen) return;
-    const key = tracks[cur] && tracks[cur].key;
-    if (w && pre && pre.key === key && pre.g === gopAt(w.vt, cursor) && pre.upto >= cursor - 0.3) {
-      chunks = pre.chunks; pre = null; cursor = Math.min(cursor, chunks[chunks.length - 1].frames.length ? chunks[chunks.length - 1].frames.slice(-1)[0].t : cursor);
-    } else {
+    {
       freePre();
       const c = w ? await wcDecode(gopAt(w.vt, cursor), g, cursor) : await capture(Math.max(T0(), cursor - CH), cursor, g);
       if (g !== gen) { c.frames.forEach(f => f.bmp.close()); return; }
@@ -1952,8 +1969,11 @@ const Rev = (() => {
     loading = null;                                 // декодер лишаємо — знову назад почнеться одразу
     // звільняємо допоміжне відео: на Android воно тримає апаратний декодер, і основне відео потім не грає
     hv.removeAttribute('src'); hv.load();
-    chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); chunks = [];
     const t = cursor;
+    // лишаємось на паузі — розпаковані кадри не викидаємо: наступне «назад» з цього місця рушить одразу
+    if (!resume && wc && chunks.length && tracks[cur] && wc.key === tracks[cur].key) { freePre(); pre = { key: wc.key, upto: t, g: gopAt(wc.vt, t), chunks }; }
+    else chunks.forEach(c => c.frames.forEach(f => f.bmp.close()));
+    chunks = [];
     audio.currentTime = t;
     const hide = () => { cv.classList.remove('on'); };
     audio.addEventListener('seeked', hide, { once: true }); setTimeout(hide, 600);
@@ -2776,7 +2796,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v114';
+const APP_VER = 'v115';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
