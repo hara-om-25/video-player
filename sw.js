@@ -1,24 +1,35 @@
 // Офлайн-кеш застосунку (збирає build.py). Діє лише в його папці.
-const CACHE = 'video-player-v115';
+// Спершу кеш — застосунок відкривається миттєво й без інтернету (і при поганому зв'язку не чекає мережу).
+// Нові версії приходять так: сторінка сама порівнює APP_VER на сайті (checkUpdate, запит з ?u=… — лише мережа),
+// просить оновити цей файл; новий sw.js з новим CACHE завантажує свіжі файли — і сторінка перезапускається.
+const CACHE = 'video-player-v116';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './fonts/tektur-cyrillic.woff2', './fonts/tektur-cyrillic-ext.woff2', './fonts/tektur-latin.woff2', './fonts/tektur-latin-ext.woff2'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' — повз кеш браузера, щоб у новий кеш не потрапили старі файли
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => k.startsWith('video-player-') && k !== CACHE).map(k => caches.delete(k)))
   ).then(() => self.clients.claim()));
 });
-// Спершу мережа (щоб оновлення приходили одразу), без мережі — кеш
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  const fresh = e.request.mode === 'navigate'
-    ? fetch(e.request.url, { cache: 'reload' })
-    : fetch(e.request);
-  e.respondWith(fresh.then(resp => {
-    if (resp && resp.ok) { const copy = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
-    return resp;
-  }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('./index.html'))));
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin || url.searchParams.has('u')) return;   // перевірка оновлення — повз кеш
+  e.respondWith((async () => {
+    const nav = req.mode === 'navigate';
+    const hit = await caches.match(req, { ignoreSearch: true }) || (nav && (await caches.match('./') || await caches.match('./index.html')));
+    if (hit) return hit;
+    try {
+      const resp = await fetch(req);
+      if (resp && resp.ok) { const copy = resp.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return resp;
+    } catch (err) {
+      return (await caches.match('./index.html')) || Response.error();
+    }
+  })());
 });
