@@ -44,5 +44,26 @@
    "focus-existing",
    "auto"
   ]
+ },
+ "share_target": {
+  "action": "./?share-target",
+  "method": "POST",
+  "enctype": "multipart/form-data",
+  "params": {
+   "files": [
+    {
+     "name": "media",
+     "accept": [
+      "video/*",
+      ".mp4",
+      ".m4v",
+      ".webm",
+      ".mkv",
+      ".mov",
+      ".3gp"
+     ]
+    }
+   ]
+  }
  }
 }

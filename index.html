@@ -3035,11 +3035,12 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v118';
+const APP_VER = 'v119';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
 const APP_URL = 'https://hara-om-25.github.io/video-player/';
+const APP_ID = APP_URL.replace(/\/$/, '').split('/').pop();   // audio-player / video-player / video-editor
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch {}
   try {
@@ -3143,7 +3144,26 @@ setSpeed(speed);
   const sv = getSetting('vspeed', 1); apply(sv > 0 ? sv : 1, false);
 })();
 renderAll();
-restoreSession();
+// файли, якими «поділилися» з галереї / файлового менеджера (sw.js поклав їх у вхідні)
+async function takeShared() {
+  if (!/[?&]shared=/.test(location.search) || !window.caches) return;
+  history.replaceState(null, '', location.pathname);
+  try {
+    const box = await caches.open('share-' + APP_ID), keys = await box.keys(), files = [];
+    for (const k of keys) {
+      const r = await box.match(k); if (!r) continue;
+      const b = await r.blob();
+      files.push(new File([b], decodeURIComponent(r.headers.get('x-name') || 'video'), { type: b.type || r.headers.get('content-type') || '' }));
+      await box.delete(k);
+    }
+    if (!files.length) return toast('Файл не надійшов — спробуйте ще раз', 2000);
+    addFiles(files);
+    const i = tracks.findIndex(t => t.key === fileKey(files[0]));
+    if (i >= 0 && i !== cur) openTrack(i);
+    toast(files.length > 1 ? 'Додано файлів: ' + files.length : 'Додано: ' + files[0].name, 1500);
+  } catch { toast('Не вдалося взяти файл', 2000); }
+}
+restoreSession().finally(takeShared);
 </script>
 </body>
 </html>
