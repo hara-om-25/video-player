@@ -2074,7 +2074,13 @@ const Draw = (() => {
   }
   function paint(list, sel) {
     fitCv(); ctx.clearRect(0, 0, cv.width, cv.height);
-    const F = frame(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    lines(ctx, frame(), list, sel);
+  }
+  // малюнок на будь-якому полотні: F — прямокутник кадру (для «Зберегти» — увесь кадр)
+  R.renderTo = (c, W, H, t) => lines(c, { x: 0, y: 0, w: W, h: H }, at(t), -1);
+  R.has = () => !!(data && data.marks.some(m => m.draw && m.draw.length));
+  function lines(ctx, F, list, sel) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     list.forEach((st, j) => {
       if (!st.p.length) return;
       const lw = Math.max(1.5, st.w * F.w);
@@ -2861,6 +2867,20 @@ async function exportVideo(clip, dir) {
     v.pause(); v.playbackRate = 1; clipStopAt = null;
     await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = clip.start; setTimeout(r, 3000); });
     stream = cap.call(v);
+    // відеоредактор: є малюнки — кадр + малюнок складаємо на полотні й пишемо його (звук — з відео)
+    if (FEAT.draw && Draw.has()) {
+      const vw = v.videoWidth, vh = v.videoHeight, k = Math.min(1, 1920 / Math.max(vw, vh));
+      const oc = document.createElement('canvas'); oc.width = Math.round(vw * k / 2) * 2; oc.height = Math.round(vh * k / 2) * 2;
+      const oct = oc.getContext('2d');
+      const comp = t => { try { oct.drawImage(v, 0, 0, oc.width, oc.height); Draw.renderTo(oct, oc.width, oc.height, t); } catch {} };
+      comp(v.currentTime);
+      let live = true;
+      if ('requestVideoFrameCallback' in v) { const cb = (now, md) => { if (!live) return; comp(md.mediaTime); v.requestVideoFrameCallback(cb); }; v.requestVideoFrameCallback(cb); }
+      else { const f = () => { if (!live) return; comp(v.currentTime); requestAnimationFrame(f); }; requestAnimationFrame(f); }
+      const cs = oc.captureStream(30), src = stream;
+      stream = new MediaStream([...cs.getVideoTracks(), ...src.getAudioTracks()]);
+      stream.stopAll = () => { live = false; cs.getTracks().forEach(t => t.stop()); src.getTracks().forEach(t => t.stop()); };
+    }
     const mime = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
       .find(t => MediaRecorder.isTypeSupported(t)) || '';
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : {});
@@ -2899,7 +2919,7 @@ async function exportVideo(clip, dir) {
     console.error(err);
     toast('Не вдалося записати відео: ' + (err && err.message || err));
   } finally {
-    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (stream) { if (stream.stopAll) stream.stopAll(); else stream.getTracks().forEach(t => t.stop()); }
     v.playbackRate = rate;
     busy = false; $('btnSaveVid').disabled = $('btnSaveClip').disabled = $('btnSaveTrim').disabled = false; progress('');
   }
@@ -3015,7 +3035,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v117';
+const APP_VER = 'v118';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
