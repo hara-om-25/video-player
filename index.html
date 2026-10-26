@@ -694,6 +694,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <div class="srow"><span class="sl">Папка, яку відкриває «+»<small id="setOpenName">не обрано</small></span><button class="accent" id="setOpenBtn">Обрати</button></div>
   <div class="srow"><span class="sl">Папка для збережених шматків<small id="setSaveName">не обрано — у «Завантаження»</small></span><button class="accent" id="setSaveBtn">Обрати</button></div>
   <label class="srow"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
+  <label class="srow"><input type="checkbox" id="setSysFs"><span class="sl">Ховати панелі Android на весь екран<small style="color:var(--dim);white-space:normal">Chrome тоді щоразу показує підказку «щоб вийти з повноекранного режиму…»</small></span></label>
   <div class="snote" id="setNote"></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
 </dialog>
@@ -1353,6 +1354,7 @@ async function showSet() {
   $('setOpenName').textContent = o ? o.name : 'не обрано';
   $('setSaveName').textContent = sv ? sv.name : 'не обрано — у «Завантаження»';
   $('setStar').checked = !!editCfg.starEnd;
+  $('setSysFs').checked = !!getSetting('sysFs', false);
   const can = !!window.showDirectoryPicker;
   $('setOpenBtn').disabled = $('setSaveBtn').disabled = !can;
   $('setNote').textContent = can ? '' : 'Цей браузер не дає обирати папки: «+» відкриває звичайне вікно вибору, а шматки зберігаються в «Завантаження».';
@@ -1367,6 +1369,7 @@ async function pickDir(key, mode) {
 $('btnSet').onclick = showSet;
 $('setOpenBtn').onclick = () => pickDir('dir:open', 'read');
 $('setSaveBtn').onclick = () => pickDir('dir:save', 'readwrite');
+$('setSysFs').onchange = e => setSetting('sysFs', e.target.checked);
 $('setStar').onchange = e => { editCfg.starEnd = e.target.checked; setSetting('editcfg', editCfg); };
 $('setOk').onclick = () => $('dlgSet').close();
 // Рядки «Останні» і «Обрізать ↺ ± сек» піднімаються рівно настільки, щоб регулятор
@@ -2628,7 +2631,8 @@ if (FEAT.vslider) { setVol(getSetting('vvol', 1), true); setBri(getSetting('vbri
 function setFs(on) {
   const d = document, el = d.documentElement, inFs = d.fullscreenElement || d.webkitFullscreenElement;
   d.body.classList.toggle('fs', on);
-  if (on && !inFs) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }
+  // системний повний екран Chrome показує підказку «щоб вийти…» — тому лише якщо ввімкнено в ⚙ (sysFs)
+  if (on && !inFs && getSetting('sysFs', false)) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }
   if (!on && inFs) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
   zoomReset();
   requestAnimationFrame(() => { fitVideo(); zoomReset(); layoutActions(); });
@@ -3065,7 +3069,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v121';
+const APP_VER = 'v122';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
