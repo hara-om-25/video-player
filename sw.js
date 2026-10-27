@@ -2,7 +2,7 @@
 // Спершу кеш — застосунок відкривається миттєво й без інтернету (і при поганому зв'язку не чекає мережу).
 // Нові версії приходять так: сторінка сама порівнює APP_VER на сайті (checkUpdate, запит з ?u=… — лише мережа),
 // просить оновити цей файл; новий sw.js з новим CACHE завантажує свіжі файли — і сторінка перезапускається.
-const CACHE = 'video-player-v125';
+const CACHE = 'video-player-v126';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './fonts/tektur-cyrillic.woff2', './fonts/tektur-cyrillic-ext.woff2', './fonts/tektur-latin.woff2', './fonts/tektur-latin-ext.woff2'];
 

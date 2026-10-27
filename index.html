@@ -626,7 +626,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     </div>
     <div class="sec">
       <h2>
-        <i class="l"></i><span>Мітки</span><i class="r"><button id="btnDelMark" class="hsq accent" title="Видалити обрану мітку">🗑</button><button id="btnRen" class="hsq accent" title="Перейменувати обрану мітку">✎</button><button id="btnDraw" class="hsq accent" title="Малюнок на обраній мітці"><svg class="easel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.5V3"/><rect x="3.5" y="3" width="17" height="11" rx="1.2"/><path d="M6.5 11.5l3.5-3.5 2.5 2.5 3-3.5 2.5 3" stroke-width="1.6"/><path d="M8.5 14L5 22.5M15.5 14l3.5 8.5M12 14v6"/></svg></button></i>
+        <i class="l"></i><span>Мітки</span><i class="r"><button id="btnDelMark" class="hsq accent" title="Видалити обрану мітку">🗑</button><button id="btnRen" class="hsq accent" title="Перейменувати обрану мітку">✎</button><button id="btnDraw" class="hsq accent" title="Малюнок на обраній мітці"><svg class="easel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8C6.6 2.8 2.5 6.9 2.5 12s4.1 9.2 9.3 9.2c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.9-1.8h2.2c2.6 0 4.6-2 4.6-4.5 0-4.3-4.2-7.7-9.5-7.7z"/><circle cx="7.3" cy="11" r="1.4" fill="currentColor" stroke="none"/><circle cx="9.6" cy="7.1" r="1.4" fill="currentColor" stroke="none"/><circle cx="14.4" cy="7.1" r="1.4" fill="currentColor" stroke="none"/><circle cx="17.3" cy="10.6" r="1.4" fill="currentColor" stroke="none"/></svg></button></i>
       </h2>
       <div class="list" id="markList"></div>
     </div>
@@ -2430,7 +2430,7 @@ function renderMarks() {
     <div class="item ${m === selMark ? 'sel' : ''}" data-i="${i}">
       <span class="num">${++k}.</span>
       <span class="t">${fmt(m.t - T0())}</span>
-      ${m.draw && m.draw.length ? '<span class="badge easelb"><svg class=\"easel\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 1.5V3\"/><rect x=\"3.5\" y=\"3\" width=\"17\" height=\"11\" rx=\"1.2\"/><path d=\"M6.5 11.5l3.5-3.5 2.5 2.5 3-3.5 2.5 3\" stroke-width=\"1.6\"/><path d=\"M8.5 14L5 22.5M15.5 14l3.5 8.5M12 14v6\"/></svg></span>' : ''}
+      ${m.draw && m.draw.length ? '<span class="badge easelb"><svg class=\"easel\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2.8C6.6 2.8 2.5 6.9 2.5 12s4.1 9.2 9.3 9.2c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.9-1.8h2.2c2.6 0 4.6-2 4.6-4.5 0-4.3-4.2-7.7-9.5-7.7z\"/><circle cx=\"7.3\" cy=\"11\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"9.6\" cy=\"7.1\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14.4\" cy=\"7.1\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"17.3\" cy=\"10.6\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/></svg></span>' : ''}
     </div>`).join('');
     return;
   }
@@ -3109,7 +3109,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v125';
+const APP_VER = 'v126';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
