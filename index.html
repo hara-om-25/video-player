@@ -1670,11 +1670,14 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
     if (op > 0.01) sheen += `<path d="${sector(a - 0.05, a + 2.05, 0, RF)}" fill="${col}" opacity="${op.toFixed(3)}"/>`;
   }
   const [dx, dy] = pt(JOG_DIMPLE_D, -135);
+  // відеоредактор — золота ручка (рішення користувача), плеєри — чорний метал
+  const FACE = FEAT.draw ? ['#ecc865', '#c48f27', '#7d5713'] : ['#1d1e21', '#121315', '#0b0b0d'];
+  const DIMP = FEAT.draw ? ['#c4952f', '#9a7020', '#5c420e'] : ['#26282c', '#16171a', '#08090a'];
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
-    <radialGradient id="jgFace" gradientUnits="userSpaceOnUse" cx="-25" cy="-30" r="150"><stop offset="0" stop-color="#1d1e21"/><stop offset=".7" stop-color="#121315"/><stop offset="1" stop-color="#0b0b0d"/></radialGradient>
-    <radialGradient id="jgDimple" cx="58%" cy="60%" r="65%"><stop offset="0" stop-color="#26282c"/><stop offset=".7" stop-color="#16171a"/><stop offset="1" stop-color="#08090a"/></radialGradient>
+    <radialGradient id="jgFace" gradientUnits="userSpaceOnUse" cx="-25" cy="-30" r="150"><stop offset="0" stop-color="${FACE[0]}"/><stop offset=".7" stop-color="${FACE[1]}"/><stop offset="1" stop-color="${FACE[2]}"/></radialGradient>
+    <radialGradient id="jgDimple" cx="58%" cy="60%" r="65%"><stop offset="0" stop-color="${DIMP[0]}"/><stop offset=".7" stop-color="${DIMP[1]}"/><stop offset="1" stop-color="${DIMP[2]}"/></radialGradient>
     <linearGradient id="jgDimpleRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".5" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#9aa0a8" stop-opacity=".8"/></linearGradient>
     <linearGradient id="jgEdgeHi" gradientUnits="userSpaceOnUse" x1="-80" y1="-80" x2="20" y2="20"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".6" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <linearGradient id="jgInHi" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="-60" y2="-60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
@@ -3144,7 +3147,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v127';
+const APP_VER = 'v128';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
