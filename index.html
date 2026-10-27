@@ -1677,7 +1677,6 @@ const JOG_DIMPLE_D = 80, JOG_DIMPLE_R = 11;    // ямка під палець: 
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     // полірований злиток: без шліфування; широка фаска по краю + друга, тонка, всередині
     brushed += `<circle r="${RF - 1.6}" fill="none" stroke="url(#jgBevel)" stroke-width="4"/>`;
-    brushed += `<circle r="${RF - 6}" fill="none" stroke="url(#jgBevel2)" stroke-width="1.6"/>`;
   }
   // відеоредактор — золота ручка (рішення користувача), плеєри — чорний метал
   const FACE = FEAT.draw ? ['#dcab4c', '#a5711d', '#4a2e07'] : ['#1d1e21', '#121315', '#0b0b0d'];
@@ -3161,7 +3160,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v131';
+const APP_VER = 'v132';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
