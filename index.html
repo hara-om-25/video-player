@@ -186,6 +186,18 @@ body.f-draw .vidbox.on > #drawCanvas { display: block; }
 #drawCanvas.edit { pointer-events: auto; touch-action: none; cursor: crosshair; }
 #btnDraw { display: none; }
 body.f-draw #btnDraw { display: inline-block; font-size: 22px; }
+#btnRen { display: none; }
+body.f-draw #btnRen { display: inline-block; font-size: 22px; margin-right: 6px; }
+/* вузька шапка «Мітки» з двома кнопками: менші кнопки; clip — щоб фокус на кнопці не зсував панель убік */
+#btnDelMark { display: none; }
+body.f-draw #btnDelMark { display: inline-block; }
+body.f-draw .panel.side h2 .hsq { width: 34px; height: 36px; font-size: 18px; }
+body.f-draw .panel.side h2 #btnRen, body.f-draw .panel.side h2 #btnDelMark { margin-right: 4px; }
+body.f-draw .panel.side h2 > span { display: none; }       /* три кнопки у вузькій панелі — без слова «Мітки» */
+body.f-draw .panel.side h2 .r { justify-content: center; }
+body.f-draw .panel.side { overflow: clip; }
+/* редактор: мітки без назв; дотик обирає мітку — кнопки ✎ / 🖌 у шапці діють на неї */
+#markList .item.sel { background: rgba(255,210,63,.22); outline: 2px solid var(--accent); outline-offset: -2px; }
 /* на весь екран 🖌 — праворуч, над віконцем швидкості; трохи прозорий, як інші кнопки */
 body.fs.f-draw #btnDraw { position: fixed; z-index: 16; right: 14px; bottom: calc(var(--jogR) * 1.15 + 132px); width: 52px; height: 46px; opacity: .8; }
 .drawbar { position: absolute; z-index: 20; left: 8px; right: 8px; top: 8px; display: none; flex-wrap: wrap; align-items: center; gap: 6px;
@@ -610,7 +622,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     </div>
     <div class="sec">
       <h2>
-        <i class="l"></i><span>Мітки</span><i class="r"><button id="btnDraw" class="hsq accent" title="Малювати на цій мітці (або нова мітка тут)">🖌</button></i>
+        <i class="l"></i><span>Мітки</span><i class="r"><button id="btnDelMark" class="hsq accent" title="Видалити обрану мітку">🗑</button><button id="btnRen" class="hsq accent" title="Перейменувати обрану мітку">✎</button><button id="btnDraw" class="hsq accent" title="Малюнок на обраній мітці">🖌</button></i>
       </h2>
       <div class="list" id="markList"></div>
     </div>
@@ -1030,6 +1042,7 @@ let cur = -1;               // індекс поточного треку
 let data = null;            // {marks:[{t,name}], clips:[{name,start,end}], pos}
 let selStart = null, selEnd = null;
 let clipStopAt = null;      // для прослуховування фрагмента
+let selMark = null;         // обрана мітка (редактор: на неї діють ✎ і 🖌)
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
 
 /* ═════════ збереження (localStorage) ═════════
@@ -2131,7 +2144,7 @@ const Draw = (() => {
     $('drawLbl').textContent = '🖌 ' + (m.name || 'Мітка') + ' · ' + fmt(m.t - T0());
     tools(); bar.classList.add('on'); cv.classList.add('edit'); R.placeBar();
     paint(ed.s, -1);
-    if (src && src !== m.draw) toast('Це копія попереднього малюнка — посуньте ✥ чи видозмініть 〰', 2500);
+    if (src && src !== m.draw && !getSetting('drawCopyHint', false)) { setSetting('drawCopyHint', true); toast('Це копія попереднього малюнка — посуньте ✥ чи видозмініть 〰', 2500); }
   };
   const close = keep => {
     if (keep) {
@@ -2229,10 +2242,8 @@ const Draw = (() => {
   // «🖌» над мітками: малюнок на мітці в цьому місці; немає — нова мітка
   $('btnDraw').onclick = () => {
     if (!hasTrack() || !audio.videoWidth) return toast('Спочатку відкрийте відео');
-    const t = Rev.active ? Rev.time() : audio.currentTime;
-    let m = data.marks.find(x => Math.abs(x.t - t) < 0.15);
-    if (!m) { m = { t, name: 'Малюнок ' + (data.marks.filter(x => x.draw).length + 1) }; data.marks.push(m); data.marks.sort((a, b) => a.t - b.t); save(); renderMarks(); renderBar(); }
-    R.open(m);
+    if (!selMark || !data.marks.includes(selMark)) return toast('Оберіть мітку');
+    R.open(selMark);
   };
   return R;
 })();
@@ -2392,6 +2403,11 @@ function renderBar() {
 async function addMark() {
   if (!hasTrack()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
+  if (FEAT.draw) {                          // редактор: без вікна назви, нова мітка одразу обрана
+    const m = { t, name: 'Мітка ' + (data.marks.length + 1) };
+    data.marks.push(m); data.marks.sort((a, b) => a.t - b.t); selMark = m;
+    save(); renderMarks(); renderBar(); renderPlaylist(); return toast('★ ' + fmt(t - T0()), 700);
+  }
   const name = await ask('Нова мітка · ' + fmt(t, true), 'Назва мітки', 'Мітка ' + (data.marks.length + 1));
   if (name === null) return;
   data.marks.push({ t, name: name || 'Мітка ' + (data.marks.length + 1) });
@@ -2405,6 +2421,15 @@ function renderMarks() {
   if (!data.marks.length) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити мітку на поточній позиції</div>'; return; }
   if (!data.marks.some(m => m.t >= T0())) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити мітку на поточній позиції</div>'; return; }
   let k = 0;
+  if (FEAT.draw) {                      // редактор: лише номер і час (+ 🖌, якщо є малюнок)
+    el.innerHTML = data.marks.map((m, i) => m.t < T0() ? '' : `
+    <div class="item ${m === selMark ? 'sel' : ''}" data-i="${i}">
+      <span class="num">${++k}.</span>
+      <span class="t">${fmt(m.t - T0())}</span>
+      ${m.draw && m.draw.length ? '<span class="badge">🖌</span>' : ''}
+    </div>`).join('');
+    return;
+  }
   el.innerHTML = data.marks.map((m, i) => m.t < T0() ? '' : `
     <div class="item" data-i="${i}">
       <span class="num">${++k}.</span>
@@ -2419,6 +2444,7 @@ function renderMarks() {
 $('markList').addEventListener('click', async e => {
   const it = e.target.closest('.item'); if (!it) return;
   const m = data.marks[+it.dataset.i];
+  if (FEAT.draw) { selMark = m; renderMarks(); clipStopAt = null; seek(m.t); return; }
   const a = e.target.closest('[data-a]')?.dataset.a;
   if (a === 'ren') {
     const n = await ask('Перейменувати мітку', fmt(m.t, true), m.name);
@@ -2427,6 +2453,16 @@ $('markList').addEventListener('click', async e => {
   else { clipStopAt = null; seek(m.t); }
 });
 $('btnMark').onclick = addMark;
+$('btnDelMark').onclick = () => {
+  if (!selMark || !data || !data.marks.includes(selMark)) return toast('Оберіть мітку');
+  data.marks.splice(data.marks.indexOf(selMark), 1); selMark = null;
+  save(); renderMarks(); renderBar(); renderPlaylist(); toast('Мітку видалено');
+};
+$('btnRen').onclick = async () => {
+  if (!selMark || !data || !data.marks.includes(selMark)) return toast('Оберіть мітку');
+  const n = await ask('Перейменувати мітку', fmt(selMark.t, true), selMark.name);
+  if (n) { selMark.name = n; save(); renderMarks(); renderBar(); }
+};
 
 /* Видалення свайпом: рядок плейлиста, мітки чи фрагмента тягнеш убік — і якщо відвів далеко
    (за 40% ширини), він вилітає за екран і видаляється; інакше вертається на місце. */
@@ -2464,7 +2500,7 @@ function swipeDelete(list, onDelete) {
 }
 document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea')) e.preventDefault(); });
 swipeDelete($('playlist'), i => removeTrack(i));
-swipeDelete($('markList'), i => { data.marks.splice(i, 1); save(); renderMarks(); renderBar(); renderPlaylist(); toast('Мітку видалено'); });
+swipeDelete($('markList'), i => { if (data.marks[i] === selMark) selMark = null; data.marks.splice(i, 1); save(); renderMarks(); renderBar(); renderPlaylist(); toast('Мітку видалено'); });
 swipeDelete($('clipList'), i => { data.clips.splice(i, 1); save(); renderClips(); renderBar(); renderPlaylist(); toast('Фрагмент видалено'); });
 
 /* ═════════ фрагменти ═════════ */
@@ -3069,7 +3105,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v122';
+const APP_VER = 'v124';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
