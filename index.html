@@ -2495,9 +2495,19 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
 (() => {
   const bar = $('bar'); let drag = false;
   const at = e => { const r = bar.getBoundingClientRect(), v = tlView(); return v[0] + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * v[1]; };
-  bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; tlWin = tlView(); bar.setPointerCapture(e.pointerId); clipStopAt = null; seek(at(e)); });
-  bar.addEventListener('pointermove', e => { if (drag) seek(at(e)); });
-  const end = () => { drag = false; tlWin = null; updateTime(); };
+  // перетягування: повзунок — одразу, відео — кадр за кадром (новий перехід, лише коли попередній показано;
+  // інакше Android скасовує переходи один за одним і картинка стоїть, доки не відпустиш)
+  let pend = null;
+  const scrub = t => {
+    t = Math.max(T0(), Math.min(T1() - 0.05, t));
+    updateTime(t);
+    if (audio.seeking) { pend = t; return; }
+    pend = null; seek(t);
+  };
+  audio.addEventListener('seeked', () => { if (pend != null) { const t = pend; pend = null; seek(t); } });
+  bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; tlWin = tlView(); bar.setPointerCapture(e.pointerId); clipStopAt = null; scrub(at(e)); });
+  bar.addEventListener('pointermove', e => { if (drag) scrub(at(e)); });
+  const end = () => { drag = false; tlWin = null; if (pend != null) { const t = pend; pend = null; if (!audio.seeking) seek(t); else pend = t; } updateTime(pend ?? undefined); };
   bar.addEventListener('pointerup', end);
   bar.addEventListener('pointercancel', end);
   // коліщатко миші над шкалою — масштаб
@@ -3224,7 +3234,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v140';
+const APP_VER = 'v141';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
