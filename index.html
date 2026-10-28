@@ -72,21 +72,24 @@ header h1 { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; white-spac
 .hc3 { justify-content: flex-end; }
 /* відеоредактор: без лівої панелі — відео ширше; плейлист — випадний список з шапки */
 #plBtn, .plpop { display: none; }
-body.f-draw.f-vslider { --cols: minmax(0, 1fr) 150px; }
-body.f-draw .panel.playlist { display: none; }
-body.f-draw header { display: flex; }
-body.f-draw .hc1 { flex: none; }
-body.f-draw .hc1 h1 { flex: none; }
-body.f-draw .hc2 { flex: 1; min-width: 0; gap: 10px; }
-body.f-draw #btnAdd { width: 40px; height: 36px; padding: 0; font-size: 24px; border-radius: 9px; color: #111; flex: none; }
-body.f-draw #plBtn { display: inline-block; flex: none; width: 40px; height: 36px; padding: 0; font-size: 20px; color: var(--accent); background: var(--surf2); border: 1px solid var(--surf3); border-radius: 9px; }
-body.f-draw #plBtn.on { background: var(--accent); color: #111; }
-body.f-draw .hc2 .now { cursor: pointer; }
+body.f-hdrpl.f-vslider { --cols: minmax(0, 1fr) 150px; }   /* відеоплеєр і редактор: лівої панелі немає */
+body.f-hdrpl.f-vslider .panel.playlist { display: none; }
+/* аудіоплеєр: ліва панель лишається для «Фрагментів» і швидкості — без заголовка «Плейлист» */
+body.f-hdrpl:not(.f-vslider) .panel.playlist > h2 { display: none; }
+body.f-hdrpl:not(.f-vslider) .panel.playlist .fragsec { border-top: 0; }
+body.f-hdrpl header { display: flex; }
+body.f-hdrpl .hc1 { flex: none; }
+body.f-hdrpl .hc1 h1 { flex: none; }
+body.f-hdrpl .hc2 { flex: 1; min-width: 0; gap: 10px; }
+body.f-hdrpl #btnAdd { width: 40px; height: 36px; padding: 0; font-size: 24px; border-radius: 9px; color: #111; flex: none; }
+body.f-hdrpl #plBtn { display: inline-block; flex: none; width: 40px; height: 36px; padding: 0; font-size: 20px; color: var(--accent); background: var(--surf2); border: 1px solid var(--surf3); border-radius: 9px; }
+body.f-hdrpl #plBtn.on { background: var(--accent); color: #111; }
+body.f-hdrpl .hc2 .now { cursor: pointer; }
 .plpop { position: fixed; z-index: 40; top: 56px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); max-height: 60vh; overflow-y: auto;
   background: var(--surface); border: 1px solid var(--accent); border-radius: 12px; padding: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
-body.f-draw .plpop.on { display: block; }
+body.f-hdrpl .plpop.on { display: block; }
 .plpop #playlist { max-height: none; }
-body.f-draw .panel.stage > .progress { position: absolute; z-index: 18; top: 8px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.7); border-radius: 8px; padding: 6px 12px; }
+body.f-hdrpl.f-vslider .panel.stage > .progress { position: absolute; z-index: 18; top: 8px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.7); border-radius: 8px; padding: 6px 12px; }
 header .now { color: var(--dim); font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 header .hdur { flex: none; font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 header button { padding: 6px 9px; font-size: 13px; }
@@ -469,8 +472,8 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .hc3 { width: 100%; }
   .hc1 { flex: 1; }
   header .now { display: none; }
-  body.f-draw header .now { display: block; }
-  body.f-draw .hc2 { order: 3; width: 100%; flex: none; justify-content: flex-start; }
+  body.f-hdrpl header .now { display: block; }
+  body.f-hdrpl .hc2 { order: 3; width: 100%; flex: none; justify-content: flex-start; }
   .transport { gap: 8px; flex-wrap: nowrap; }
   .speed button { padding: 10px 6px; font-size: 17px; }
   .speed .arr { padding: 10px 3px 10px 8px; }
@@ -567,7 +570,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 </style>
 </head>
-<body class="f-video f-trim f-last f-vslider f-edit app-video">
+<body class="f-video f-trim f-last f-vslider f-edit f-hdrpl app-video">
 
 <header>
   <div class="hc1">
@@ -1073,7 +1076,7 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
    Файл ідентифікується за назвою та розміром — тому при повторному
    відкритті того самого файлу мітки й фрагменти підтягуються автоматично. */
 // Можливості цього застосунку (підставляє build.py): аудіоплеєр, відеоплеєр чи відеоредактор
-const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "edit": true, "db": "markplayer-video", "session": "session.video"};
+const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "edit": true, "hdrpl": true, "db": "markplayer-video", "session": "session.video"};
 const PREFIX = 'markplayer:';
 const fileKey = f => PREFIX + f.name + '|' + f.size;
 function load(key) {
@@ -1515,11 +1518,11 @@ if (FEAT.vslider) {
   $('playlist').after($('progress'));          // «Фрагментів» немає — хід запису видно під плейлистом
 }
 /* відеоредактор: лівої панелі немає — «+» у шапці біля назви, плейлист — список, що розкривається з ▽ біля назви файлу */
-if (FEAT.draw) {
+if (FEAT.hdrpl) {
   document.querySelector('.hc1').appendChild($('btnAdd'));
   const pop = $('plPop');
   pop.appendChild($('playlist'));
-  document.querySelector('.panel.stage').appendChild($('progress'));   // хід запису — поверх відео вгорі
+  if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
   const open = on => {
     if (on) { pop.style.top = Math.round(document.querySelector('header').getBoundingClientRect().bottom + 4) + 'px'; renderPlaylist(); }
     pop.classList.toggle('on', on); $('plBtn').classList.toggle('on', on);
@@ -3173,7 +3176,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v134';
+const APP_VER = 'v135';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
