@@ -2514,7 +2514,14 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
     pend = null; seek(t);
   };
   audio.addEventListener('seeked', () => { if (pend != null) { const t = pend; pend = null; seek(t); } });
-  bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; tlWin = tlView(); bar.setPointerCapture(e.pointerId); clipStopAt = null; scrub(at(e)); });
+  // торкнувся шкали — відео зупиняється саме тут (рішення користувача)
+  bar.addEventListener('pointerdown', e => {
+    if (!dur()) return;
+    drag = true; tlWin = tlView(); bar.setPointerCapture(e.pointerId); clipStopAt = null;
+    if (Rev.active) Rev.stop(false);
+    if (!audio.paused) audio.pause();
+    scrub(at(e));
+  });
   bar.addEventListener('pointermove', e => { if (drag) scrub(at(e)); });
   const end = () => { drag = false; tlWin = null; if (pend != null) { const t = pend; pend = null; if (!audio.seeking) seek(t); else pend = t; } updateTime(pend ?? undefined); };
   bar.addEventListener('pointerup', end);
@@ -3243,7 +3250,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v142';
+const APP_VER = 'v143';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
