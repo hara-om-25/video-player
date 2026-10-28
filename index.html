@@ -242,7 +242,7 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 .drawbar .sw.on { border: 3px solid #fff; outline: 2px solid var(--accent); }
 .drawbar .sp { flex: 1; }
 .drawbar #drawOk { background: var(--accent); border-color: var(--accent); color: #111; font-size: 15px; font-weight: 700; }
-.drawbar #drawCancel { font-size: 15px; }
+.drawbar #drawCancel, .drawbar #drawClear { font-size: 15px; }
 #markList .acts button.dr { color: var(--dim); }
 #markList .acts button.dr.has { color: var(--accent); }
 /* показник гучності / яскравості, поки ведеш пальцем біля краю */
@@ -638,7 +638,8 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       <button data-tool="pen" title="Малювати">✎</button>
       <button data-tool="move" title="Посунути лінію (або весь малюнок); два пальці — повернути й змінити розмір">✥</button>
       <button data-tool="bend" title="Видозмінити: потягни частину лінії">〰</button>
-      <button data-tool="erase" title="Стерти лінію (торкнутись)">⌫</button>
+      <button data-tool="erase" title="Стирачка: торкнись лінії або веди по лініях">⌫</button>
+      <button id="drawClear" title="Стерти все на цій мітці">Стерти все</button>
       <span id="drawCols"></span>
       <button id="drawW" title="Товщина лінії">●</button>
       <button id="drawUndo" title="Скасувати останню дію">↶</button>
@@ -2143,6 +2144,9 @@ const Draw = (() => {
   let ed = null, lastKey = '', ver = 0;
   let color = getSetting('drawColor', COLORS[0]), wi = getSetting('drawW', 1), tool = 'pen';
   R.dirty = () => { ver++; };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // старі лінії без id отримують 'n'+номер — так само, як їх зіставляє at(), тож переходи не ламаються
+  const ensureIds = arr => { (arr || []).forEach((st, j) => { if (!st.i) st.i = 'n' + j; }); };
   R.at = t => at(t);
   const fitCv = () => {
     const r = $('vidbox').getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
@@ -2179,11 +2183,12 @@ const Draw = (() => {
     const A = ms[i], B = ms[i + 1];
     if (!A.draw || !A.draw.length) return [];
     if (!B || !B.draw || !B.draw.length) return A.draw;
+    // лінії зіставляються за id (старі без id — за порядком): є в обох — перетікає; стерта в наступній мітці —
+    // лишається до неї й там зникає; нова в наступній — проявляється
     const k = Math.min(1, Math.max(0, (t - A.t) / Math.max(1e-3, B.t - A.t))), out = [];
-    for (let j = 0; j < Math.max(A.draw.length, B.draw.length); j++) {
-      const a = A.draw[j], b = B.draw[j];
-      out.push(a && b ? tween(a, b, k) : a ? Object.assign({}, a, { al: 1 - k }) : Object.assign({}, b, { al: k }));
-    }
+    const key = (st, j) => st.i || 'n' + j, bm = new Map(B.draw.map((b, j) => [key(b, j), b])), used = new Set();
+    A.draw.forEach((a, j) => { const kk = key(a, j), b = bm.get(kk); if (b) { used.add(kk); out.push(tween(a, b, k)); } else out.push(a); });
+    B.draw.forEach((b, j) => { if (!used.has(key(b, j))) out.push(Object.assign({}, b, { al: k })); });
     return out;
   }
   function paint(list, sel) {
@@ -2229,6 +2234,7 @@ const Draw = (() => {
     // нова мітка — з копії попереднього малюнка (його лишається посунути / видозмінити)
     let src = m.draw && m.draw.length ? m.draw : null;
     if (!src) { const prev = data.marks.filter(x => x.t < m.t && x.draw && x.draw.length).pop(); if (prev) src = prev.draw; }
+    ensureIds(src);
     ed = { m, s: deep(src), undo: [], sel: -1 };
     R.editing = true;
     $('drawLbl').textContent = '✎ ' + (m.name || 'Мітка') + ' · ' + fmt(m.t - T0());
@@ -2241,7 +2247,7 @@ const Draw = (() => {
   const close = keep => {
     if (keep) {
       const r4 = v => Math.round(v * 10000) / 10000;
-      const out = ed.s.filter(st => st.p.length).map(st => ({ c: st.c, w: st.w, p: st.p.map(q => [r4(q[0]), r4(q[1])]) }));
+      const out = ed.s.filter(st => st.p.length).map(st => ({ i: st.i || uid(), c: st.c, w: st.w, p: st.p.map(q => [r4(q[0]), r4(q[1])]) }));
       if (out.length) ed.m.draw = out; else delete ed.m.draw;
       save(); renderMarks(); renderPlaylist();
     }
@@ -2272,6 +2278,7 @@ const Draw = (() => {
   $('drawOk').onclick = () => close(true);
   $('drawCancel').onclick = () => close(false);
   $('drawUndo').onclick = () => { if (ed && ed.undo.length) { ed.s = ed.undo.pop(); ed.sel = -1; paint(ed.s, -1); } };
+  $('drawClear').onclick = () => { if (ed && ed.s.length) { snap(); ed.s = []; ed.sel = -1; paint(ed.s, -1); } };   // ↶ поверне
   $('drawW').onclick = () => { wi = (wi + 1) % WIDTHS.length; setSetting('drawW', wi); tools(); };
   bar.addEventListener('click', e => {
     const t = e.target.closest('[data-tool]'), c = e.target.closest('[data-c]');
@@ -2295,8 +2302,8 @@ const Draw = (() => {
       return;
     }
     if (pts.size > 1) return;
-    if (tool === 'pen') { snap(); ed.s.push({ c: color, w: WIDTHS[wi], p: [q] }); ed.sel = -1; g = { pen: true }; }
-    else if (tool === 'erase') { const j = hit(q); if (j >= 0) { snap(); ed.s.splice(j, 1); } g = null; }
+    if (tool === 'pen') { snap(); ed.s.push({ i: uid(), c: color, w: WIDTHS[wi], p: [q] }); ed.sel = -1; g = { pen: true }; }
+    else if (tool === 'erase') { snap(); const j = hit(q); if (j >= 0) ed.s.splice(j, 1); ed.sel = -1; g = { erase: true }; }   // торкнись або веди по лініях
     else if (tool === 'move') { const j = hit(q); ed.sel = j; snap(); g = { move: true, j, q0: q, orig: deep(ed.s) }; }
     else if (tool === 'bend') { snap(); g = { bend: true, q0: q, orig: deep(ed.s) }; }
     paint(ed.s, ed.sel);
@@ -2313,6 +2320,8 @@ const Draw = (() => {
       let cx = 0, cy = 0; all.forEach(p => { cx += p[0]; cy += p[1]; }); cx /= all.length; cy /= all.length;
       const co = Math.cos(ang), si = Math.sin(ang);
       idx.forEach(j => { ed.s[j].p = g.orig[j].p.map(p => { const dx = p[0] - cx, dy = (p[1] - cy) * asp; return [cx + (dx * co - dy * si) * sc, cy + (dx * si + dy * co) * sc / asp]; }); });
+    } else if (g.erase) {
+      const j = hit(q); if (j >= 0) ed.s.splice(j, 1);
     } else if (g.pen) {
       const st = ed.s[ed.s.length - 1], l = st.p[st.p.length - 1];
       if (pxDist(l, q) > 2) st.p.push(q);
@@ -3234,7 +3243,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v141';
+const APP_VER = 'v142';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
