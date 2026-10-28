@@ -228,6 +228,10 @@ body.fs.f-draw #btnDraw { position: fixed; z-index: 16; right: 14px; bottom: cal
 .drawbar { position: absolute; z-index: 20; left: 8px; right: 8px; top: 8px; display: none; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 6px; border-radius: 12px; background: rgba(0,0,0,.72); }
 .drawbar.on { display: flex; }
+/* малюємо: доки не «Готово» / «Скасувати», працюють лише панель малювання й полотно */
+body.drawing { pointer-events: none; }
+body.drawing #drawBar, body.drawing #drawBar *, body.drawing #drawCanvas.edit { pointer-events: auto; }
+body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawing #jog, body.drawing .fsbtn, body.drawing .fsexit { opacity: .45; }
 .drawbar.moved { right: auto; max-width: calc(100% - 16px); }
 .drawbar .grip { flex: none; width: 34px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent);
   cursor: move; touch-action: none; border-radius: 9px; background: rgba(255,255,255,.08); }
@@ -2228,7 +2232,9 @@ const Draw = (() => {
     ed = { m, s: deep(src), undo: [], sel: -1 };
     R.editing = true;
     $('drawLbl').textContent = '✎ ' + (m.name || 'Мітка') + ' · ' + fmt(m.t - T0());
+    tool = ed.s.length ? 'move' : 'pen';             // є що посунути (копія попереднього) — одразу ✥, порожньо — ✎
     tools(); bar.classList.add('on'); cv.classList.add('edit'); R.placeBar();
+    document.body.classList.add('drawing');          // поки не «Готово» / «Скасувати» — решта кнопок заблокована
     paint(ed.s, -1);
     if (src && src !== m.draw && !getSetting('drawCopyHint', false)) { setSetting('drawCopyHint', true); toast('Це копія попереднього малюнка — посуньте ✥ чи видозмініть 〰', 2500); }
   };
@@ -2240,6 +2246,7 @@ const Draw = (() => {
       save(); renderMarks(); renderPlaylist();
     }
     ed = null; R.editing = false; bar.classList.remove('on'); cv.classList.remove('edit'); lastKey = ''; ver++;
+    document.body.classList.remove('drawing');
   };
   // панель малювання можна перетягнути за ⠿ — щоб дістати ту частину кадру, яку вона закривала
   (() => {
@@ -3184,6 +3191,7 @@ $('restoreInput').onchange = async e => {
 /* ═════════ клавіатура та системні кнопки ═════════ */
 document.addEventListener('keydown', e => {
   if (e.target.matches('input') || $('dlg').open) return;
+  if (Draw.editing) return;                          // малюємо — клавіші застосунку не діють
   const k = e.key;
   if (k === ' ') { e.preventDefault(); togglePlay(); }
   else if (k === 'ArrowLeft') skip(e.shiftKey ? -30 : e.ctrlKey ? -10 : -5);
@@ -3216,7 +3224,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v139';
+const APP_VER = 'v140';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
