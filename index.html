@@ -30,7 +30,7 @@
   --accent:  #ffd23f;   /* жовтий — той самий, що й у міток */
   --accent2: #ffd23f;
   --star:    #ffd23f;
-  --clip:    #e8336d;
+  --clip:    #4caf50;   /* фрагменти: [ ], виділення на шкалі — зелені, як ▶ (рішення користувача) */
   --text:    #f0f0f0;
   --dim:     #bcbfc4;
   --danger:  #c0392b;
@@ -279,10 +279,8 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 .item .acts [data-a="play"] { color: #4caf50; }
 .item .acts [data-a="dl"]   { color: var(--accent); }
 /* «зберегти фрагмент MP3» — як кнопка ⬇MP3 у шапці «Фрагментів» (жовта, стрілка + підпис) */
-.item .acts .dlmp3 { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 40px; height: 36px; padding: 0 !important;
-  background: var(--accent) !important; color: #111 !important; border-radius: 8px; line-height: 1; }
-.item .acts .dlmp3 b { font-size: 15px; }
-.item .acts .dlmp3 small { font-size: 10px; font-weight: 700; }
+.item .acts .dlmp3 { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 36px; padding: 0 !important; color: #4caf50 !important; }
+.item .acts .dlmp3 svg { width: 24px; height: 24px; pointer-events: none; }
 .item .acts [data-a="ren"]  { color: #42a5f5; }
 .item.active .name { color: var(--accent2); }
 
@@ -335,7 +333,7 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 }
 .bar .track { position: absolute; left: 0; right: 0; top: 15px; height: 5px; border-radius: 3px; background: var(--surf3); }
 .bar .fill  { position: absolute; left: 0; top: 15px; height: 5px; border-radius: 3px; background: var(--accent); width: 0; }
-.bar .sel   { position: absolute; top: 9px; height: 17px; background: rgba(232,51,109,.25); border-left: 2px solid var(--clip); border-right: 2px solid var(--clip); display: none; }
+.bar .sel   { position: absolute; top: 9px; height: 17px; background: rgba(76,175,80,.25); border-left: 2px solid var(--clip); border-right: 2px solid var(--clip); display: none; }
 .bar .cliprange { position: absolute; top: 24px; height: 3px; background: var(--clip); opacity: .55; border-radius: 2px; }
 .bar .mk {
   position: absolute; top: 0; width: 14px; margin-left: -7px; height: 14px; color: var(--star);
@@ -2838,7 +2836,7 @@ function renderClips() {
       <span class="meta">${fmt(Math.max(0, c.start - T0()))}–${fmt(c.end - T0())}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
-        <button data-a="dl" class="dlmp3" title="Зберегти MP3"><b>⬇</b><small>MP3</small></button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
+        <button data-a="dl" class="dlmp3" title="Зберегти MP3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M4.5 13.5v5.5h15v-5.5"/></svg></button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
       </span>
     </div>`).join('');
@@ -3250,7 +3248,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v143';
+const APP_VER = 'v144';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
