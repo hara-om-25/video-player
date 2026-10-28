@@ -73,6 +73,7 @@ header h1 { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; white-spac
 /* відеоредактор: без лівої панелі — відео ширше; плейлист — випадний список з шапки */
 #plBtn, .plpop { display: none; }
 body.f-hdrpl.f-vslider { --cols: minmax(0, 1fr) 150px; }   /* відеоплеєр і редактор: лівої панелі немає */
+body.f-hdrpl.f-vslider.app-video { --cols: minmax(0, 1fr) 220px; }   /* відеоплеєр: відео вужче, мітки ширше (рішення користувача) */
 body.f-hdrpl.f-vslider .panel.playlist { display: none; }
 /* аудіоплеєр: ліва панель лишається для «Фрагментів» і швидкості — без заголовка «Плейлист» */
 body.f-hdrpl:not(.f-vslider) .panel.playlist > h2 { display: none; }
@@ -3181,7 +3182,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v136';
+const APP_VER = 'v137';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
