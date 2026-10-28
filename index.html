@@ -555,6 +555,8 @@ body.f-vslider #vspeed.drag #btnUntrim { visibility: hidden; }
 @media (max-width: 860px) { body.f-vslider .actions .r2 { bottom: 14px; } }
 body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; align-self: flex-start; margin: 0; }   /* 60/30/10 — біля лівого краю панелі, якомога нижче */
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
+/* список міток закінчується над віконцем швидкості, ★ і «Обрізати» — не залазить під них */
+@media (min-width: 861px) { body.f-vspd .panel.side > .sec { position: absolute; left: 0; right: 0; top: 0; bottom: calc(var(--vsb, 80px) + 46px); } }
 body.f-vspd .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
 body.f-vspd #btnMark { position: absolute; right: 10px; top: var(--vstar, auto); }
 .vspeed:not(.drag) .vsbox { top: auto; bottom: 0; transform: translateX(-50%); }   /* у спокої — внизу, над ★ */
@@ -3214,7 +3216,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v138';
+const APP_VER = 'v139';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
