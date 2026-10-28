@@ -312,7 +312,13 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .item .t { color: var(--star); font-variant-numeric: tabular-nums; font-size: 17px; }
 
 /* ── timeline ─────────────────────────── */
-.timeline { padding: 6px 16px 0; }
+.timeline { padding: 6px 16px 0; display: flex; align-items: center; gap: 10px; }
+.timeline .bar { flex: 1; min-width: 0; }
+/* масштаб шкали: ◁ 100% ▷ */
+.tlzoom { flex: none; display: flex; align-items: center; gap: 2px; }
+.tlzoom button { width: 30px; height: 30px; padding: 0; font-size: 15px; color: var(--accent); background: var(--surf2); border: 1px solid var(--surf3); border-radius: 7px; }
+.tlzoom button:disabled { opacity: .35; }
+.tlzoom b { min-width: 3.2em; text-align: center; color: var(--accent); font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
 .transport .right { grid-column: 3; grid-row: 1; justify-self: stretch; display: flex; align-items: center; gap: 14px; }
 .transport .right .star { margin: 0 auto; }
 .transport .star { width: 64px; height: 64px; padding: 0; font-size: 38px; color: var(--star); border-radius: 10px; }
@@ -687,6 +693,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 
 <div class="footer">
   <div class="timeline">
+    <div class="tlzoom" title="Масштаб шкали: скільки відсотків запису видно"><button id="tlIn" title="Збільшити (видно менше)">◁</button><b id="tlPct">100%</b><button id="tlOut" title="Зменшити (видно більше)">▷</button></div>
     <div class="bar" id="bar">
       <div class="track"></div>
       <div class="sel" id="sel"></div>
@@ -2447,8 +2454,26 @@ audio.ontimeupdate = () => {
   updateTime();
 };
 let lastPosSave = 0;
+/* Масштаб шкали: видно tlPct % запису; вікно йде за поточним місцем (по центру), під час перетягування — стоїть */
+const TL_PCTS = [100, 50, 25, 10, 5, 2, 1];
+let tlPct = getSetting('tlPct', 100), tlWin = null, tlLastA = null;
+if (!TL_PCTS.includes(tlPct)) tlPct = 100;
+function tlView(tt) {
+  if (tlWin) return tlWin;
+  const a0 = T0(), sp = span();
+  if (tlPct >= 100) return [a0, sp];
+  const w = sp * tlPct / 100, t = tt ?? (Rev.active ? Rev.time() : audio.currentTime) ?? 0;
+  return [Math.min(Math.max(a0, t - w / 2), a0 + sp - w), w];
+}
+const tlX = (t, v = tlView()) => (t - v[0]) / v[1] * 100;
+function setTlPct(p) {
+  tlPct = p; setSetting('tlPct', p); $('tlPct').textContent = (p < 1 ? p.toFixed(1) : p) + '%';
+  $('tlIn').disabled = p <= TL_PCTS[TL_PCTS.length - 1]; $('tlOut').disabled = p >= 100;
+  tlLastA = null; renderBar(); updateTime();
+}
 function updateTime(tt) {
-  const d = dur(), t = tt ?? (audio.currentTime || 0), p = d ? Math.max(0, (t - T0()) / span() * 100) : 0;
+  const d = dur(), t = tt ?? (audio.currentTime || 0), v = tlView(t), p = d ? Math.max(0, Math.min(100, tlX(t, v))) : 0;
+  if (tlPct < 100 && v[0] !== tlLastA) { tlLastA = v[0]; renderBar(v); }   // вікно зсунулось — мітки на шкалі переставити
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
   $('tCur').textContent = hms(t - T0());
@@ -2460,20 +2485,27 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
 /* перетягування по шкалі */
 (() => {
   const bar = $('bar'); let drag = false;
-  const at = e => { const r = bar.getBoundingClientRect(); return T0() + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * span(); };
-  bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; bar.setPointerCapture(e.pointerId); clipStopAt = null; seek(at(e)); });
+  const at = e => { const r = bar.getBoundingClientRect(), v = tlView(); return v[0] + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * v[1]; };
+  bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; tlWin = tlView(); bar.setPointerCapture(e.pointerId); clipStopAt = null; seek(at(e)); });
   bar.addEventListener('pointermove', e => { if (drag) seek(at(e)); });
-  bar.addEventListener('pointerup', () => { drag = false; });
-  bar.addEventListener('pointercancel', () => { drag = false; });
+  const end = () => { drag = false; tlWin = null; updateTime(); };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+  // коліщатко миші над шкалою — масштаб
+  bar.addEventListener('wheel', e => { e.preventDefault(); const i = TL_PCTS.indexOf(tlPct) + (e.deltaY < 0 ? 1 : -1); if (i >= 0 && i < TL_PCTS.length) setTlPct(TL_PCTS[i]); }, { passive: false });
+  $('tlIn').onclick = () => { const i = TL_PCTS.indexOf(tlPct); if (i < TL_PCTS.length - 1) setTlPct(TL_PCTS[i + 1]); };
+  $('tlOut').onclick = () => { const i = TL_PCTS.indexOf(tlPct); if (i > 0) setTlPct(TL_PCTS[i - 1]); };
+  $('tlPct').ondblclick = () => setTlPct(100);
 })();
 
-function renderBar() {
+function renderBar(vv) {
   const d = dur(), el = $('barExtras');
   if (!d || !data) { el.innerHTML = ''; renderSel(); return; }
+  const v = vv || tlView(), A = v[0], B = v[0] + v[1];
   el.innerHTML =
-    (FEAT.clips ? data.clips : []).filter(c => c.end > T0()).map(c => { const a = Math.max(c.start, T0()); return `<div class="cliprange" style="left:${(a - T0()) / span() * 100}%;width:${Math.max(0.3, (c.end - a) / span() * 100)}%" title="${esc(c.name)}"></div>`; }).join('') +
-    data.marks.filter(m => m.t >= T0()).map(m => `<div class="mk" style="left:${(m.t - T0()) / span() * 100}%" title="${esc(m.name)}">★</div>`).join('');
-  renderSel();
+    (FEAT.clips ? data.clips : []).filter(c => c.end > A && c.start < B).map(c => { const a = Math.max(c.start, A), e = Math.min(c.end, B); return `<div class="cliprange" style="left:${tlX(a, v)}%;width:${Math.max(0.3, (e - a) / v[1] * 100)}%" title="${esc(c.name)}"></div>`; }).join('') +
+    data.marks.filter(m => m.t >= A && m.t <= B).map(m => `<div class="mk" style="left:${tlX(m.t, v)}%" title="${esc(m.name)}">★</div>`).join('');
+  renderSel(v);
 }
 
 /* ═════════ мітки ═════════ */
@@ -2588,7 +2620,7 @@ function setSel(s, e) {
   if (selStart != null && selEnd != null && selEnd < selStart) [selStart, selEnd] = [selEnd, selStart];
   renderSel();
 }
-function renderSel() {
+function renderSel(vv) {
   if (data && (String(data.sel) !== String([selStart, selEnd]))) { data.sel = [selStart, selEnd]; save(); }
   $('lblStart').textContent = selStart == null ? 'початок' : fmt(selStart, true);
   $('lblEnd').textContent = selEnd == null ? 'кінець' : fmt(selEnd, true);
@@ -2598,9 +2630,9 @@ function renderSel() {
   if (d && (selStart != null || selEnd != null)) {
     const s = selStart ?? selEnd, e = selEnd ?? selStart;
     sel.style.display = 'block';
-    const a = Math.max(s, T0());
-    sel.style.left = (a - T0()) / span() * 100 + '%';
-    sel.style.width = Math.max(0, (e - a) / span() * 100) + '%';
+    const v = vv || tlView(), a = Math.max(s, v[0]), b = Math.min(e, v[0] + v[1]);
+    sel.style.left = tlX(a, v) + '%';
+    sel.style.width = Math.max(0, (b - a) / v[1] * 100) + '%';
   } else sel.style.display = 'none';
 }
 $('btnStart').onclick = () => setSel(audio.currentTime, null);
@@ -3182,7 +3214,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v137';
+const APP_VER = 'v138';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -3291,6 +3323,7 @@ setSpeed(speed);
   const sv = getSetting('vspeed', 1); apply(sv > 0 ? sv : 1, false);
 })();
 renderAll();
+setTlPct(tlPct);
 // файли, якими «поділилися» з галереї / файлового менеджера (sw.js поклав їх у вхідні)
 async function takeShared() {
   if (!/[?&]shared=/.test(location.search) || !window.caches) return;
