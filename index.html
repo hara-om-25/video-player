@@ -273,6 +273,11 @@ body.fs.f-draw #btnDraw { position: fixed; z-index: 16; right: 14px; bottom: cal
 /* кольори значків у списках */
 .item .acts [data-a="play"] { color: #4caf50; }
 .item .acts [data-a="dl"]   { color: var(--accent); }
+/* «зберегти фрагмент MP3» — як кнопка ⬇MP3 у шапці «Фрагментів» (жовта, стрілка + підпис) */
+.item .acts .dlmp3 { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 40px; height: 36px; padding: 0 !important;
+  background: var(--accent) !important; color: #111 !important; border-radius: 8px; line-height: 1; }
+.item .acts .dlmp3 b { font-size: 15px; }
+.item .acts .dlmp3 small { font-size: 10px; font-weight: 700; }
 .item .acts [data-a="ren"]  { color: #42a5f5; }
 .item.active .name { color: var(--accent2); }
 
@@ -505,7 +510,7 @@ body:not(.f-trim) #btnTrim, body:not(.f-trim) #btnUntrim { display: none !import
 body:not(.f-last) .actions .r1 { display: none !important; }
 /* відеоплеєр (f-vslider): шкала швидкості −10…+10 біля правого краю, під нею ★; «Останні» — стовпчиком 60/30/10 */
 .vspeed, .actions .lastcol { display: none; }
-body.f-vslider .panel.side { position: relative; }
+body.f-vspd .panel.side { position: relative; }
 body.f-vslider { --cols: 150px minmax(0, 1fr) 150px; }   /* відео якомога ширше; бокові панелі вузькі й однакові */
 /* «Останні» 60/30/10 — у рядку зі шкалою часу, ліворуч від регулятора */
 .lastrow { display: none; }
@@ -519,10 +524,10 @@ body.f-vslider #markList .item { flex-wrap: wrap; row-gap: 2px; }
 body.f-vslider #markList .item .name { order: 5; flex: 1 1 100%; padding-left: 1.6em; white-space: normal; overflow-wrap: anywhere; }
 body.f-vslider #markList .item .acts { margin-left: auto; }
 @media (max-width: 860px) { body.f-vslider .panel.side .sec { padding-right: 66px; } }   /* відео ширше; бокові панелі однакової ширини */
-body.f-vslider .vspeed { pointer-events: none; }        /* стовпчик не заважає міткам; реагує лише віконце */
-body.f-vslider .vspeed .vsbox { pointer-events: auto; }
+body.f-vspd .vspeed { pointer-events: none; }        /* стовпчик не заважає міткам; реагує лише віконце */
+body.f-vspd .vspeed .vsbox { pointer-events: auto; }
 body.f-vslider .actions { border-top: 0; }
-body.f-vslider .actions .r1, body.f-vslider .spdrow { display: none !important; }
+body.f-vslider .actions .r1, body.f-vspd .spdrow { display: none !important; }
 /* «Обрізать» — ліворуч від ★, у стилі кнопок шапки (жовта); ↺ — над нею, коли є обрізка */
 body.f-vslider .actions .r2 { position: absolute; left: 8px; bottom: calc(var(--vsb, 80px) - 60px); flex-direction: column; align-items: stretch; gap: 4px; }
 /* «Обрізати» / «Зберегти» — одна кнопка, розділена навпіл по горизонталі */
@@ -543,8 +548,8 @@ body.f-vslider #vspeed.drag #btnUntrim { visibility: hidden; }
 @media (max-width: 860px) { body.f-vslider .actions .r2 { bottom: 14px; } }
 body.f-vslider .actions .lastcol { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; align-self: flex-start; margin: 0; }   /* 60/30/10 — біля лівого краю панелі, якомога нижче */
 body.f-vslider .actions .lastcol .act.last { width: 58px; padding: 10px 0; font-size: 14px; }
-body.f-vslider .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
-body.f-vslider #btnMark { position: absolute; right: 10px; top: var(--vstar, auto); }
+body.f-vspd .vspeed { display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; right: 8px; top: 8px; width: 56px; bottom: var(--vsb, 80px); z-index: 2; }
+body.f-vspd #btnMark { position: absolute; right: 10px; top: var(--vstar, auto); }
 .vspeed:not(.drag) .vsbox { top: auto; bottom: 0; transform: translateX(-50%); }   /* у спокої — внизу, над ★ */
 .vspeed .vsl { font-size: 13px; font-weight: 700; color: var(--accent); opacity: 0; transition: opacity .15s; }
 .vspeed .vstrack { position: relative; flex: 1; width: 6px; border-radius: 3px; background: var(--accent); opacity: 0; transition: opacity .15s; pointer-events: none; }
@@ -570,7 +575,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 </style>
 </head>
-<body class="f-video f-trim f-last f-vslider f-edit f-hdrpl app-video">
+<body class="f-video f-trim f-last f-vslider f-edit f-hdrpl f-vspd app-video">
 
 <header>
   <div class="hc1">
@@ -1076,7 +1081,7 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
    Файл ідентифікується за назвою та розміром — тому при повторному
    відкритті того самого файлу мітки й фрагменти підтягуються автоматично. */
 // Можливості цього застосунку (підставляє build.py): аудіоплеєр, відеоплеєр чи відеоредактор
-const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "edit": true, "hdrpl": true, "db": "markplayer-video", "session": "session.video"};
+const FEAT = {"id": "video", "video": true, "clips": false, "trim": true, "last": true, "vslider": true, "edit": true, "hdrpl": true, "vspd": true, "db": "markplayer-video", "session": "session.video"};
 const PREFIX = 'markplayer:';
 const fileKey = f => PREFIX + f.name + '|' + f.size;
 function load(key) {
@@ -1432,7 +1437,7 @@ function layoutActions() {
     need = Math.max(need, dyNeed - dyNow);
   }
   sp.style.height = Math.max(0, Math.ceil(need)) + 'px';
-  if (FEAT.vslider && !matchMedia('(max-width: 860px)').matches) {   // шкала й ★ — біля правого краю панелі, над колом регулятора
+  if (FEAT.vspd && !matchMedia('(max-width: 860px)').matches) {   // шкала й ★ — біля правого краю панелі, над колом регулятора
     const side = document.querySelector('.panel.side'), pr = side.getBoundingClientRect();
     const dx = W - (pr.right - 8 - 28);                      // відстань стовпчика до правого краю вікна
     const circTop = dx < R ? H - Math.sqrt(R * R - dx * dx) : H;
@@ -1519,7 +1524,7 @@ if (FEAT.vslider) {
 }
 /* відеоредактор: лівої панелі немає — «+» у шапці біля назви, плейлист — список, що розкривається з ▽ біля назви файлу */
 if (FEAT.hdrpl) {
-  document.querySelector('.hc1').appendChild($('btnAdd'));
+  document.querySelector('.hc2').appendChild($('btnAdd'));     // «+» — одразу після тривалості
   const pop = $('plPop');
   pop.appendChild($('playlist'));
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
@@ -1558,7 +1563,7 @@ let speed = getSetting('speed', 1);
 let wantRate = 1, rateCap = Infinity, capUntil = 0;
 function setRate(r) { wantRate = r; audio.playbackRate = Math.min(r, rateCap); }
 function setSpeed(v) {
-  speed = FEAT.vslider ? Math.min(10, Math.max(0.1, Math.round(v * 100) / 100)) : Math.min(4, Math.max(0.5, Math.round(v * 100) / 100));
+  speed = FEAT.vspd ? Math.min(10, Math.max(0.1, Math.round(v * 100) / 100)) : Math.min(4, Math.max(0.5, Math.round(v * 100) / 100));
   setRate(speed); audio.defaultPlaybackRate = speed;
   audio.preservesPitch = audio.mozPreservesPitch = audio.webkitPreservesPitch = true;
   $('spVal').textContent = '×' + speed.toFixed(2);
@@ -2765,7 +2770,7 @@ function renderClips() {
       <span class="meta">${fmt(Math.max(0, c.start - T0()))}–${fmt(c.end - T0())}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
-        <button data-a="dl" title="Зберегти MP3">⬇</button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
+        <button data-a="dl" class="dlmp3" title="Зберегти MP3"><b>⬇</b><small>MP3</small></button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
       </span>
     </div>`).join('');
@@ -3176,7 +3181,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v135';
+const APP_VER = 'v136';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -3251,7 +3256,7 @@ setSpeed(speed);
    Віконце з числом нерухоме: натиснув — з'являється жовта шкала, ведеш вгору/вниз — швидкість міняється;
    подвійний дотик — назад до ×1. */
 (() => {
-  if (!FEAT.vslider) return;
+  if (!FEAT.vspd) return;
   const box = $('vsThumb'), col = $('vspeed'), tr = $('vsTrack');
   const toV = sp => Math.log10(Math.min(10, Math.max(0.1, sp)));
   const toSp = v => { const x = Math.pow(10, Math.max(-1, Math.min(1, v))); return Math.abs(v) < 0.04 ? 1 : x < 1 ? Math.max(0.1, Math.round(x * 20) / 20) : Math.round(x * 10) / 10; };
