@@ -2,7 +2,7 @@
 // Спершу кеш — застосунок відкривається миттєво й без інтернету (і при поганому зв'язку не чекає мережу).
 // Нові версії приходять так: сторінка сама порівнює APP_VER на сайті (checkUpdate, запит з ?u=… — лише мережа),
 // просить оновити цей файл; новий sw.js з новим CACHE завантажує свіжі файли — і сторінка перезапускається.
-const CACHE = 'video-player-v145';
+const CACHE = 'video-player-v146';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './fonts/tektur-cyrillic.woff2', './fonts/tektur-cyrillic-ext.woff2', './fonts/tektur-latin.woff2', './fonts/tektur-latin-ext.woff2'];
 
@@ -15,7 +15,8 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k.startsWith('video-player-') && k !== CACHE).map(k => caches.delete(k)))
   ).then(() => self.clients.claim()));
 });
-const INBOX = 'share-video-player';     // не з префіксом CACHE — інакше activate її стер би
+const INBOX = 'share-video-player';
+const AICACHE = 'ai1-video-player';   // ai1 — змінити, коли зміняться файли в ai/     // не з префіксом CACHE — інакше activate її стер би
 self.addEventListener('fetch', e => {
   const req = e.request;
   // «Поділитися» → файли кладемо у вхідні й відкриваємо застосунок; сторінка забере їх у плейлист
@@ -36,6 +37,17 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin || url.searchParams.has('u')) return;   // перевірка оновлення — повз кеш
+  // нейромережа відеоредактора (ai/, ~6 МБ) — в окремому кеші, який нова версія не стирає
+  if (url.pathname.includes('/ai/')) {
+    e.respondWith((async () => {
+      const box = await caches.open(AICACHE), hit = await box.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      const resp = await fetch(req);
+      if (resp && resp.ok) await box.put(req, resp.clone());
+      return resp;
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const nav = req.mode === 'navigate';
     const hit = await caches.match(req, { ignoreSearch: true }) || (nav && (await caches.match('./') || await caches.match('./index.html')));

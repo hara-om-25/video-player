@@ -197,7 +197,10 @@ html, body { touch-action: pan-x pan-y; }
 .vidbox.on { touch-action: none; }
 /* відео не збільшене — вертикальний свайп по ньому прокручує сторінку (на телефоні відео займає майже весь екран) */
 body:not(.fs) .vidbox.on:not(.zoomed) { touch-action: pan-y; }
-.vidbox.on > #audio, #revCanvas { transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1)); transform-origin: 50% 50%; }
+.vidbox.on > #audio, #revCanvas, #aiCanvas { transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1)) var(--st, scale(1)); transform-origin: 50% 50%; }
+/* відеоредактор: рамки об'єктів (обробка 🎯); --st — стабілізація, малюнки (#drawCanvas) її не мають */
+#aiCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+body.f-ai .vidbox.on > #aiCanvas { display: block; }
 /* яскравість відео (відеоплеєр, на весь екран — вертикальний свайп біля правого краю) */
 .vidbox.on > #audio, #revCanvas { filter: brightness(var(--vbri, 1)); }
 /* відеоредактор: малюнки на мітках — полотно поверх відео (масштабується разом з ним) */
@@ -414,6 +417,21 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 /* відеоредактор: шестерня в шапці й вікно налаштувань */
 #btnSet { display: none; flex: none; width: 40px; height: 34px; padding: 4px; background: none; border: 0; color: var(--accent); }
 body.f-edit #btnSet { display: inline-block; }
+#btnAI { display: none; flex: none; width: 40px; height: 34px; padding: 0; background: none; border: 0; font-size: 22px; line-height: 1; }
+body.f-ai #btnAI { display: inline-block; }
+#dlgAI { width: min(480px, calc(100vw - 32px)); }
+#dlgAI .srow { display: flex; align-items: center; gap: 10px; margin-top: 10px; cursor: pointer; font-size: 14px; }
+#dlgAI .srow input { width: 24px; height: 24px; flex: none; accent-color: var(--accent); }
+#dlgAI .aiprog { margin-top: 8px; font-size: 13px; color: var(--accent2); min-height: 1.2em; }
+#dlgAI .ailist { max-height: 42vh; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+#dlgAI .airow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--surf2); }
+#dlgAI .airow.sel { outline: 2px solid var(--accent); }
+#dlgAI .ain { flex: none; min-width: 28px; height: 28px; border-radius: 6px; color: #111; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+#dlgAI .airow input { flex: 1; min-width: 0; font-size: 15px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--surf3); background: var(--surface); color: var(--text); user-select: text; }
+#dlgAI .airow button { flex: none; padding: 6px 10px; font-size: 17px; }
+#dlgAI .ainone { color: var(--dim); font-size: 13px; padding: 6px; }
+#dlgPick .pkck { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 15px; color: var(--text); cursor: pointer; }
+#dlgPick .pkck input { width: 24px; height: 24px; accent-color: var(--accent); }
 #btnSet svg { width: 100%; height: 100%; display: block; pointer-events: none; }
 #dlgSet { width: min(440px, calc(100vw - 32px)); }
 #dlgSet .srow { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
@@ -599,6 +617,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button>
   <input type="file" id="restoreInput" accept=".json,application/json" hidden>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
+  <button id="btnAI" title="Обробка: стабілізація й об’єкти">🎯</button>
   <button id="btnSet" title="Налаштування"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.4"/></svg></button>
   <button class="ver" id="ver" title="Скопіювати посилання на плеєр"></button>
   </div>
@@ -628,7 +647,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <section class="panel stage">
     <div class="vidbox" id="vidbox">
       <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z"/></svg>
-      <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><canvas id="drawCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
+      <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><canvas id="aiCanvas"></canvas><canvas id="drawCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
     </div>
     <div class="drawbar" id="drawBar">
       <span class="grip" id="drawGrip" title="Перетягни панель, щоб відкрити ту частину кадру">⠿</span>
@@ -759,6 +778,19 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <h3 id="dfTitle"></h3>
   <div class="dflist" id="dfList"></div>
   <div class="row"><button id="dfOther">Інша папка…</button><button id="dfCancel">Скасувати</button><button class="accent" id="dfAdd">Додати</button></div>
+</dialog>
+
+<dialog id="dlgAI">
+  <h3>Обробка відео</h3>
+  <p id="aiInfo"></p>
+  <div class="row" style="justify-content:flex-start;margin-top:4px"><button class="accent" id="aiRun">Обробити шматок</button></div>
+  <div class="aiprog" id="aiProg"></div>
+  <div id="aiOpts">
+    <label class="srow"><input type="checkbox" id="aiBoxes"><span>Рамки з підписами</span></label>
+    <label class="srow"><input type="checkbox" id="aiStab"><span>Стабілізація</span></label>
+    <div class="ailist" id="aiList"></div>
+  </div>
+  <div class="row"><button id="aiDel">Прибрати обробку</button><button class="accent" id="aiOk">Готово</button></div>
 </dialog>
 
 <div class="plpop" id="plPop"></div>
@@ -3180,6 +3212,7 @@ function openTrack(i, autoplay) {
   cur = i;
   const t = tracks[i];
   data = load(t.key);
+  AI.ensure();
   selStart = FEAT.clips && data.sel ? data.sel[0] : null;      // позначки [ ] теж відновлюються
   selEnd = FEAT.clips && data.sel ? data.sel[1] : null;
   clipStopAt = null;
@@ -4230,6 +4263,385 @@ const Draw = (() => {
   };
   return R;
 })();
+/* ── відеоредактор: обробка (FEAT.ai) — стабілізація + пошук і трекінг об'єктів ──
+   Без сервера, прямо на пристрої. Кадри — з файлу (VTrack + VideoDecoder). Рух камери — власний невеликий
+   «OpenCV»: кути Ши-Томасі → пірамідальний потік Лукаса-Канаде → подібність (зсув+поворот) з RANSAC;
+   траєкторія згладжується (0,25 с), поправка обмежена ±6% (великі повороти — навмисні панорами).
+   Об'єкти: нейромережа CenterNet (TF.js, модель 4 МБ з ai/, підвантажується при першій обробці й кешується
+   для офлайну) на 2–3 квадратних частинах кадру ~4 рази на секунду; між ними рамки веде потік LK; номер
+   тримається, доки об'єкт не зникне надовго. Результат — в IndexedDB ('ai:' + ключ файлу), усе в пікселях
+   кадру (як videoWidth × videoHeight). Підписи можна міняти, об'єкти — прибирати (вікно «🎯»). */
+const AI = (() => {
+  const R = { has: () => false, ensure: () => {}, tap: () => false, opt: {}, matrix: () => null, drawBoxes: () => {}, objs: () => [] };
+  if (!FEAT.ai) return R;
+  const UA = { 0: 'людина', 1: 'велосипед', 2: 'авто', 3: 'мотоцикл', 5: 'вантажівка', 7: 'вантажівка' };
+  const KEEP = new Set([0, 1, 2, 3, 5, 7]), VEH = new Set([1, 2, 3, 5, 7]);
+  const COLS = ['#ffd63f', '#5adcff', '#78ff78', '#ff78c8', '#ffa03c', '#c8a0ff'];
+  let res = null, resKey = null, ver = 0, busyAI = false;
+  const rk = t => t.parent || t.key;      // обробка — спільна для файлу і його шматків (час у ній — від початку файлу)
+  const opt = Object.assign({ boxes: true, stab: true }, getSetting('aiopt', {}));
+  const saveOpt = () => setSetting('aiopt', opt);
+
+  // ── маленький «OpenCV» ──
+  function toGray(id, w, h) { const g = new Float32Array(w * h), d = id.data; for (let i = 0, j = 0; i < g.length; i++, j += 4) g[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) / 256; return g; }
+  function down(g, w, h) { const W = w >> 1, H = h >> 1, o = new Float32Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = 2 * y * w + 2 * x; o[y * W + x] = (g[i] + g[i + 1] + g[i + w] + g[i + w + 1]) / 4; } return { g: o, w: W, h: H }; }
+  function pyr(g, w, h) { const P = [{ g, w, h }]; for (let l = 1; l < 3; l++) P.push(down(P[l - 1].g, P[l - 1].w, P[l - 1].h)); return P; }
+  const smp = (L, x, y) => {             // білінійно
+    if (x < 0) x = 0; if (y < 0) y = 0; if (x > L.w - 1.001) x = L.w - 1.001; if (y > L.h - 1.001) y = L.h - 1.001;
+    const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0 * L.w + x0, g = L.g;
+    return (g[i] * (1 - fx) + g[i + 1] * fx) * (1 - fy) + (g[i + L.w] * (1 - fx) + g[i + L.w + 1] * fx) * fy;
+  };
+  // кути Ши-Томасі в прямокутнику [x0,y0,x1,y1]
+  function corners(L, max, md, x0 = 2, y0 = 2, x1 = L.w - 3, y1 = L.h - 3) {
+    const { g, w } = L; x0 = Math.max(2, x0 | 0); y0 = Math.max(2, y0 | 0); x1 = Math.min(L.w - 3, x1 | 0); y1 = Math.min(L.h - 3, y1 | 0);
+    if (x1 - x0 < 4 || y1 - y0 < 4) return [];
+    const cell = Math.max(2, md | 0), best = new Map();
+    let top = 0; const cand = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      let a = 0, b = 0, c = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const i = (y + dy) * w + x + dx, ix = (g[i + 1] - g[i - 1]) / 2, iy = (g[i + w] - g[i - w]) / 2;
+        a += ix * ix; b += ix * iy; c += iy * iy;
+      }
+      const l = (a + c) / 2 - Math.sqrt(((a - c) / 2) ** 2 + b * b);
+      if (l <= 0) continue;
+      const k = ((y / cell) | 0) * 100000 + ((x / cell) | 0), cur = best.get(k);
+      if (!cur || cur[2] < l) best.set(k, [x, y, l]);
+      if (l > top) top = l;
+    }
+    for (const v of best.values()) if (v[2] > top * 0.01) cand.push(v);
+    cand.sort((p, q) => q[2] - p[2]);
+    return cand.slice(0, max).map(v => [v[0], v[1]]);
+  }
+  // пірамідальний LK: точки з P0 (рівень 0) → P1
+  function lk(P0, P1, pts, r = 7) {
+    const out = [];
+    for (const [px, py] of pts) {
+      let gx = 0, gy = 0, ok = true;
+      for (let l = P0.length - 1; l >= 0; l--) {
+        const A = P0[l], B = P1[l], s = 1 / (1 << l), x = px * s, y = py * s;
+        let G11 = 0, G12 = 0, G22 = 0; const IX = [], IY = [], I0 = [];
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+          const ix = (smp(A, x + dx + 1, y + dy) - smp(A, x + dx - 1, y + dy)) / 2, iy = (smp(A, x + dx, y + dy + 1) - smp(A, x + dx, y + dy - 1)) / 2;
+          IX.push(ix); IY.push(iy); I0.push(smp(A, x + dx, y + dy)); G11 += ix * ix; G12 += ix * iy; G22 += iy * iy;
+        }
+        const det = G11 * G22 - G12 * G12; if (det < 1e-3) { ok = false; break; }
+        let vx = 0, vy = 0;
+        for (let it = 0; it < 8; it++) {
+          let b1 = 0, b2 = 0, k = 0;
+          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++, k++) {
+            const e = I0[k] - smp(B, x + gx + vx + dx, y + gy + vy + dy); b1 += e * IX[k]; b2 += e * IY[k];
+          }
+          const ux = (G22 * b1 - G12 * b2) / det, uy = (G11 * b2 - G12 * b1) / det; vx += ux; vy += uy;
+          if (ux * ux + uy * uy < 0.0009) break;
+        }
+        gx = (gx + vx) * (l ? 2 : 1); gy = (gy + vy) * (l ? 2 : 1);
+      }
+      const nx = px + gx, ny = py + gy;
+      out.push(ok && nx >= 0 && ny >= 0 && nx < P0[0].w && ny < P0[0].h ? [nx, ny] : null);
+    }
+    return out;
+  }
+  // подібність (зсув + поворот + масштаб) з RANSAC: p1 ≈ [a −b; b a]·p0 + t
+  function similarity(p0, p1) {
+    const n = p0.length; if (n < 6) return null;
+    const fit = idx => { let mx0 = 0, my0 = 0, mx1 = 0, my1 = 0; for (const i of idx) { mx0 += p0[i][0]; my0 += p0[i][1]; mx1 += p1[i][0]; my1 += p1[i][1]; } const m = idx.length; mx0 /= m; my0 /= m; mx1 /= m; my1 /= m;
+      let sa = 0, sb = 0, ss = 0; for (const i of idx) { const x0 = p0[i][0] - mx0, y0 = p0[i][1] - my0, x1 = p1[i][0] - mx1, y1 = p1[i][1] - my1; sa += x0 * x1 + y0 * y1; sb += x0 * y1 - y0 * x1; ss += x0 * x0 + y0 * y0; }
+      if (ss < 1e-6) return null; const a = sa / ss, b = sb / ss; return { a, b, tx: mx1 - (a * mx0 - b * my0), ty: my1 - (b * mx0 + a * my0) }; };
+    const err = (M, i) => Math.hypot(M.a * p0[i][0] - M.b * p0[i][1] + M.tx - p1[i][0], M.b * p0[i][0] + M.a * p0[i][1] + M.ty - p1[i][1]);
+    let best = null, bestIn = [];
+    for (let it = 0; it < 120; it++) {
+      const i = (Math.random() * n) | 0, j = (Math.random() * n) | 0; if (i === j) continue;
+      const M = fit([i, j]); if (!M) continue;
+      const inl = []; for (let k = 0; k < n; k++) if (err(M, k) < 1.5) inl.push(k);
+      if (inl.length > bestIn.length) { bestIn = inl; best = M; }
+    }
+    if (bestIn.length < 6) return null;
+    return fit(bestIn) || best;
+  }
+  const iou = (a, b) => { const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]), x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]); const i = Math.max(0, x2 - x1) * Math.max(0, y2 - y1); return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i + 1e-9); };
+  const inside = (a, b) => { const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]), x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]); return Math.max(0, x2 - x1) * Math.max(0, y2 - y1) / ((a[2] - a[0]) * (a[3] - a[1]) + 1e-9); };
+
+  // ── нейромережа ──
+  let model = null, backend = '';
+  const loadScript = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('не завантажилось ' + src)); document.head.appendChild(s); });
+  async function loadModel(say) {
+    if (model) return model;
+    say('Завантаження нейромережі… (лише вперше)');
+    if (!window.tf) await loadScript('ai/tf.min.js');
+    if (!tf.wasm) await loadScript('ai/tf-backend-wasm.min.js');
+    tf.wasm.setWasmPaths(new URL('ai/', location.href).href);
+    model = await tf.loadGraphModel('ai/centernet.json');
+    // що швидше на цьому пристрої — відеокарта (webgl) чи процесор (wasm)
+    const probe = new OffscreenCanvas(64, 64);
+    const timeIt = async () => { const run = () => tf.tidy(() => model.execute(tf.image.resizeBilinear(tf.browser.fromPixels(probe).toFloat().expandDims(0), [512, 512]), ['tower_0/detections'])); let r = run(); await r.data(); r.dispose(); const t0 = performance.now(); r = run(); await r.data(); r.dispose(); return performance.now() - t0; };
+    const tried = [];
+    for (const be of ['webgl', 'wasm']) { try { if (await tf.setBackend(be)) { await tf.ready(); say('Перевірка швидкості (' + be + ')…'); tried.push([await timeIt(), be]); } } catch {} }
+    tried.sort((a, b) => a[0] - b[0]); backend = tried.length ? tried[0][1] : tf.getBackend();
+    await tf.setBackend(backend); await tf.ready();
+    return model;
+  }
+  async function detect(cv, W, H) {           // cv — кадр (W×H); квадратні частини вздовж довшої сторони
+    const long = Math.max(W, H), short = Math.min(W, H), r = long / short, n = r > 1.4 ? 3 : r > 1.05 ? 2 : 1, out = [];
+    const img = tf.browser.fromPixels(cv).toFloat().expandDims(0);
+    try {
+      for (let k = 0; k < n; k++) {
+        const off = n === 1 ? (long - short) / 2 : k * (long - short) / (n - 1);
+        const [x0, y0] = W >= H ? [off, 0] : [0, off];
+        const t = tf.tidy(() => model.execute(tf.image.cropAndResize(img, [[y0 / H, x0 / W, (y0 + short) / H, (x0 + short) / W]], [0], [512, 512]), ['tower_0/detections']));
+        const d = (await t.array())[0]; t.dispose();
+        for (const q of d) if (q[4] > 0.28 && KEEP.has(q[5])) out.push({ c: q[5], s: q[4], b: [x0 + q[0] / 512 * short, y0 + q[1] / 512 * short, x0 + q[2] / 512 * short, y0 + q[3] / 512 * short] });
+      }
+    } finally { img.dispose(); }
+    out.sort((a, b) => b.s - a.s); const keep = [];
+    for (const d of out) if (keep.every(o => iou(o.b, d.b) < 0.45)) keep.push(d);
+    return keep;
+  }
+
+  // ── обробка шматка [start, end] поточного файлу ──
+  R.analyze = async (say) => {
+    if (busyAI || busy) return toast('Зачекайте…');
+    const t = tracks[cur]; if (!t || !audio.videoWidth) return toast('Спочатку відкрийте відео');
+    const vt = await VTrack.get(t.key, t.file);
+    if (!vt || !window.VideoDecoder) return toast('Обробка вміє лише MP4 / MOV з H.264, HEVC, VP9 чи AV1', 3000);
+    const dcfg = { codec: vt.codec }; if (vt.description) dcfg.description = vt.description;
+    try { if (!(await VideoDecoder.isConfigSupported(dcfg)).supported) return toast('Цей кодек пристрій не розпаковує', 2500); } catch { return toast('Цей кодек пристрій не розпаковує', 2500); }
+    busyAI = true; const T0s = performance.now();
+    const start = T0(), end = T1(), len = Math.max(0.1, end - start);
+    try {
+      await loadModel(say);
+      const W = audio.videoWidth, H = audio.videoHeight, S = 640 / W, sw = 640, sh = Math.max(16, Math.round(H * S));
+      const small = new OffscreenCanvas(sw, sh), sx = small.getContext('2d', { willReadFrequently: true });
+      const dk = Math.min(1, 1280 / Math.max(W, H)), dw = Math.round(W * dk), dh = Math.round(H * dk);
+      const dc = new OffscreenCanvas(dw, dh), dx2 = dc.getContext('2d', { willReadFrequently: true });
+      const dus = [...vt.du.slice(0, 200)].sort((a, b) => a - b), fps = Math.min(120, Math.max(5, vt.ts / (dus[dus.length >> 1] || vt.ts / 30)));
+      const step = fps > 40 ? 2 : 1, detEvery = Math.max(1, Math.round(fps / step / 4));   // аналіз ≤ 30 к/с, пошук ~4 рази/с
+      const frames = [], trk = []; let nid = 1, prevP = null, cumX = 0, cumY = 0, cumA = 0, idx = 0, pi = 0;
+      const tracksA = [];
+      const onFrame = async (f, ft) => {
+        if (idx++ % step) return;
+        drawRot(sx, f, sw, sh, vt.rot);
+        const P = pyr(toGray(sx.getImageData(0, 0, sw, sh), sw, sh), sw, sh);
+        if (prevP) {
+          const p0 = corners(prevP[0], 200, 12), p1 = lk(prevP, P, p0), a = [], b = [];
+          p1.forEach((q, i) => { if (q) { a.push(p0[i]); b.push(q); } });
+          const M = similarity(a, b);
+          if (M) { cumX += M.tx / S; cumY += M.ty / S; cumA += Math.atan2(M.b, M.a); }
+          for (const tk of tracksA) {           // рамку — за точками всередині неї
+            const bx = tk.b.map(v => v * S), pts = corners(prevP[0], 30, 3, bx[0], bx[1], bx[2], bx[3]);
+            if (pts.length < 3) continue;
+            const nx = lk(prevP, P, pts, 6), dxs = [], dys = [];
+            nx.forEach((q, i) => { if (q) { dxs.push(q[0] - pts[i][0]); dys.push(q[1] - pts[i][1]); } });
+            if (dxs.length < 3) continue;
+            const med = v => v.sort((p, q) => p - q)[v.length >> 1], mx = med(dxs) / S, my = med(dys) / S;
+            tk.b = [tk.b[0] + mx, tk.b[1] + my, tk.b[2] + mx, tk.b[3] + my];
+          }
+        }
+        prevP = P;
+        if (pi % detEvery === 0) {
+          drawRot(dx2, f, dw, dh, vt.rot);
+          const ds = (await detect(dc, dw, dh)).map(d => ({ c: d.c, s: d.s, b: d.b.map(v => v / dk) })).filter(d => {
+            const [x1, y1, x2, y2] = d.b, w = x2 - x1, h = y2 - y1;
+            return !(w * h > 0.2 * W * H || w < W * 0.0146 || h < H * 0.022 || y2 > H * 0.93);
+          });
+          const used = new Set();
+          for (const tk of [...tracksA].sort((p, q) => q.hits - p.hits)) {
+            let best = 0.25, bi = -1;
+            ds.forEach((d, j) => { if (!used.has(j) && VEH.has(d.c) === VEH.has(tk.c)) { const v = iou(tk.b, d.b); if (v > best) { best = v; bi = j; } } });
+            if (bi < 0) { tk.miss++; continue; }
+            used.add(bi); const d = ds[bi];
+            tk.b = tk.b.map((v, k) => 0.4 * v + 0.6 * d.b[k]); tk.hits++; tk.miss = 0;
+            const cc = d.c === 5 ? 7 : d.c; tk.votes[cc] = (tk.votes[cc] || 0) + d.s;
+          }
+          ds.forEach((d, j) => { if (!used.has(j)) { const cc = d.c === 5 ? 7 : d.c; tracksA.push({ b: d.b.slice(), c: d.c, hits: 1, miss: 0, id: 0, votes: { [cc]: d.s }, pts: [] }); } });
+          for (let i = tracksA.length - 1; i >= 0; i--) if (tracksA[i].miss > (tracksA[i].id ? 4 : 1)) tracksA.splice(i, 1);
+          for (let i = tracksA.length - 1; i >= 0; i--) { const a = tracksA[i]; if (tracksA.some(b => b !== a && b.hits >= a.hits && inside(a.b, b.b) > 0.6)) tracksA.splice(i, 1); }
+          for (const tk of tracksA) {
+            const best = +Object.keys(tk.votes).sort((p, q) => tk.votes[q] - tk.votes[p])[0];
+            if (tk.lab == null || tk.votes[best] > 2 * (tk.votes[tk.lab] || 0)) tk.lab = best;
+            if (!tk.id && tk.hits >= 3) { tk.id = nid++; tk.obj = { id: tk.id, label: UA[tk.lab] || 'об’єкт', b: tk.pts }; trk.push(tk.obj); }
+            if (tk.obj && !tk.obj.renamed) tk.obj.label = UA[tk.lab] || 'об’єкт';
+          }
+        }
+        pi++;
+        frames.push([+ft.toFixed(4), cumX, cumY, cumA]);
+        for (const tk of tracksA) tk.pts.push([+ft.toFixed(4), ...tk.b.map(v => Math.round(v))]);
+        const el = (performance.now() - T0s) / 1000, done = (ft - start) / len;
+        say('Обробка… ' + Math.round(done * 100) + '% · ' + Math.round(el) + ' с' + (done > 0.05 ? ' · лишилось ~' + Math.max(0, Math.round(el / done - el)) + ' с' : '') + ' · ' + backend);
+      };
+      await forEachFrame(t, vt, dcfg, start, end, onFrame);
+      // згладжування траєкторії (±0,25 с) і поправка
+      const n = frames.length, Rr = Math.max(2, Math.round(0.25 * fps / step)), LIM = 0.06;
+      const corr = frames.map((_, i) => { const s = [0, 0, 0]; let c = 0; for (let k = i - Rr; k <= i + Rr; k++) { const q = frames[Math.max(0, Math.min(n - 1, k))]; s[0] += q[1]; s[1] += q[2]; s[2] += q[3]; c++; } return [s[0] / c - frames[i][1], s[1] / c - frames[i][2], s[2] / c - frames[i][3]]; });
+      res = { key: rk(t), start, end, W, H, zoom: 1 + 2 * LIM + 0.01, backend, sec: Math.round((performance.now() - T0s) / 1000),
+        st: frames.map((q, i) => [q[0], Math.max(-LIM * W, Math.min(LIM * W, corr[i][0])), Math.max(-LIM * H, Math.min(LIM * H, corr[i][1])), Math.max(-0.05, Math.min(0.05, corr[i][2]))].map((v, k) => k ? +v.toFixed(k === 3 ? 5 : 1) : v)),
+        objs: trk.filter(o => o.b.length > 3) };
+      resKey = rk(t); ver++;
+      await idb.put('ai:' + rk(t), res).catch(() => {});
+      toast('Готово за ' + res.sec + ' с: об’єктів ' + res.objs.length, 2500);
+    } catch (err) { console.error(err); toast('Обробка не вдалася: ' + (err && err.message || err), 3000); }
+    finally { busyAI = false; say(''); }
+  };
+  // послідовне розпакування кадрів [start, end] (кадри після cb закриваються)
+  async function forEachFrame(t, vt, dcfg, start, end, cb) {
+    const q = []; let fail = null;
+    const dec = new VideoDecoder({ output: f => q.push(f), error: e => { fail = e; } });
+    dec.configure(dcfg);
+    const gopAt = x => { let lo = 0, hi = vt.gops.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (vt.gops[m].a <= x + 1e-6) lo = m; else hi = m - 1; } return lo; };
+    const drain = async () => { while (q.length) { const f = q.shift(), ft = f.timestamp / 1e6; try { if (ft >= start - 1e-3 && ft <= end + 1e-3) await cb(f, ft); } finally { f.close(); } } };
+    try {
+      for (let g = gopAt(start), g1 = gopAt(end); g <= g1 && !fail; g++) {
+        const G = vt.gops[g], a = vt.off[G.s]; let b = a;
+        for (let k = G.s; k < G.e; k++) b = Math.max(b, vt.off[k] + vt.len[k]);
+        const buf = await VTrack.bytes(t.file, a, b);
+        for (let k = G.s; k < G.e && !fail; k++) {
+          const o = vt.off[k] - a;
+          dec.decode(new EncodedVideoChunk({ type: k === G.s ? 'key' : 'delta', timestamp: Math.round(vt.pts[k] * 1e6), duration: Math.round(vt.du[k] / vt.ts * 1e6), data: buf.subarray(o, o + vt.len[k]) }));
+          await drain();
+          while (dec.decodeQueueSize > 4 && !fail) { await new Promise(r => setTimeout(r, 2)); await drain(); }
+        }
+      }
+      await dec.flush(); await drain();
+    } finally { q.forEach(f => f.close()); try { dec.close(); } catch {} }
+    if (fail) throw fail;
+  }
+
+  // ── результати: завантаження, значення на момент t ──
+  async function ensure() {
+    const t = tracks[cur]; if (!t) { res = null; resKey = null; return; }
+    const k = rk(t); if (resKey === k) return;
+    resKey = k; res = null; ver++;
+    try { const r = await idb.get('ai:' + k); if (resKey === k) { res = r || null; ver++; } } catch {}
+  }
+  R.ensure = ensure;
+  R.has = () => !!(res && hasTrack() && res.key === rk(tracks[cur]));
+  const lerpAt = (arr, t) => {                 // arr: [[t, ...v]] за зростанням t
+    if (!arr.length || t < arr[0][0] - 0.05 || t > arr[arr.length - 1][0] + 0.05) return null;
+    let lo = 0, hi = arr.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arr[m][0] <= t) lo = m; else hi = m; }
+    const A = arr[lo], B = arr[hi], k = B[0] > A[0] ? Math.max(0, Math.min(1, (t - A[0]) / (B[0] - A[0]))) : 0;
+    return A.slice(1).map((v, i) => v + (B[i + 1] - v) * k);
+  };
+  // force — для «Зберегти» (там свій вибір), інакше — як увімкнено у вікні 🎯
+  R.stabAt = (t, force) => (R.has() && (force || opt.stab)) ? lerpAt(res.st, t) : null;     // [dx, dy, da] у пікселях кадру
+  R.boxesAt = (t, force) => (R.has() && (force || opt.boxes)) ? res.objs.map(o => { const b = lerpAt(o.b, t); return b && { id: o.id, label: o.label, b }; }).filter(Boolean) : [];
+  R.zoom = () => res ? res.zoom : 1;
+  R.opt = opt;
+  // матриця стабілізації (як у прототипі): поворот на da навколо центру з наближенням zoom і зсув
+  R.matrix = (t, W, H, k = 1) => {          // k — масштаб від пікселів кадру до цілі
+    const s = R.stabAt(t, true); if (!s) return null; const z = res.zoom, c = Math.cos(s[2]) * z, sn = Math.sin(s[2]) * z;
+    const cx = W / 2, cy = H / 2;           // у цільових пікселях
+    return [c, sn, -sn, c, cx - c * cx + sn * cy + s[0] * z * k, cy - sn * cx - c * cy + s[1] * z * k];
+  };
+  // малювання рамок на полотні c (кадр у прямокутнику F, k — масштаб кадр→полотно)
+  R.drawBoxes = (c, t, F, force) => {
+    const bs = R.boxesAt(t, force); if (!bs.length) return;
+    const k = F.w / res.W, fs = Math.max(11, Math.round(F.w / 60)), lw = Math.max(2, F.w / 480);
+    c.font = `700 ${fs}px sans-serif`; c.textBaseline = 'top';
+    for (const o of bs) {
+      const x1 = F.x + o.b[0] * k, y1 = F.y + o.b[1] * k, x2 = F.x + o.b[2] * k, y2 = F.y + o.b[3] * k, col = COLS[(o.id - 1) % COLS.length];
+      c.lineWidth = lw + 3; c.strokeStyle = '#000'; c.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      c.lineWidth = lw; c.strokeStyle = col; c.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      const lab = o.id + ' ' + o.label, tw = c.measureText(lab).width, ty = y1 > fs + 6 ? y1 - fs - 6 : y2 + 2;
+      c.fillStyle = 'rgba(0,0,0,.8)'; c.fillRect(x1, ty, tw + 8, fs + 5); c.fillStyle = col; c.fillText(lab, x1 + 4, ty + 3);
+    }
+  };
+  // дотик по рамці (на паузі) — вікно цього об'єкта
+  R.objs = () => R.has() ? res.objs : [];
+  R.rename = (id, label) => { const o = res && res.objs.find(x => x.id === id); if (o) { o.label = label; o.renamed = true; idb.put('ai:' + res.key, res).catch(() => {}); ver++; } };
+  R.remove = id => { if (!res) return; res.objs = res.objs.filter(x => x.id !== id); idb.put('ai:' + res.key, res).catch(() => {}); ver++; };
+  R.clear = async () => { if (!res) return; await idb.del('ai:' + res.key).catch(() => {}); res = null; ver++; };
+  R.ver = () => ver;
+  R.busy = () => busyAI;
+  R.saveOpt = saveOpt;
+
+  // ── показ: рамки на #aiCanvas, стабілізація — CSS-змінна --st на #audio / #revCanvas / #aiCanvas ──
+  const cv = $('aiCanvas'), ctx = cv.getContext('2d'), box = $('vidbox');
+  let lastKey = '', lastSt = '', mt = 0;
+  const frameCss = () => {          // де картинка у #vidbox (CSS px), як у відео: cover / contain
+    const r = box.getBoundingClientRect(), vw = audio.videoWidth || 16, vh = audio.videoHeight || 9;
+    const k = (fitMode === 'cover' ? Math.max : Math.min)(r.width / vw, r.height / vh), w = vw * k, h = vh * k;
+    return { x: (r.width - w) / 2, y: (r.height - h) / 2, w, h, W: r.width, H: r.height };
+  };
+  // кадр, який саме показується (під час відтворення — mediaTime з requestVideoFrameCallback)
+  if ('requestVideoFrameCallback' in audio) { const cb = (now, md) => { mt = md.mediaTime; audio.requestVideoFrameCallback(cb); }; audio.requestVideoFrameCallback(cb); }
+  (function tick() {
+    requestAnimationFrame(tick);
+    const on = R.has() && audio.videoWidth;
+    const t = Rev.active ? Rev.time() : (!audio.paused && mt ? mt : audio.currentTime);
+    const F = frameCss();
+    // стабілізація
+    let st = '';
+    const s = on && R.stabAt(t);
+    if (s) { const z = res.zoom, k = F.w / res.W; st = `translate(${(s[0] * z * k).toFixed(2)}px, ${(s[1] * z * k).toFixed(2)}px) rotate(${s[2].toFixed(5)}rad) scale(${z})`; }
+    if (st !== lastSt) { lastSt = st; if (st) box.style.setProperty('--st', st); else box.style.removeProperty('--st'); }
+    // рамки
+    const d = Math.min(2, devicePixelRatio || 1), cw = Math.max(2, Math.round(F.W * d)), ch = Math.max(2, Math.round(F.H * d));
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; lastKey = ''; }
+    const key = on && opt.boxes ? t.toFixed(3) + '|' + ver + '|' + cw + 'x' + ch + fitMode : 'none';
+    if (key === lastKey) return; lastKey = key;
+    ctx.clearRect(0, 0, cw, ch);
+    if (key !== 'none') R.drawBoxes(ctx, t, { x: F.x * d, y: F.y * d, w: F.w * d, h: F.h * d });
+  })();
+  // дотик по рамці → вікно 🎯 з цим об'єктом (true — дотик забрано)
+  R.tap = (x, y) => {
+    if (!R.has() || !opt.boxes || $('dlgAI').open) return false;
+    const r = box.getBoundingClientRect(), F = frameCss();
+    let p = new DOMPoint(x - r.left - r.width / 2, y - r.top - r.height / 2);
+    try { const m = getComputedStyle(cv).transform; if (m && m !== 'none') p = new DOMMatrix(m).inverse().transformPoint(p); } catch {}
+    const k = res.W / F.w, fx = (p.x + r.width / 2 - F.x) * k, fy = (p.y + r.height / 2 - F.y) * k, tol = 14 * k;
+    const t = Rev.active ? Rev.time() : audio.currentTime;
+    let hit = 0, area = Infinity;           // найменша рамка під пальцем (з запасом 14 px)
+    for (const o of R.boxesAt(t)) {
+      const [x1, y1, x2, y2] = o.b;
+      if (fx >= x1 - tol && fx <= x2 + tol && fy >= y1 - tol && fy <= y2 + tol && (x2 - x1) * (y2 - y1) < area) { hit = o.id; area = (x2 - x1) * (y2 - y1); }
+    }
+    if (!hit) return false;
+    if (!audio.paused) audio.pause();
+    openDlg(hit);
+    return true;
+  };
+
+  // ── вікно 🎯 ──
+  const dlg = $('dlgAI'), say = msg => { progress(msg); $('aiProg').textContent = msg; };
+  const fmtS = x => fmt(Math.max(0, x - T0()));   // час — як на шкалі (від обрізки)
+  function renderDlg(focus) {
+    const t = tracks[cur], st = T0(), en = T1();
+    $('aiInfo').textContent = t ? 'Шматок: ' + fmtS(st) + ' – ' + fmtS(en) + ' (' + Math.round(en - st) + ' с). Обробляється те, що між обрізкою й кінцем шматка.' : 'Спочатку відкрийте відео';
+    $('aiRun').disabled = busyAI || !t;
+    $('aiRun').textContent = R.has() ? 'Обробити заново' : 'Обробити шматок';
+    $('aiBoxes').checked = opt.boxes; $('aiStab').checked = opt.stab;
+    const has = R.has();
+    $('aiOpts').hidden = !has; $('aiDel').hidden = !has;
+    if (has && !busyAI) $('aiProg').textContent = 'Оброблено ' + fmtS(res.start) + ' – ' + fmtS(res.end) + ' за ' + res.sec + ' с (' + res.backend + '). Об’єктів: ' + res.objs.length + '.';
+    const list = $('aiList'); list.innerHTML = '';
+    if (has && !res.objs.length) list.innerHTML = '<div class="ainone">Об’єктів не знайдено</div>';
+    if (has) for (const o of res.objs) {
+      const row = document.createElement('div'); row.className = 'airow' + (o.id === focus ? ' sel' : '');
+      const n = document.createElement('span'); n.className = 'ain'; n.textContent = o.id; n.style.background = COLS[(o.id - 1) % COLS.length];
+      const inp = document.createElement('input'); inp.value = o.label; inp.maxLength = 40; inp.placeholder = 'підпис';
+      inp.onchange = () => R.rename(o.id, inp.value.trim());
+      const go = document.createElement('button'); go.textContent = '⌖'; go.title = 'Показати';
+      go.onclick = () => { if (!audio.paused) audio.pause(); seek(o.b[0][0]); dlg.close(); };
+      const del = document.createElement('button'); del.className = 'aidel'; del.textContent = '🗑'; del.title = 'Прибрати об’єкт разом з рамкою';
+      del.onclick = () => { R.remove(o.id); renderDlg(); };
+      row.append(n, inp, go, del); list.appendChild(row);
+      if (o.id === focus) setTimeout(() => { row.scrollIntoView({ block: 'nearest' }); inp.focus(); inp.select(); }, 50);
+    }
+  }
+  function openDlg(focus) { renderDlg(focus); if (!dlg.open) dlg.showModal(); }
+  $('btnAI').onclick = async () => { await ensure(); openDlg(); };
+  $('aiRun').onclick = async () => {
+    if (!audio.paused) audio.pause();
+    $('aiRun').disabled = true;
+    const p = R.analyze(say); renderDlg();
+    await p; renderDlg();
+  };
+  $('aiBoxes').onchange = () => { opt.boxes = $('aiBoxes').checked; saveOpt(); ver++; };
+  $('aiStab').onchange = () => { opt.stab = $('aiStab').checked; saveOpt(); ver++; };
+  $('aiDel').onclick = async () => { await R.clear(); renderDlg(); };
+  $('aiOk').onclick = () => { document.activeElement && document.activeElement.blur(); dlg.close(); };
+  return R;
+})();
 // кадри для «назад» тримаємо готовими лише на паузі; почалось відтворення — декодер звільняємо
 audio.addEventListener('play', () => Rev.release());
 audio.addEventListener('pause', () => { if (audio.videoWidth && !Rev.active) Rev.prepareSoon(); });
@@ -4671,7 +5083,11 @@ if (FEAT.vslider) { setVol(getSetting('vvol', 1), true); setBri(getSetting('vbri
         // одинарний дотик на паузі: права половина — +1 с, ліва — −1 с (чекаємо, чи не буде другого дотику)
         lastTap = now; const r = box.getBoundingClientRect(), right = lastXY[0] > r.left + r.width / 2;
         clearTimeout(tapT);
-        tapT = setTimeout(() => { if (audio.paused && !Rev.active && hasTrack()) { clipStopAt = null; seek(audio.currentTime + (right ? 1 : -1)); } }, 360);
+        const [tx0, ty0] = lastXY;
+        tapT = setTimeout(() => {
+          if (AI.tap(tx0, ty0)) return;         // відеоредактор: дотик по рамці об'єкта — його підпис / прибрати
+          if (audio.paused && !Rev.active && hasTrack()) { clipStopAt = null; seek(audio.currentTime + (right ? 1 : -1)); }
+        }, 360);
       }
     }
   };
@@ -4968,6 +5384,25 @@ function pick(title, text, opts) {
     d.showModal();
   });
 }
+// що вшити у збережене відео — галочки (null — закрили)
+function pickOverlay(items) {
+  return new Promise(res => {
+    const d = $('dlgPick'), txt = $('pkText'); $('pkTitle').textContent = 'Зберегти відео'; txt.textContent = 'Що вшити у збережене відео:';
+    const cks = items.map(([k, lab, on]) => {
+      const l = document.createElement('label'); l.className = 'pkck';
+      const c = document.createElement('input'); c.type = 'checkbox'; c.checked = on; l.append(c, document.createTextNode(lab)); txt.appendChild(l);
+      return [k, c];
+    });
+    const box = $('pkBtns'); box.innerHTML = '';
+    const done = v => { d.close(); res(v); };
+    const c = document.createElement('button'); c.textContent = 'Скасувати'; c.onclick = () => done(null);
+    const ok = document.createElement('button'); ok.textContent = 'Зберегти'; ok.className = 'accent';
+    ok.onclick = () => { const o = { draw: false, boxes: false, stab: false }; cks.forEach(([k, el]) => { o[k] = el.checked; }); done(o); };
+    box.append(c, ok);
+    d.oncancel = e => { e.preventDefault(); done(null); };
+    d.showModal();
+  });
+}
 /* ── «Зберегти» швидко й без втрати якості (MP4, WebCodecs) ──
    Кадри розпаковуються прямо з файлу (VTrack), за потреби на них накладаються малюнки,
    кодуються апаратним кодером (H.264, інакше HEVC / VP9 / AV1) і складаються в MP4 разом зі звуком
@@ -5052,8 +5487,12 @@ async function exportFast(clip, dir, overlay) {
     while (q.length) {
       const f = q.shift(), ft = f.timestamp / 1e6;
       if (ft < clip.start - 1e-3 || ft > clip.end + 1e-3) { f.close(); continue; }
+      const M = overlay.stab && AI.matrix(ft, W, H, W / sw0);
+      if (M) { cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H); cx.setTransform(...M); }
       drawRot(cx, f, W, H, vt.rot); f.close();
-      if (overlay && FEAT.draw) Draw.renderTo(cx, W, H, ft);
+      if (overlay.boxes) AI.drawBoxes(cx, ft, { x: 0, y: 0, w: W, h: H }, true);   // рамки — разом з кадром
+      if (M) cx.setTransform(1, 0, 0, 1, 0, 0);
+      if (overlay.draw && FEAT.draw) Draw.renderTo(cx, W, H, ft);
       const vf = new VideoFrame(cv, { timestamp: Math.round((ft - clip.start) * 1e6), duration: Math.round(1e6 / fps) });
       venc.encode(vf, { keyFrame: n % kf === 0 }); vf.close(); n++;
       while (venc.encodeQueueSize > 4 && !fail) await new Promise(r => setTimeout(r, 2));
@@ -5091,12 +5530,15 @@ async function exportFast(clip, dir, overlay) {
 }
 async function exportVideo(clip, dir) {
   if (busy) return toast('Зачекайте, йде збереження…');
-  // є що накласти (малюнки) — питаємо, вшивати чи ні
-  let overlay = true;
-  if (FEAT.draw && Draw.has()) {
-    const c = await pick('Зберегти відео', 'Вшити малюнки у збережене відео?', ['З малюнками', 'Без малюнків']);
-    if (c === null) return;
-    overlay = c === 0;
+  // є що накласти (малюнки, рамки об'єктів, стабілізація) — питаємо, що вшивати
+  let overlay = { draw: true, boxes: false, stab: false };
+  const items = [];
+  if (FEAT.draw && Draw.has()) items.push(['draw', 'Малюнки', true]);
+  if (AI.has() && AI.objs().length) items.push(['boxes', 'Рамки з підписами', AI.opt.boxes]);
+  if (AI.has()) items.push(['stab', 'Стабілізація', AI.opt.stab]);
+  if (items.length) {
+    overlay = await pickOverlay(items);
+    if (!overlay) return;
   }
   busy = true; $('btnSaveVid').disabled = $('btnSaveClip').disabled = $('btnSaveTrim').disabled = true;
   let done = false;
@@ -5107,7 +5549,7 @@ async function exportVideo(clip, dir) {
 }
 /* ── запасний шлях: фрагмент програється від [ до ] і записується з екрана плеєра ──
    (MediaRecorder, у реальному часі; MP4, якщо браузер уміє, інакше WebM) */
-async function exportRealtime(clip, dir, overlay = true) {
+async function exportRealtime(clip, dir, overlay = { draw: true }) {
   if (busy) return toast('Зачекайте, йде збереження…');
   const v = audio, cap = v.captureStream || v.mozCaptureStream;
   if (!cap || !window.MediaRecorder) return toast('Цей браузер не вміє записувати відео');
@@ -5119,11 +5561,18 @@ async function exportRealtime(clip, dir, overlay = true) {
     await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = clip.start; setTimeout(r, 3000); });
     stream = cap.call(v);
     // відеоредактор: є малюнки — кадр + малюнок складаємо на полотні й пишемо його (звук — з відео)
-    if (overlay && FEAT.draw && Draw.has()) {
+    if ((overlay.draw && FEAT.draw && Draw.has()) || (AI.has() && (overlay.boxes || overlay.stab))) {
       const vw = v.videoWidth, vh = v.videoHeight, k = Math.min(1, 1920 / Math.max(vw, vh));
       const oc = document.createElement('canvas'); oc.width = Math.round(vw * k / 2) * 2; oc.height = Math.round(vh * k / 2) * 2;
       const oct = oc.getContext('2d');
-      const comp = t => { try { oct.drawImage(v, 0, 0, oc.width, oc.height); Draw.renderTo(oct, oc.width, oc.height, t); } catch {} };
+      const comp = t => { try {
+        const M = overlay.stab && AI.matrix(t, oc.width, oc.height, oc.width / vw);
+        if (M) { oct.fillStyle = '#000'; oct.fillRect(0, 0, oc.width, oc.height); oct.setTransform(...M); }
+        oct.drawImage(v, 0, 0, oc.width, oc.height);
+        if (overlay.boxes) AI.drawBoxes(oct, t, { x: 0, y: 0, w: oc.width, h: oc.height }, true);
+        if (M) oct.setTransform(1, 0, 0, 1, 0, 0);
+        if (overlay.draw && FEAT.draw) Draw.renderTo(oct, oc.width, oc.height, t);
+      } catch {} };
       comp(v.currentTime);
       let live = true;
       if ('requestVideoFrameCallback' in v) { const cb = (now, md) => { if (!live) return; comp(md.mediaTime); v.requestVideoFrameCallback(cb); }; v.requestVideoFrameCallback(cb); }
@@ -5287,7 +5736,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v145';
+const APP_VER = 'v146';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
