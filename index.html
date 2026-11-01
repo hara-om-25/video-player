@@ -786,7 +786,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <div class="row" style="justify-content:flex-start;margin-top:4px"><button class="accent" id="aiRun">Обробити шматок</button></div>
   <div class="aiprog" id="aiProg"></div>
   <div id="aiOpts">
-    <label class="srow"><input type="checkbox" id="aiBoxes"><span>Рамки з підписами</span></label>
+    <label class="srow"><input type="checkbox" id="aiBoxes"><span>Силуети з підписами</span></label>
     <label class="srow"><input type="checkbox" id="aiStab"><span>Стабілізація</span></label>
     <div class="ailist" id="aiList"></div>
   </div>
@@ -4276,7 +4276,6 @@ const AI = (() => {
   if (!FEAT.ai) return R;
   const UA = { 0: 'людина', 1: 'велосипед', 2: 'авто', 3: 'мотоцикл', 5: 'вантажівка', 7: 'вантажівка' };
   const KEEP = new Set([0, 1, 2, 3, 5, 7]), VEH = new Set([1, 2, 3, 5, 7]);
-  const COLS = ['#ffd63f', '#5adcff', '#78ff78', '#ff78c8', '#ffa03c', '#c8a0ff'];
   let res = null, resKey = null, ver = 0, busyAI = false;
   const rk = t => t.parent || t.key;      // обробка — спільна для файлу і його шматків (час у ній — від початку файлу)
   const opt = Object.assign({ boxes: true, stab: true }, getSetting('aiopt', {}));
@@ -4381,6 +4380,54 @@ const AI = (() => {
     await tf.setBackend(backend); await tf.ready();
     return model;
   }
+  // силуети: MediaPipe Interactive Segmenter (Magic Touch) — вирізає об'єкт за точкою на ньому, будь-якого виду
+  let seg = null, segDel = '';
+  async function loadSeg(say) {
+    if (seg !== null) return seg;
+    seg = false;
+    try {
+      say('Завантаження нейромережі силуетів… (лише вперше)');
+      const mp = await import(new URL('ai/mp/vision_bundle.mjs', location.href).href);
+      const fs = await mp.FilesetResolver.forVisionTasks(new URL('ai/mp', location.href).href);
+      const probe = new OffscreenCanvas(160, 160), px = probe.getContext('2d'); px.fillStyle = '#888'; px.fillRect(0, 0, 160, 160); px.fillStyle = '#fff'; px.fillRect(50, 40, 60, 80);
+      const tried = [];
+      for (const d of ['GPU', 'CPU']) {
+        try {
+          say('Перевірка швидкості силуетів (' + d + ')…');
+          const sg = await mp.InteractiveSegmenterLegacy.createFromOptions(fs, { baseOptions: { modelAssetPath: new URL('ai/magic_touch.tflite', location.href).href, delegate: d }, outputCategoryMask: false, outputConfidenceMasks: true });
+          const run = () => { const r = sg.segment(probe, { keypoint: { x: 0.5, y: 0.5 } }); r.confidenceMasks[0].getAsFloat32Array(); r.close(); };
+          run(); const t0 = performance.now(); run(); tried.push([performance.now() - t0, d, sg]);
+        } catch (e) { console.warn('силуети ' + d + ':', e); }
+      }
+      tried.sort((a, b) => a[0] - b[0]);
+      tried.slice(1).forEach(x => { try { x[2].close(); } catch {} });
+      if (tried.length) { seg = tried[0][2]; segDel = tried[0][1]; }
+    } catch (e) { console.warn('силуети недоступні:', e); }
+    return seg;
+  }
+  const mc = new OffscreenCanvas(16, 16), mcx = mc.getContext('2d', { willReadFrequently: true });
+  // маска об'єкта з рамкою b (пікселі кадру); src — кадр, sk — масштаб кадр→src
+  function maskOf(src, sk, b, W, H, t) {
+    const w = b[2] - b[0], h = b[3] - b[1], p = 0.3;
+    const rg = [Math.max(0, b[0] - w * p), Math.max(0, b[1] - h * p), Math.min(W, b[2] + w * p), Math.min(H, b[3] + h * p)];
+    const cw = (rg[2] - rg[0]) * sk, ch = (rg[3] - rg[1]) * sk; if (cw < 4 || ch < 4) return null;
+    const k = Math.min(4, 256 / Math.max(cw, ch)); mc.width = Math.max(8, Math.round(cw * k)); mc.height = Math.max(8, Math.round(ch * k));
+    mcx.drawImage(src, rg[0] * sk, rg[1] * sk, cw, ch, 0, 0, mc.width, mc.height);
+    const r = seg.segment(mc, { keypoint: { x: ((b[0] + b[2]) / 2 - rg[0]) / (rg[2] - rg[0]), y: ((b[1] + b[3]) / 2 - rg[1]) / (rg[3] - rg[1]) } });
+    try {
+      const m = r.confidenceMasks[0], a = m.getAsFloat32Array(), mw = m.width, mh = m.height;
+      const q = Math.min(1, 48 / Math.max(mw, mh)), qw = Math.max(2, Math.round(mw * q)), qh = Math.max(2, Math.round(mh * q)), out = new Uint8Array(qw * qh);
+      let on = 0;
+      for (let y = 0; y < qh; y++) for (let x = 0; x < qw; x++) {      // зменшуємо до ≤48 px — для показу досить (малюється згладжено)
+        const x0 = Math.floor(x * mw / qw), x1 = Math.max(x0 + 1, Math.floor((x + 1) * mw / qw)), y0 = Math.floor(y * mh / qh), y1 = Math.max(y0 + 1, Math.floor((y + 1) * mh / qh));
+        let sum = 0; for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) sum += a[yy * mw + xx];
+        const v = sum / ((x1 - x0) * (y1 - y0)); out[y * qw + x] = Math.round(v * 255); if (v > 0.5) on++;
+      }
+      const frac = on / (qw * qh);
+      if (frac < 0.03 || frac > 0.9) return null;           // не вирізалось (порожньо / увесь шматок)
+      return { t: +t.toFixed(4), bm: b.map(v => Math.round(v)), rg: rg.map(v => Math.round(v)), w: qw, h: qh, m: out };
+    } finally { r.close(); }
+  }
   async function detect(cv, W, H) {           // cv — кадр (W×H); квадратні частини вздовж довшої сторони
     const long = Math.max(W, H), short = Math.min(W, H), r = long / short, n = r > 1.4 ? 3 : r > 1.05 ? 2 : 1, out = [];
     const img = tf.browser.fromPixels(cv).toFloat().expandDims(0);
@@ -4410,6 +4457,7 @@ const AI = (() => {
     const start = T0(), end = T1(), len = Math.max(0.1, end - start);
     try {
       await loadModel(say);
+      await loadSeg(say);
       const W = audio.videoWidth, H = audio.videoHeight, S = 640 / W, sw = 640, sh = Math.max(16, Math.round(H * S));
       const small = new OffscreenCanvas(sw, sh), sx = small.getContext('2d', { willReadFrequently: true });
       const dk = Math.min(1, 1280 / Math.max(W, H)), dw = Math.round(W * dk), dh = Math.round(H * dk);
@@ -4453,14 +4501,19 @@ const AI = (() => {
             tk.b = tk.b.map((v, k) => 0.4 * v + 0.6 * d.b[k]); tk.hits++; tk.miss = 0;
             const cc = d.c === 5 ? 7 : d.c; tk.votes[cc] = (tk.votes[cc] || 0) + d.s;
           }
-          ds.forEach((d, j) => { if (!used.has(j)) { const cc = d.c === 5 ? 7 : d.c; tracksA.push({ b: d.b.slice(), c: d.c, hits: 1, miss: 0, id: 0, votes: { [cc]: d.s }, pts: [] }); } });
+          ds.forEach((d, j) => { if (!used.has(j)) { const cc = d.c === 5 ? 7 : d.c; tracksA.push({ b: d.b.slice(), c: d.c, hits: 1, miss: 0, id: 0, votes: { [cc]: d.s }, pts: [], ms: [] }); } });
           for (let i = tracksA.length - 1; i >= 0; i--) if (tracksA[i].miss > (tracksA[i].id ? 4 : 1)) tracksA.splice(i, 1);
           for (let i = tracksA.length - 1; i >= 0; i--) { const a = tracksA[i]; if (tracksA.some(b => b !== a && b.hits >= a.hits && inside(a.b, b.b) > 0.6)) tracksA.splice(i, 1); }
           for (const tk of tracksA) {
             const best = +Object.keys(tk.votes).sort((p, q) => tk.votes[q] - tk.votes[p])[0];
             if (tk.lab == null || tk.votes[best] > 2 * (tk.votes[tk.lab] || 0)) tk.lab = best;
-            if (!tk.id && tk.hits >= 3) { tk.id = nid++; tk.obj = { id: tk.id, label: UA[tk.lab] || 'об’єкт', b: tk.pts }; trk.push(tk.obj); }
+            if (!tk.id && tk.hits >= 3) { tk.id = nid++; tk.obj = { id: tk.id, label: UA[tk.lab] || 'об’єкт', b: tk.pts, m: tk.ms }; trk.push(tk.obj); }
             if (tk.obj && !tk.obj.renamed) tk.obj.label = UA[tk.lab] || 'об’єкт';
+          }
+          // силуети — через раз (~2 рази на секунду), лише для об'єктів, що вже майже підтверджені
+          if (seg && (pi / detEvery) % 2 === 0) for (const tk of tracksA) {
+            if (tk.hits < 2 || tk.miss) continue;
+            try { const m = vt.rot ? maskOf(dc, dk, tk.b, W, H, ft) : maskOf(f, f.displayWidth / W, tk.b, W, H, ft); if (m) tk.ms.push(m); } catch (e) { console.warn(e); }
           }
         }
         pi++;
@@ -4473,7 +4526,7 @@ const AI = (() => {
       // згладжування траєкторії (±0,25 с) і поправка
       const n = frames.length, Rr = Math.max(2, Math.round(0.25 * fps / step)), LIM = 0.06;
       const corr = frames.map((_, i) => { const s = [0, 0, 0]; let c = 0; for (let k = i - Rr; k <= i + Rr; k++) { const q = frames[Math.max(0, Math.min(n - 1, k))]; s[0] += q[1]; s[1] += q[2]; s[2] += q[3]; c++; } return [s[0] / c - frames[i][1], s[1] / c - frames[i][2], s[2] / c - frames[i][3]]; });
-      res = { key: rk(t), start, end, W, H, zoom: 1 + 2 * LIM + 0.01, backend, sec: Math.round((performance.now() - T0s) / 1000),
+      res = { key: rk(t), start, end, W, H, zoom: 1 + 2 * LIM + 0.01, backend: backend + (segDel ? ' + ' + segDel : ''), sec: Math.round((performance.now() - T0s) / 1000),
         st: frames.map((q, i) => [q[0], Math.max(-LIM * W, Math.min(LIM * W, corr[i][0])), Math.max(-LIM * H, Math.min(LIM * H, corr[i][1])), Math.max(-0.05, Math.min(0.05, corr[i][2]))].map((v, k) => k ? +v.toFixed(k === 3 ? 5 : 1) : v)),
         objs: trk.filter(o => o.b.length > 3) };
       resKey = rk(t); ver++;
@@ -4533,16 +4586,50 @@ const AI = (() => {
     return [c, sn, -sn, c, cx - c * cx + sn * cy + s[0] * z * k, cy - sn * cx - c * cy + s[1] * z * k];
   };
   // малювання рамок на полотні c (кадр у прямокутнику F, k — масштаб кадр→полотно)
+  // силует: маска (≤48 px) → червоне полотно, кешується
+  const RED = '#ff2a2a', FILL = 0.45, mcache = new WeakMap();
+  const maskCv = M => {
+    let cv = mcache.get(M); if (cv) return cv;
+    cv = new OffscreenCanvas(M.w, M.h); const id = new ImageData(M.w, M.h);
+    for (let i = 0; i < M.m.length; i++) { id.data[i * 4] = 255; id.data[i * 4 + 1] = 42; id.data[i * 4 + 2] = 42; id.data[i * 4 + 3] = M.m[i]; }
+    cv.getContext('2d').putImageData(id, 0, 0); mcache.set(M, cv); return cv;
+  };
+  // де маска M зараз: її ділянка відносно рамки — за поточною рамкою b
+  const placeM = (M, b) => {
+    const sx = (b[2] - b[0]) / Math.max(1, M.bm[2] - M.bm[0]), sy = (b[3] - b[1]) / Math.max(1, M.bm[3] - M.bm[1]);
+    return [b[0] + (M.rg[0] - M.bm[0]) * sx, b[1] + (M.rg[1] - M.bm[1]) * sy, b[0] + (M.rg[2] - M.bm[0]) * sx, b[1] + (M.rg[3] - M.bm[1]) * sy];
+  };
+  let tmp = null;
+  function silhouette(c, o, b, t, F, k) {
+    const ms = o.m; if (!ms || !ms.length) return false;
+    let i = -1; for (let j = 0; j < ms.length; j++) if (ms[j].t <= t) i = j;
+    const A = ms[Math.max(0, i)], B = i >= 0 && i + 1 < ms.length ? ms[i + 1] : null;
+    const w = B && B.t - A.t < 1.5 ? Math.max(0, Math.min(1, (t - A.t) / (B.t - A.t))) : 0;   // між двома масками — плавно
+    const parts = [[A, 1 - w]]; if (B && w > 0) parts.push([B, w]);
+    const boxes = parts.map(([M]) => placeM(M, b).map((v, j) => (j % 2 ? F.y : F.x) + v * k));
+    const X0 = Math.floor(Math.min(...boxes.map(q => q[0]))), Y0 = Math.floor(Math.min(...boxes.map(q => q[1])));
+    const X1 = Math.ceil(Math.max(...boxes.map(q => q[2]))), Y1 = Math.ceil(Math.max(...boxes.map(q => q[3])));
+    const tw = X1 - X0, th = Y1 - Y0; if (tw < 2 || th < 2) return true;
+    if (!tmp) tmp = new OffscreenCanvas(tw, th);
+    if (tmp.width < tw || tmp.height < th) { tmp.width = Math.max(tmp.width, tw); tmp.height = Math.max(tmp.height, th); }
+    const x = tmp.getContext('2d'); x.clearRect(0, 0, tw, th); x.globalCompositeOperation = 'lighter'; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    parts.forEach(([M, a], j) => { const q = boxes[j]; x.globalAlpha = a; x.drawImage(maskCv(M), q[0] - X0, q[1] - Y0, q[2] - q[0], q[3] - q[1]); });
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+    c.save(); c.globalAlpha = FILL; c.drawImage(tmp, 0, 0, tw, th, X0, Y0, tw, th); c.restore();
+    return true;
+  }
   R.drawBoxes = (c, t, F, force) => {
     const bs = R.boxesAt(t, force); if (!bs.length) return;
     const k = F.w / res.W, fs = Math.max(11, Math.round(F.w / 60)), lw = Math.max(2, F.w / 480);
-    c.font = `700 ${fs}px sans-serif`; c.textBaseline = 'top';
     for (const o of bs) {
-      const x1 = F.x + o.b[0] * k, y1 = F.y + o.b[1] * k, x2 = F.x + o.b[2] * k, y2 = F.y + o.b[3] * k, col = COLS[(o.id - 1) % COLS.length];
-      c.lineWidth = lw + 3; c.strokeStyle = '#000'; c.strokeRect(x1, y1, x2 - x1, y2 - y1);
-      c.lineWidth = lw; c.strokeStyle = col; c.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      const x1 = F.x + o.b[0] * k, y1 = F.y + o.b[1] * k, x2 = F.x + o.b[2] * k, y2 = F.y + o.b[3] * k;
+      const obj = res.objs.find(q => q.id === o.id);
+      if (!silhouette(c, obj, o.b, t, F, k)) {     // масок немає (старіша обробка) — червона напівпрозора рамка
+        c.save(); c.globalAlpha = FILL; c.fillStyle = RED; c.fillRect(x1, y1, x2 - x1, y2 - y1); c.restore();
+      }
+      c.font = `700 ${fs}px sans-serif`; c.textBaseline = 'top';
       const lab = o.id + ' ' + o.label, tw = c.measureText(lab).width, ty = y1 > fs + 6 ? y1 - fs - 6 : y2 + 2;
-      c.fillStyle = 'rgba(0,0,0,.8)'; c.fillRect(x1, ty, tw + 8, fs + 5); c.fillStyle = col; c.fillText(lab, x1 + 4, ty + 3);
+      c.fillStyle = 'rgba(0,0,0,.75)'; c.fillRect(x1, ty, tw + 8, fs + 5); c.fillStyle = '#fff'; c.fillText(lab, x1 + 4, ty + 3);
     }
   };
   // дотик по рамці (на паузі) — вікно цього об'єкта
@@ -4617,7 +4704,7 @@ const AI = (() => {
     if (has && !res.objs.length) list.innerHTML = '<div class="ainone">Об’єктів не знайдено</div>';
     if (has) for (const o of res.objs) {
       const row = document.createElement('div'); row.className = 'airow' + (o.id === focus ? ' sel' : '');
-      const n = document.createElement('span'); n.className = 'ain'; n.textContent = o.id; n.style.background = COLS[(o.id - 1) % COLS.length];
+      const n = document.createElement('span'); n.className = 'ain'; n.textContent = o.id; n.style.background = RED; n.style.color = '#fff';
       const inp = document.createElement('input'); inp.value = o.label; inp.maxLength = 40; inp.placeholder = 'підпис';
       inp.onchange = () => R.rename(o.id, inp.value.trim());
       const go = document.createElement('button'); go.textContent = '⌖'; go.title = 'Показати';
@@ -5534,7 +5621,7 @@ async function exportVideo(clip, dir) {
   let overlay = { draw: true, boxes: false, stab: false };
   const items = [];
   if (FEAT.draw && Draw.has()) items.push(['draw', 'Малюнки', true]);
-  if (AI.has() && AI.objs().length) items.push(['boxes', 'Рамки з підписами', AI.opt.boxes]);
+  if (AI.has() && AI.objs().length) items.push(['boxes', 'Силуети з підписами', AI.opt.boxes]);
   if (AI.has()) items.push(['stab', 'Стабілізація', AI.opt.stab]);
   if (items.length) {
     overlay = await pickOverlay(items);
@@ -5736,7 +5823,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v146';
+const APP_VER = 'v147';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
