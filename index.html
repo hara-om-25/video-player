@@ -739,7 +739,11 @@ body.f-vslider #vspeed #btnUntrim { position: absolute; right: calc(100% + 6px);
 /* «Обрізати | ↺» — одна жовта кнопка, розділена рискою; ↺ з'являється лише коли є обрізка */
 body.f-vslider .trimrow { display: flex; align-items: stretch; gap: 4px; }   /* v185: ↺ — окрема кнопка, закруглена з усіх боків */
 body.f-vslider .trimrow #btnTrim { flex: 1; min-width: 0; }
-body.f-vslider .trimrow #btnSaveTrim { flex: none; width: 70px; }
+body.f-vslider .trimrow #btnSaveTrim { flex: none; width: 54px; }
+/* v195: з ↺ «Обрізати» вміщається — дрібніші літери, вужчі ↺ і MP4 */
+body.f-vslider .trimrow:has(#btnUntrim.on) #btnTrim { font-size: 12px !important; letter-spacing: 0; padding: 0 4px; }
+body.f-vslider .trimrow:has(#btnUntrim.on) #btnUntrim { width: 38px; }
+body.f-vslider .trimrow:has(#btnUntrim.on) #btnSaveTrim { width: 48px; font-size: 13px !important; }
 body.f-vslider .trimrow #btnUntrim { display: flex; align-items: center; justify-content: center; flex: none; width: 46px; padding: 0; margin: 0;
   background: var(--accent); border: 1px solid var(--accent); border-radius: 9px; color: #111; }
 body.f-vslider .trimrow #btnUntrim:not(.on) { display: none; }   /* v184: без обрізки ↺ немає взагалі */
@@ -6374,7 +6378,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v194';
+const APP_VER = 'v195';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
