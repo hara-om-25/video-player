@@ -343,8 +343,12 @@ body.tlz .tledge { display: block; }
 .times { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 .times .cur { color: var(--text); }
 .bar {
-  position: relative; height: 34px; cursor: pointer; touch-action: none; user-select: none;
+  position: relative; height: 50px; cursor: pointer; touch-action: none; user-select: none;
 }
+.bar .tk { position: absolute; top: 28px; width: 1px; height: 6px; background: var(--dim); pointer-events: none; font-style: normal; }
+.bar .tk b { position: absolute; top: 6px; left: 0; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bar .tk.l b { transform: none; }
+.bar .tk.r b { transform: translateX(-100%); }
 .bar .track { position: absolute; left: 0; right: 0; top: 15px; height: 5px; border-radius: 3px; background: var(--surf3); }
 .bar .fill  { position: absolute; left: 0; top: 15px; height: 5px; border-radius: 3px; background: var(--accent); width: 0; }
 .bar .sel   { position: absolute; top: 9px; height: 17px; background: rgba(76,175,80,.25); border-left: 2px solid var(--clip); border-right: 2px solid var(--clip); display: none; }
@@ -5132,14 +5136,15 @@ const Wave = (() => {
     ctx.clearRect(0, 0, W, H);
     const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(2, Math.round(2.5 * d));   // v163: рисок на третину менше
     const lo = T0(), hi = T1();
-    for (let x = 0; x < W; x += bw + gap) {
+    for (let x = 0, bi = 0; x < W; x += bw + gap, bi++) {
+      if (bi % 3 === 2) continue;           // v169: кожну третю риску прибрано
       const ta = t0 + x / pps, tb = t0 + (x + bw + gap) / pps;
       if (tb < lo || ta > hi) continue;
       let m = 0, miss = false;
       for (let s = ta; s < tb; s += 1 / RATE) { const v = at(s); if (v < 0) { miss = true; break; } if (v > m) m = v; }
       if (miss) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(x, mid - d / 2, bw, d); continue; }
       const h = Math.max(d, Math.sqrt(m / top) * amp);
-      ctx.fillStyle = inClip((ta + tb) / 2) ? (ta < t ? '#5fd35f' : 'rgba(76,175,80,.85)') : ta < t ? '#ffd23f' : 'rgba(255,210,63,.75)';
+      ctx.fillStyle = inClip((ta + tb) / 2) ? (ta < t ? '#5fd35f' : 'rgba(76,175,80,.45)') : ta < t ? '#ffd23f' : 'rgba(255,210,63,.38)';   // непрослухане — тьмяніше (v169)
       ctx.fillRect(x, mid - h, bw, h * 2);
     }
     // дужки [ ] на краях фрагментів
@@ -5310,13 +5315,25 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   zb.addEventListener('pointerup', zup); zb.addEventListener('pointercancel', zup);
 })();
 
+// позначки часу під шкалою (v169): крок — щоб підписи стояли не густіше ніж ~90 px
+function ticks(v) {
+  const w = $('bar').getBoundingClientRect().width || 600, n = Math.max(2, Math.floor(w / 90)), a0 = T0();
+  const step = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400].find(s => v[1] / s <= n) || 28800;
+  const lab = x => { x = Math.round(x); const h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), s2 = x % 60;
+    return h ? h + ':' + String(m).padStart(2, '0') + (step < 60 ? ':' + String(s2).padStart(2, '0') : '') : x < 60 && step < 60 ? String(x) : m + ':' + String(s2).padStart(2, '0'); };
+  let out = '';
+  for (let r = Math.ceil((v[0] - a0) / step - 1e-6) * step; a0 + r <= v[0] + v[1] + 1e-6; r += step)
+    { const x = tlX(a0 + r, v); out += `<i class="tk${x < 3 ? ' l' : x > 97 ? ' r' : ''}" style="left:${x}%"><b>${lab(r)}</b></i>`; }   // крайні підписи — всередину шкали
+  return out;
+}
+let tkW = 0; addEventListener('resize', () => { const w = $('bar').getBoundingClientRect().width; if (Math.abs(w - tkW) > 20) { tkW = w; renderBar(); } });
 function renderBar(vv) {
   const d = dur(), el = $('barExtras');
   if (!d || !data) { el.innerHTML = ''; renderSel(); return; }
   const v = vv || tlView(), A = v[0], B = v[0] + v[1];
   el.innerHTML =
     (FEAT.clips ? data.clips : []).filter(c => c.end > A && c.start < B).map(c => { const a = Math.max(c.start, A), e = Math.min(c.end, B); return `<div class="cliprange" style="left:${tlX(a, v)}%;width:${Math.max(0.3, (e - a) / v[1] * 100)}%" title="${esc(c.name)}"></div>`; }).join('') +
-    data.marks.filter(m => m.t >= A && m.t <= B).map(m => `<div class="mk" style="left:${tlX(m.t, v)}%" title="${esc(m.name)}">★</div>`).join('');
+    data.marks.filter(m => m.t >= A && m.t <= B).map(m => `<div class="mk" style="left:${tlX(m.t, v)}%" title="${esc(m.name)}">★</div>`).join('') + ticks(v);
   renderSel(v);
 }
 
@@ -6221,7 +6238,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v168';
+const APP_VER = 'v169';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
