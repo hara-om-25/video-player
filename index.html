@@ -358,11 +358,12 @@ body.tlz .tledge { display: block; }
 .bar .mk {
   position: absolute; top: 0; width: 14px; margin-left: -7px; height: 14px; color: var(--star);
   font-size: 12px; line-height: 14px; text-align: center; pointer-events: none;
+  z-index: 3; text-shadow: 0 0 2px #000, 0 0 2px #000;   /* v215: ★ — над бігунком, кільце її не закриває */
 }
 .bar .mk::after { content: ""; position: absolute; left: 6px; top: 13px; width: 2px; height: 10px; background: var(--star); opacity: .8; }
 .bar .knob {   /* v212: зелене кільце, прозоре всередині — під ним видно ★ */
   position: absolute; top: 7px; width: 21px; height: 21px; margin-left: -10.5px; border-radius: 50%; box-sizing: border-box;
-  background: rgba(76,175,80,.12); border: 3px solid var(--clip); box-shadow: 0 0 0 1px rgba(0,0,0,.5); left: 0; pointer-events: none;
+  background: rgba(76,175,80,.12); border: 3px solid var(--clip); box-shadow: 0 0 0 1px rgba(0,0,0,.5); left: 0; pointer-events: none; z-index: 2;
 }
 
 /* ── нижній рядок і регулятор прокрутки ── */
@@ -6457,7 +6458,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v214';
+const APP_VER = 'v215';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
