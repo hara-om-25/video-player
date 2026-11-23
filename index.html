@@ -3272,7 +3272,7 @@ function ask(title, text, value) {
     $('dlgForm').onsubmit = e => { e.preventDefault(); done($('dlgInput').value.trim()); };
     d.showModal();
     placeDlg();
-    setTimeout(() => { $('dlgInput').focus(); $('dlgInput').select(); }, 30);
+    setTimeout(() => { const i = $('dlgInput'), n = i.value.length; i.focus(); i.setSelectionRange(n, n); i.scrollLeft = i.scrollWidth; }, 30);   // v199: без виділення, курсор у кінці
   });
 }
 const dur = () => (isFinite(audio.duration) ? audio.duration : 0);
@@ -6394,7 +6394,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v198';
+const APP_VER = 'v199';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
