@@ -457,7 +457,6 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-vslider .tpad .key.big { width: 100px; }
   body.f-vslider .tpad .key.big svg { width: 30px; height: 30px; }
   body.f-vslider .tpad .key[data-r="-1"] { order: 1; } body.f-vslider .tpad .key[data-r="2"] { order: 2; } body.f-vslider .tpad .key[data-r="5"] { order: 3; } body.f-vslider .tpad .key[data-r="10"] { order: 4; }
-  body.f-vslider:not(.fs) .fsbtn { right: auto; left: 12px; }   /* «на весь екран» — у лівому нижньому куті відео: правий накривають кнопки */
   body.f-vslider .tpad .key[data-r="-10"] { order: 5; } body.f-vslider .tpad .key[data-r="-5"] { order: 6; } body.f-vslider .tpad .key[data-r="-2"] { order: 7; } body.f-vslider .tpad .key[data-r="1"] { order: 8; }
 }
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
@@ -3484,6 +3483,12 @@ $('setOk').onclick = () => $('dlgSet').close();
 // Рядки «Останні» і «Обрізать ↺ ± сек» піднімаються рівно настільки, щоб регулятор
 // у куті (коло радіусом R з центром у правому нижньому куті вікна) їх не перекривав.
 function layoutActions() {
+  // відеоплеєр і редактор на планшеті: панелі закінчуються над кнопками ◁ ▷ (кнопки не залазять на відео, v175)
+  if (FEAT.vslider && !FEAT.wave) {
+    const m = document.querySelector('main'), wide = !matchMedia('(max-width: 860px)').matches;
+    m.style.paddingBottom = '';
+    if (wide) { const P = $('tpad').getBoundingClientRect(), F = document.querySelector('.footer').getBoundingClientRect(); if (F.top > P.top) m.style.paddingBottom = Math.ceil(F.top - P.top + 8) + 'px'; }
+  }
   const sp = $('aspacer'); if (!sp) return;
   sp.style.height = '0px';
   const P = $('tpad').getBoundingClientRect(), W = innerWidth, H = innerHeight;   // кут, зайнятий кнопками ◁ ▷
@@ -3506,6 +3511,7 @@ function layoutActions() {
   }
 }
 addEventListener('resize', layoutActions);
+requestAnimationFrame(() => requestAnimationFrame(layoutActions));   // і одразу при запуску
 // Відео заповнює екран без чорних смуг: масштабується «під обріз», якщо обрізати
 // доводиться небагато (≤ FIT_CROP з одного боку); інакше вміщується цілим.
 const FIT_CROP = 0.25;
@@ -5244,10 +5250,12 @@ audio.ontimeupdate = () => {
 };
 let lastPosSave = 0;
 /* Масштаб шкали: видно tlPct % запису; вікно йде за поточним місцем (по центру), під час перетягування — стоїть */
-const TL_PCTS = [100, 50, 25, 10, 5, 2, 1];
-let tlPct = getSetting('tlPct', 10), tlWin = null, tlLastA = null;   // v172: за замовчуванням 10%
-if (!getSetting('tlPct10', false)) { tlPct = 10; setSetting('tlPct10', true); }   // один раз — на нове значення за замовчуванням
-if (!TL_PCTS.includes(tlPct)) tlPct = 100;
+const TL_PCTS = [100, 50, 30, 25, 10, 5, 2, 1];
+// масштаб: аудіоплеєр — свій (типово 10%), відеоплеєр і редактор — свій (типово 30%, v175)
+const TL_KEY = FEAT.wave ? 'tlPct' : 'tlPct.' + FEAT.id, TL_DEF = FEAT.wave ? 10 : 30;
+let tlPct = getSetting(TL_KEY, TL_DEF), tlWin = null, tlLastA = null;
+if (FEAT.wave && !getSetting('tlPct10', false)) { tlPct = 10; setSetting('tlPct10', true); }   // один раз — на нове значення за замовчуванням
+if (!TL_PCTS.includes(tlPct)) tlPct = TL_DEF;
 let tlFix = null;     // v165: ◁ / ▷ на краях шкали — вікно посунуте вручну (початок), доки не торкнешся шкали
 function tlView(tt) {
   if (tlWin) return tlWin;
@@ -5259,7 +5267,7 @@ function tlView(tt) {
 }
 const tlX = (t, v = tlView()) => (t - v[0]) / v[1] * 100;
 function setTlPct(p) {
-  tlPct = p; tlFix = null; setSetting('tlPct', p); $('tlPct').textContent = (p < 1 ? p.toFixed(1) : p) + '%';
+  tlPct = p; tlFix = null; setSetting(TL_KEY, p); $('tlPct').textContent = (p < 1 ? p.toFixed(1) : p) + '%';
   document.body.classList.toggle('tlz', p < 100);
   $('tlIn').disabled = p <= TL_PCTS[TL_PCTS.length - 1]; $('tlOut').disabled = p >= 100;
   tlLastA = null; renderBar(); updateTime();
@@ -5313,7 +5321,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   const zb = $('tlPct'), zc = document.createElement('div'), N = TL_PCTS.length;
   zc.className = 'vspeed tz';
   zc.innerHTML = '<span class="vsl top">100%</span><div class="vstrack"><i class="vsmid" style="display:none"></i></div><span class="vsl bot">1%</span>';
-  zb.classList.add('vsbox'); zb.title = 'Масштаб шкали: натисніть і ведіть вгору (видно більше) чи вниз (менше); подвійний дотик — 10%';
+  zb.classList.add('vsbox'); zb.title = 'Масштаб шкали: натисніть і ведіть вгору (видно більше) чи вниз (менше); подвійний дотик — ' + TL_DEF + '%';
   zc.appendChild(zb); document.querySelector('.tlzoom').appendChild(zc);
   const ztr = zc.querySelector('.vstrack'); let zd = null, zt = 0;
   const vOf = p => 1 - TL_PCTS.indexOf(p) / (N - 1);
@@ -5327,7 +5335,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   const zup = () => {
     if (!zd) return; const tap = !zd.moved; zd = null; zc.classList.remove('drag'); zb.style.top = '';
     if (!tap) return; const now = performance.now();
-    if (now - zt < 350) { zt = 0; setTlPct(10); } else zt = now;
+    if (now - zt < 350) { zt = 0; setTlPct(TL_DEF); } else zt = now;
   };
   zb.addEventListener('pointerup', zup); zb.addEventListener('pointercancel', zup);
 })();
@@ -6255,7 +6263,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v174';
+const APP_VER = 'v175';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
