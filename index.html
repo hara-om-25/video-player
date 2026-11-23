@@ -36,7 +36,7 @@
   --danger:  #c0392b;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow-x: hidden; }   /* сторінка ніколи не ширша за екран (v167) */
 body {
   background: var(--bg);
   color: var(--text);
@@ -318,7 +318,9 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 
 /* ── timeline ─────────────────────────── */
 .timeline { padding: 6px 16px 0; display: flex; align-items: center; gap: 10px; }
-.timeline .bar { flex: 1; min-width: 0; }
+.timeline /* v167: мітки й фрагменти поза видимою частиною шкали (масштаб < 100%) не виходять за неї — інакше сторінка ширшала й планшет зменшував застосунок */
+.bar { overflow-x: clip; }
+.bar { flex: 1; min-width: 0; }
 /* масштаб шкали: ◁ 100% ▷ */
 .tlzoom { flex: none; display: flex; align-items: center; gap: 2px; position: relative; width: 64px; height: 38px; }
 .tlzoom #tlIn, .tlzoom #tlOut { display: none; }        /* v165: замість ◁ ▷ — «100%» тягнеться, як ×1 */
@@ -5438,6 +5440,7 @@ function renderSel(vv) {
     const s = selStart ?? selEnd, e = selEnd ?? selStart;
     sel.style.display = 'block';
     const v = vv || tlView(), a = Math.max(s, v[0]), b = Math.min(e, v[0] + v[1]);
+    if (b < a) { sel.style.display = 'none'; return; }    // виділення поза видимою частиною шкали — не показуємо (інакше сторінка ширшала, v167)
     sel.style.left = tlX(a, v) + '%';
     sel.style.width = Math.max(0, (b - a) / v[1] * 100) + '%';
   } else sel.style.display = 'none';
@@ -6215,7 +6218,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v166';
+const APP_VER = 'v167';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
