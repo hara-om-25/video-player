@@ -429,6 +429,12 @@ html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2);
 body.f-wave .tledge { height: 38px; width: 38px; }
 html body.f-wave .wzbox .vsbox, html body.f-wave .ftspd .vsbox { min-width: 0; width: var(--kw, 56px); box-sizing: border-box; }
 body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 0; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
+/* v206: відеоплеєр і редактор — ×1 у нижньому рядку праворуч від «%» */
+html body.f-vslider:not(.f-wave) .ftspd { position: relative; flex: none; width: 56px; height: 38px; }
+html body.f-vslider:not(.f-wave) .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; }
+html body.f-vslider:not(.f-wave) .ftspd .vspeed .vsbox { min-width: 0; width: 56px; height: 38px; padding: 0 2px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+html body.f-vslider:not(.f-wave) .timeline { gap: 6px; }
+html body.f-vslider:not(.f-wave) .timeline .tlzoom { margin-left: 4px; }
 html body.f-wave .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; }
 body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
 body.f-wave .timeline .tlzoom { margin-left: 0; }
@@ -486,18 +492,14 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider .trimrow { position: relative; }
   html body.f-vslider .trimrow:has(#btnUntrim.on) #btnTrim { font-size: 15px !important; padding: 0 6px; }
   html body.f-vslider .trimrow:has(#btnUntrim.on) #btnSaveTrim { width: 54px; font-size: 15px !important; }
-  html body.f-vslider:not(.fs) .vspeed { right: 0; width: calc((100% - 24px) / 5); }
-  html body.f-vslider .vspeed .vsbox { min-width: 0; width: 100%; }
   html body.f-vslider:not(.fs) #btnMark { right: 0; width: calc((100% - 24px) / 5); }
   /* v196: ×1 — на одній висоті з «Обрізати», ★ — з 60с 30с 10с (обидві 44 px) */
-  html body.f-vslider:not(.fs) .vspeed { bottom: calc(var(--vsb, 80px) - 10px); }
   html body.f-vslider .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
   html body.f-vslider:not(.fs) #btnMark { height: 44px; margin-top: 6px; }
   /* v204: на весь екран — той самий блок і в тому ж порядку, що й у звичайному вигляді: над кнопками ◁ ▷ */
   html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 106px + 12px); }
   html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 12px); bottom: var(--fb); gap: 6px; opacity: .85; }
   html body.fs.f-vslider #btnMark { position: fixed; z-index: 16; top: auto; left: auto; right: 10px; width: var(--kc); height: 44px; margin: 0; bottom: var(--fb); opacity: .85; }
-  html body.fs.f-vslider .vspeed { position: fixed; z-index: 16; left: auto; right: 10px; width: var(--kc); top: 12vh; bottom: calc(var(--fb) + 50px); }
   html body.fs.f-vslider .actions #btnTrim, html body.fs.f-vslider .actions #btnSaveTrim, html body.fs.f-vslider .trimrow #btnUntrim { opacity: 1; }
   html body.fs.f-draw #btnDraw { bottom: calc(var(--fb) + 104px); right: 10px; }
   html body.f-vslider .actions .r2 .lastrow { display: flex; margin: 0; padding: 0; gap: 6px; }
@@ -3712,6 +3714,11 @@ if (FEAT.hdrpl) {
     sp.className = 'ftspd'; sp.appendChild($('vspeed'));
     tl.append(document.querySelector('.tlzoom'), sp);
   }   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
+  if (FEAT.vslider && !FEAT.wave) {   // v206: відеоплеєр і редактор — «%» і ×1 праворуч від шкали, як в аудіоплеєрі
+    const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
+    sp.className = 'ftspd'; sp.appendChild($('vspeed'));
+    tl.append(document.querySelector('.tlzoom'), sp);
+  }
   const open = on => {
     if (on) { pop.style.top = Math.round(document.querySelector('header').getBoundingClientRect().bottom + 4) + 'px'; renderPlaylist(); }
     pop.classList.toggle('on', on); $('plBtn').classList.toggle('on', on);
@@ -6420,7 +6427,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v205';
+const APP_VER = 'v206';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
