@@ -410,6 +410,7 @@ html body.f-wave button.accent:not(#btnInstall):not(#btnAdd):not(#btnSaveClip), 
 html body.f-wave #btnInstall, html body.f-wave #btnAdd, html body.f-wave #btnSaveClip { background: var(--accent); color: #111; border-color: var(--accent); }
 html body.f-wave dialog button.accent { background: var(--accent) !important; color: #111 !important; border-color: var(--accent) !important; }   /* у вікнах — жовті (v177) */
 html body.f-wave #markList .item { padding-top: 5px; padding-bottom: 5px; }   /* v190: мітки щільніше */
+html body.f-vslider #markList .item { padding-top: 3px; padding-bottom: 3px; }   /* v193: відеоплеєр і редактор — мітки щільніше */
 html body.f-wave .panel.side .sec > h2 { display: flex; justify-content: flex-start; padding-left: 10px; }   /* «МІТКИ» — ліворуч, як «ФРАГМЕНТИ» */
 html body.f-wave .panel.side .sec > h2 > i:empty { display: none; }
 html body.f-wave .hhint { flex: 1; min-width: 0; margin-left: 14px; font-size: 12px; line-height: 1.35; letter-spacing: 0; text-transform: none; font-weight: 400; color: #6f7378; white-space: normal; text-align: left; }
@@ -6363,7 +6364,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v192';
+const APP_VER = 'v193';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
