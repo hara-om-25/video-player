@@ -479,6 +479,10 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   /* v181: «Обрізати / Зберегти» — більші, на всю ширину ліворуч від ★ */
   html body.f-vslider:not(.fs) .actions .r2 { left: 10px; right: 74px; gap: 6px; }
   html body.f-vslider:not(.fs) .footer { padding-right: calc(var(--tpW) - 4px); }   /* шкала — до блоку кнопок, ▷ масштабу не під ними */
+  /* v196: ×1 — на одній висоті з «Обрізати», ★ — з 60с 30с 10с (обидві 44 px) */
+  html body.f-vslider:not(.fs) .vspeed { bottom: calc(var(--vsb, 80px) - 10px); }
+  html body.f-vslider:not(.fs) .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  html body.f-vslider:not(.fs) #btnMark { height: 44px; margin-top: 6px; }
   html body.f-vslider .actions .r2 .lastrow { display: flex; margin: 0; padding: 0; gap: 6px; }
   html body.f-vslider .actions .r2 .lastrow .act { flex: 1; height: 44px; padding: 0; font-size: 15px; border-radius: 9px; }
   html body.f-vslider:not(.fs) .actions #btnTrim, html body.f-vslider:not(.fs) .actions #btnSaveTrim { height: 44px; font-size: 15px; border-radius: 9px; }   /* v179: мітки — завширшки як блок кнопок */
@@ -6378,7 +6382,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v195';
+const APP_VER = 'v196';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
