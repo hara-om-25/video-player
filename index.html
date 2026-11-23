@@ -457,7 +457,6 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-hdrpl.f-vslider, html body.f-hdrpl.f-vslider.app-video { --cols: minmax(0, 1fr) 268px; }
   /* v181: «Обрізати / Зберегти» — більші, на всю ширину ліворуч від ★ */
   html body.f-vslider:not(.fs) .actions .r2 { left: 10px; right: 74px; gap: 6px; }
-  html body.f-vslider:not(.fs) .panel.side:has(#btnUntrim.on) .actions .r2 { right: 124px; }   /* є ↺ — звільняємо їй місце */
   html body.f-vslider:not(.fs) .actions #btnTrim, html body.f-vslider:not(.fs) .actions #btnSaveTrim { height: 44px; font-size: 15px; border-radius: 9px; }   /* v179: мітки — завширшки як блок кнопок */
   body.f-vslider .tpad { display: flex; flex-wrap: wrap; align-content: space-between; gap: 6px; width: 268px; height: 106px; }
   body.f-vslider .tpad .key { flex: none; width: 50px; height: 50px; font-size: 15px; }
@@ -702,7 +701,14 @@ body.f-vslider .actions #btnTrim, body.f-vslider .actions #btnSaveTrim { display
 /* ↺ — поруч із віконцем швидкості, такого ж розміру: жовта, жирна кругова стрілка */
 body.f-vslider #vspeed #btnUntrim { position: absolute; right: calc(100% + 6px); bottom: 0; width: 44px; height: 37px; padding: 0; pointer-events: auto;
   background: var(--accent); border: 1px solid var(--accent); border-radius: 8px; color: #111; }
-body.f-vslider #vspeed #btnUntrim:not(.on) { display: none; }
+/* «Обрізати | ↺» — одна жовта кнопка, розділена рискою; ↺ без обрізки — бліда й не натискається */
+body.f-vslider .trimrow { display: flex; align-items: stretch; }
+body.f-vslider .trimrow #btnTrim { flex: 1; min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+body.f-vslider .trimrow #btnUntrim { display: flex; align-items: center; justify-content: center; flex: none; width: 46px; padding: 0; margin: 0;
+  background: var(--accent); border: 1px solid var(--accent); border-left: 2px solid #111; border-radius: 0 9px 9px 0; color: #111; }
+body.f-vslider .trimrow #btnUntrim:not(.on) { color: rgba(17,17,17,.3); pointer-events: none; }
+body.f-vslider .trimrow #btnUntrim svg { width: 24px; height: 24px; display: block; pointer-events: none; }
+body.fs.f-vslider .trimrow #btnUntrim { opacity: .7; }
 body.f-vslider #vspeed #btnUntrim svg { width: 26px; height: 26px; display: block; margin: auto; pointer-events: none; }
 body.f-vslider #vspeed.drag #btnUntrim { visibility: hidden; }
 /* плейлист-дерево: обрізані шматки — під своїм файлом, зі зміщенням */
@@ -3593,7 +3599,9 @@ if (FEAT.vslider) {
   const u = $('btnUntrim');
   u.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.6A7.2 7.2 0 1 1 8.6 18.6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'
     + '<path d="M0.9 10.9H9.1L5 16.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-  $('vspeed').appendChild(u);
+  // v183: ↺ — права частина кнопки «Обрізати» (за рискою), а не окремо біля ×1
+  const tr = document.createElement('div'); tr.className = 'trimrow';
+  const bt = $('btnTrim'); bt.replaceWith(tr); tr.append(bt, u);
   $('btnTrim').textContent = 'Обрізати';
   $('playlist').after($('progress'));          // «Фрагментів» немає — хід запису видно під плейлистом
 }
@@ -5225,12 +5233,12 @@ const Wave = (() => {
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
   // віконце «скільки секунд видно» — як ×1: натиснув і ведеш угору (до 600 с) / вниз (до 1 с), подвійний дотик — 10 с
   const wz = document.createElement('div'); wz.className = 'wzbox';
-  wz.innerHTML = '<div class="vspeed wz"><span class="vsl top">600</span><div class="vstrack"><i class="vsmid"></i></div><span class="vsl bot">1</span><b class="vsbox" title="Скільки секунд видно на доріжці: натисніть і ведіть вгору (до 600) чи вниз (до 1); подвійний дотик — 10">10</b></div>';
+  wz.innerHTML = '<div class="vspeed wz"><span class="vsl top">600с</span><div class="vstrack"><i class="vsmid"></i></div><span class="vsl bot">1с</span><b class="vsbox" title="Скільки секунд видно на доріжці: натисніть і ведіть вгору (до 600) чи вниз (до 1); подвійний дотик — 10">10</b></div>';
   $('btnMark').before(wz);
   const col = wz.firstElementChild, box = col.querySelector('.vsbox'), tr = col.querySelector('.vstrack'), LN = Math.log(600);
   const nice = x => x < 10 ? Math.round(x) : x < 60 ? Math.round(x / 5) * 5 : x < 300 ? Math.round(x / 10) * 10 : Math.round(x / 30) * 30;
   const setWin = (w, save = true) => {
-    WIN = Math.min(600, Math.max(1, nice(w))); box.textContent = WIN; ver++;
+    WIN = Math.min(600, Math.max(1, nice(w))); box.textContent = WIN + 'с'; ver++;   // «с» — секунди (v183)
     if (zd) { const h = tr.offsetHeight; box.style.top = (tr.offsetTop + h * (1 - Math.log(WIN) / LN)) + 'px'; }
     if (save) setSetting('wwin', WIN);
   };
@@ -6278,7 +6286,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v182';
+const APP_VER = 'v183';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
