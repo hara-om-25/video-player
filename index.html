@@ -5127,7 +5127,9 @@ function btnClick(down) {
     const cs = getComputedStyle(b), bg = cs.backgroundColor, fg = cs.color;
     const clear = !bg || bg === 'transparent' || /rgba\(.*,\s*0\)$/.test(bg);
     b.dataset.invBg = b.style.background; b.dataset.invFg = b.style.color; b.dataset.invT = Date.now();
-    b.style.setProperty('background', fg, 'important'); b.style.setProperty('color', clear ? '#111' : bg, 'important');
+    // v205: темна кнопка (і «Скасувати» з білим текстом) → жовта з чорним; жовта/світла → чорна з жовтим
+    const m = (clear ? 'rgb(0,0,0)' : bg).match(/\d+(\.\d+)?/g).map(Number), light = 0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2] > 128;
+    b.style.setProperty('background', light ? '#111' : 'var(--accent)', 'important'); b.style.setProperty('color', light ? 'var(--accent)' : '#111', 'important');
   };
   const uninv = b => {
     if (!b || b.dataset.invT == null) return;
@@ -6418,7 +6420,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v204';
+const APP_VER = 'v205';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
