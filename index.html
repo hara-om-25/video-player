@@ -408,6 +408,9 @@ html body.f-wave #btnMark { color: var(--star); }
 html body.f-wave button.accent:not(#btnInstall):not(#btnAdd):not(#btnSaveClip), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 html body.f-wave #btnInstall, html body.f-wave #btnAdd, html body.f-wave #btnSaveClip { background: var(--accent); color: #111; border-color: var(--accent); }
 html body.f-wave dialog button.accent { background: var(--accent) !important; color: #111 !important; border-color: var(--accent) !important; }   /* у вікнах — жовті (v177) */
+html body.f-wave #markList .item { padding-top: 5px; padding-bottom: 5px; }   /* v190: мітки щільніше */
+html body.f-wave .panel.playlist .progress.on { position: relative; z-index: 2; display: inline-block; margin: 2px 10px 8px; padding: 6px 12px;
+  background: rgba(10,11,12,.88); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.6); }   /* повідомлення — на темній підкладці з тінню */
 html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: var(--kw, 56px); margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
 html body.f-wave .warail #btnSaveClip svg { width: 60%; height: auto; display: block; pointer-events: none; }
 html body.f-wave .warail #btnSaveClip small { font-size: 15px; font-weight: 800; letter-spacing: 0; pointer-events: none; }
@@ -5473,6 +5476,23 @@ $('btnRen').onclick = async () => {
 
 /* Видалення свайпом: рядок плейлиста, мітки чи фрагмента тягнеш убік — і якщо відвів далеко
    (за 40% ширини), він вилітає за екран і видаляється; інакше вертається на місце. */
+// звук «відлетіло в кошик» (v190): свист, що швидко спадає, і глухий стук об дно кошика
+function trashSound() {
+  try {
+    btnAC = btnAC || new (window.AudioContext || window.webkitAudioContext)(); if (btnAC.state === 'suspended') btnAC.resume();
+    const ac = btnAC, t = ac.currentTime + 0.005, n = Math.round(ac.sampleRate * 0.3), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = b;
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(2600, t); bp.frequency.exponentialRampToValueAtTime(500, t + 0.26);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.05); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    src.connect(bp).connect(g).connect(ac.destination); src.start(t); src.stop(t + 0.3);
+    const o = ac.createOscillator(), og = ac.createGain(), t2 = t + 0.27;
+    o.frequency.setValueAtTime(160, t2); o.frequency.exponentialRampToValueAtTime(55, t2 + 0.09);
+    og.gain.setValueAtTime(0.0001, t2); og.gain.exponentialRampToValueAtTime(0.7, t2 + 0.01); og.gain.exponentialRampToValueAtTime(0.001, t2 + 0.12);
+    o.connect(og).connect(ac.destination); o.start(t2); o.stop(t2 + 0.13);
+  } catch {}
+}
 function swipeDelete(list, onDelete) {
   let st = null;
   list.addEventListener('pointerdown', e => {
@@ -5497,6 +5517,7 @@ function swipeDelete(list, onDelete) {
     const w = it.offsetWidth;
     if (Math.abs(dx) > w * 0.4) {
       it.style.transition = 'transform .18s ease-in, opacity .18s'; it.style.transform = `translateX(${Math.sign(dx) * innerWidth}px)`; it.style.opacity = 0;
+      trashSound();
       setTimeout(() => onDelete(+it.dataset.i), 180);
     } else { it.style.transition = 'transform .2s, opacity .2s'; it.style.transform = ''; it.style.opacity = ''; setTimeout(() => { it.style.transition = ''; }, 220); }
     // клік, що йде слідом за свайпом, не повинен відкривати/перемотувати
@@ -6307,7 +6328,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v189';
+const APP_VER = 'v190';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
