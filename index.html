@@ -5016,7 +5016,7 @@ function btnClick(down) {
 }
 (() => {
   let pressed = null;
-  const sel = 'button, .act, label.srow, .key';
+  const sel = 'button, .act, label.srow, .key, .vsbox, [role=button]';   // v178: і віконця ×1 / секунд / % — теж клацають
   document.addEventListener('pointerdown', e => { const b = e.target.closest(sel); if (!b || b.disabled) return; pressed = b; btnClick(true); }, true);
   const up = () => { if (pressed) { pressed = null; btnClick(false); } };
   document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', () => { pressed = null; }, true);
@@ -6265,7 +6265,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v177';
+const APP_VER = 'v178';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
