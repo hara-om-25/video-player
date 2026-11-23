@@ -446,6 +446,17 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .markctl .bigtime { font-size: 30px; }
   html body.f-wave .panel.side > .sec { position: static; flex: 0 0 auto; min-height: 0; max-height: 100%; }
 }
+/* відеоплеєр і редактор (v173): малі кнопки — квадратні й більші; ряди ◁ 2 5 10 / −10 −5 −2 ▷ */
+@media (min-width: 861px) {
+  body.f-vslider { --tpW: 284px; --tpH: 122px; }
+  body.f-vslider .tpad { display: flex; flex-wrap: wrap; align-content: space-between; gap: 6px; width: 268px; height: 106px; }
+  body.f-vslider .tpad .key { flex: none; width: 50px; height: 50px; font-size: 15px; }
+  body.f-vslider .tpad .key.big { width: 100px; }
+  body.f-vslider .tpad .key.big svg { width: 30px; height: 30px; }
+  body.f-vslider .tpad .key[data-r="-1"] { order: 1; } body.f-vslider .tpad .key[data-r="2"] { order: 2; } body.f-vslider .tpad .key[data-r="5"] { order: 3; } body.f-vslider .tpad .key[data-r="10"] { order: 4; }
+  body.f-vslider:not(.fs) .fsbtn { right: auto; left: 12px; }   /* «на весь екран» — у лівому нижньому куті відео: правий накривають кнопки */
+  body.f-vslider .tpad .key[data-r="-10"] { order: 5; } body.f-vslider .tpad .key[data-r="-5"] { order: 6; } body.f-vslider .tpad .key[data-r="-2"] { order: 7; } body.f-vslider .tpad .key[data-r="1"] { order: 8; }
+}
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
 body.f-vspd .vspeed .vsbox, #btnMark { border-color: var(--accent) !important; }
 .key { padding: 0; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--accent); border-color: var(--accent);   /* як 60с / 30с / 10с (з v151) */
@@ -6241,7 +6252,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v172';
+const APP_VER = 'v173';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
