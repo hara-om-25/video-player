@@ -398,7 +398,8 @@ html body.f-wave #btnMark { color: var(--star); }
 html body.f-wave button.accent:not(#btnInstall):not(#btnAdd):not(#btnSaveClip), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 html body.f-wave #btnInstall, html body.f-wave #btnAdd, html body.f-wave #btnSaveClip { background: var(--accent); color: #111; border-color: var(--accent); }
 html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: var(--kw, 56px); margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
-html body.f-wave .warail #btnSaveClip b { font-size: 15px; }
+html body.f-wave .warail #btnSaveClip svg { width: 60%; height: auto; display: block; pointer-events: none; }
+html body.f-wave .warail #btnSaveClip small { font-size: 15px; font-weight: 800; letter-spacing: 0; pointer-events: none; }
 html body.f-wave .panel.side .actions { border-top: 0; }   /* v164: без смужки під мітками */   /* «+» — жовта, як «Встановити» (v160) */
 body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
 html body.f-wave .wzbox .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -412,7 +413,7 @@ body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
 body.f-wave .timeline .tlzoom { margin-left: 10px; }
 @media (min-width: 861px) and (max-width: 1150px) {    /* вужчий планшет: кнопки вміщаються в рядок */
   html body.f-wave { --kw: 40px; }
-  html body.f-wave .tpad { gap: 5px; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.3) repeat(3, var(--kw)); }
+  html body.f-wave .tpad { gap: 5px; }
   html body.f-wave .markctl.ovl { gap: 10px; }
 }
 @media (max-width: 860px) {
@@ -431,11 +432,11 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
   body.f-wave .panel.stage { height: 270px; }
   body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
-  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.7) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 26px); gap: 6px; align-items: center; }
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) + 30px) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 30px); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
   body.f-wave .tpad .key.sm { font-size: 16px; height: var(--kw); }
-  body.f-wave .tpad .key.big { height: calc(var(--kw) + 26px); }
-  body.f-wave .tpad .key.big svg { width: 54px; height: 54px; }   /* ▷ — ще більша (v166) */
+  body.f-wave .tpad .key.big { height: calc(var(--kw) + 30px); }
+  body.f-wave .tpad .key.big svg { width: calc(var(--kw) * 0.95); height: calc(var(--kw) * 0.95); }   /* ▷ — великий квадрат (v168) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
   html body.f-wave .panel.side > .sec { position: static; flex: 0 0 auto; min-height: 0; max-height: 100%; }
@@ -3571,7 +3572,9 @@ if (FEAT.hdrpl) {
     // ×1 і ★ — праворуч від звукової доріжки (v156)
     const row = document.createElement('div'), rail = document.createElement('div');
     row.className = 'waverow'; rail.className = 'warail';
-    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); rail.append($('btnSaveClip'), $('btnMark'));   // v164: ⬇MP3 — над віконцем секунд
+    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); const sc = $('btnSaveClip');      // v168: значок «стрілка в лоток», як у зеленої кнопки фрагмента, і більші літери
+    sc.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M4.5 13.5v5.5h15v-5.5"/></svg><small>MP3</small>';
+    rail.append(sc, $('btnMark'));   // v164: ⬇MP3 — над віконцем секунд
     // «◁ 100% ▷» — праворуч від шкали, ×1 — у самому кутку (v160)
     const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
     sp.className = 'ftspd'; sp.appendChild($('vspeed'));
@@ -6218,7 +6221,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v167';
+const APP_VER = 'v168';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
