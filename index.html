@@ -685,7 +685,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 
 .toast {   /* повідомлення — посередині екрана, жовтими літерами, фон затемнено */
   position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .25s;
+  background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .12s;
 }
 .toast span {
   max-width: min(90vw, 760px); padding: 18px 26px; border-radius: 14px; text-align: center;
@@ -3284,7 +3284,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 let toastTimer;
 function toast(msg, ms = 700) {
   const el = $('toast'); el.innerHTML = ''; el.appendChild(document.createElement('span')).textContent = msg; el.classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms / 3);   // v217: усі повідомлення зникають утричі швидше
 }
 // Вікно назви стоїть посередині видимої частини екрана — над клавіатурою, коли вона відкрита
 function placeDlg() {
@@ -6460,7 +6460,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v216';
+const APP_VER = 'v217';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
