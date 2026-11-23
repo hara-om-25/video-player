@@ -516,8 +516,9 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 3; width: auto; height: 38px; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { width: 100%; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { height: 38px; }
-  html body.fs.f-vslider:not(.f-wave) .brow, html body.fs.f-vslider:not(.f-wave) .fsexit { opacity: .85; }
-  html body.fs.f-vslider:not(.f-wave) .fsexit { background: rgba(0,0,0,.55); }
+  html body.fs.f-vslider:not(.f-wave) .brow { opacity: .85; }
+  html body.fs.f-vslider:not(.f-wave) .fsexit { padding: 6px; opacity: 1; }   /* v218: вихід — точно як «на весь екран» (розмір, товщина, тло) */
+  html body.f-vslider:not(.f-wave) .brow .ftspd, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { width: 100%; }   /* v218: ×3.6 не заходить під кнопку в кутку */
   /* v210: на весь екран шкала — до ▷ масштабу; вихід — вище, ліворуч від кнопок (не на шкалі) */
   html body.fs.f-vslider:not(.f-wave) .timeline { right: calc(10px + 38px + 64px + (268px - 24px) / 5 * 2 + 18px + 8px); }
   html body.fs.f-vslider:not(.f-wave) .fsexit { right: calc(268px + 10px + 10px); bottom: calc(70px + env(safe-area-inset-bottom)); }
@@ -976,7 +977,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 </div>
 
 <!-- регулятор прокрутки: центр — у правому нижньому куті, видно чверть -->
-<button id="btnFsExit" class="fsbtn fsexit" title="Вийти з повного екрана  ( Esc )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></svg></button>
+<button id="btnFsExit" class="fsbtn fsexit" title="Вийти з повного екрана  ( Esc )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h5V3M16 3v5h5M21 16h-5v5M8 21v-5H3"/></svg></button>
 <svg class="jog" id="jog" viewBox="-115 -115 230 230" aria-label="Регулятор прокрутки"></svg>
 <div class="tpad" id="tpad">
   <button class="key sm" data-r="-10" title="Назад на 10 с"><i></i></button><button class="key sm" data-r="-5" title="Назад на 5 с"><i></i></button><button class="key sm" data-r="-2" title="Назад на 2 с"><i></i></button>
@@ -6460,7 +6461,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v217';
+const APP_VER = 'v218';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
