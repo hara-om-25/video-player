@@ -345,8 +345,8 @@ body.tlz .tledge { display: block; }
 .bar {
   position: relative; height: 50px; cursor: pointer; touch-action: none; user-select: none;
 }
-.bar .tk { position: absolute; top: 28px; width: 1px; height: 6px; background: var(--dim); pointer-events: none; font-style: normal; }
-.bar .tk b { position: absolute; top: 6px; left: 0; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bar .tk { position: absolute; top: 28px; width: 1px; height: 6px; background: #6f7378; pointer-events: none; font-style: normal; }
+.bar .tk b { position: absolute; top: 6px; left: 0; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: #8b8f94; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bar .tk.l b { transform: none; }
 .bar .tk.r b { transform: translateX(-100%); }
 .bar .track { position: absolute; left: 0; right: 0; top: 15px; height: 5px; border-radius: 3px; background: var(--surf3); }
@@ -411,10 +411,11 @@ html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2);
 /* «◁ 100% ▷» — з жовтою обводкою (v161) */
 body.f-wave .tledge { height: 38px; width: 38px; }
 html body.f-wave .wzbox .vsbox, html body.f-wave .ftspd .vsbox { min-width: 0; width: var(--kw, 56px); box-sizing: border-box; }
-body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 10px; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
+body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 0; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
 html body.f-wave .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; }
 body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
-body.f-wave .timeline .tlzoom { margin-left: 10px; }
+body.f-wave .timeline .tlzoom { margin-left: 0; }
+body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміжків між ▷, % і ×1 */
 @media (min-width: 861px) and (max-width: 1150px) {    /* вужчий планшет: кнопки вміщаються в рядок */
   html body.f-wave { --kw: 40px; }
   html body.f-wave .tpad { gap: 5px; }
@@ -5136,10 +5137,9 @@ const Wave = (() => {
     const k = t.toFixed(3) + '|' + ver + '|' + W + 'x' + H + '|' + rg.join(';'); if (k === lastKey) return; lastKey = k;
     const inClip = x => rg.some(r => x >= r[0] && x <= r[1]);
     ctx.clearRect(0, 0, W, H);
-    const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(2, Math.round(2.5 * d));   // v163: рисок на третину менше
+    const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(3, Math.round(4.75 * d));   // v171: риски рідше й на однаковій відстані
     const lo = T0(), hi = T1();
-    for (let x = 0, bi = 0; x < W; x += bw + gap, bi++) {
-      if (bi % 3 === 2) continue;           // v169: кожну третю риску прибрано
+    for (let x = 0; x < W; x += bw + gap) {
       const ta = t0 + x / pps, tb = t0 + (x + bw + gap) / pps;
       if (tb < lo || ta > hi) continue;
       let m = 0, miss = false;
@@ -6240,7 +6240,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v170';
+const APP_VER = 'v171';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
