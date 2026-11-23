@@ -284,6 +284,7 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 /* «зберегти фрагмент MP3» — як кнопка ⬇MP3 у шапці «Фрагментів» (жовта, стрілка + підпис) */
 .item .acts .dlmp3 { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 36px; padding: 0 !important; color: #4caf50 !important; }
 .item .acts .dlmp3 svg { width: 24px; height: 24px; pointer-events: none; }
+html body.f-wave .item .acts .dlmp3 { color: var(--accent) !important; }   /* аудіоплеєр: ⬇ у фрагментах — жовта (v176) */
 .item .acts [data-a="ren"]  { color: #42a5f5; }
 .item.active .name { color: var(--accent2); }
 
@@ -435,9 +436,9 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
-  body.f-wave .panel.stage { height: 270px; }
+  body.f-wave .panel.stage { height: 236px; }   /* v176: доріжка нижча, без порожнечі над кнопками */
   body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
-  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) + 30px) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 30px); gap: 6px; align-items: center; }
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) + 30px) repeat(3, var(--kw)); grid-template-rows: var(--kw); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
   body.f-wave .tpad .key.sm { font-size: 16px; height: var(--kw); }
   body.f-wave .tpad .key.big { height: calc(var(--kw) + 30px); position: relative; top: 20px; }   /* v174: ▷ трохи залазить нижче панелі */
@@ -6263,7 +6264,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v175';
+const APP_VER = 'v176';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
