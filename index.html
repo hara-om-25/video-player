@@ -5231,7 +5231,8 @@ audio.ontimeupdate = () => {
 let lastPosSave = 0;
 /* Масштаб шкали: видно tlPct % запису; вікно йде за поточним місцем (по центру), під час перетягування — стоїть */
 const TL_PCTS = [100, 50, 25, 10, 5, 2, 1];
-let tlPct = getSetting('tlPct', 100), tlWin = null, tlLastA = null;
+let tlPct = getSetting('tlPct', 10), tlWin = null, tlLastA = null;   // v172: за замовчуванням 10%
+if (!getSetting('tlPct10', false)) { tlPct = 10; setSetting('tlPct10', true); }   // один раз — на нове значення за замовчуванням
 if (!TL_PCTS.includes(tlPct)) tlPct = 100;
 let tlFix = null;     // v165: ◁ / ▷ на краях шкали — вікно посунуте вручну (початок), доки не торкнешся шкали
 function tlView(tt) {
@@ -5298,7 +5299,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   const zb = $('tlPct'), zc = document.createElement('div'), N = TL_PCTS.length;
   zc.className = 'vspeed tz';
   zc.innerHTML = '<span class="vsl top">100%</span><div class="vstrack"><i class="vsmid" style="display:none"></i></div><span class="vsl bot">1%</span>';
-  zb.classList.add('vsbox'); zb.title = 'Масштаб шкали: натисніть і ведіть вгору (видно більше) чи вниз (менше); подвійний дотик — 100%';
+  zb.classList.add('vsbox'); zb.title = 'Масштаб шкали: натисніть і ведіть вгору (видно більше) чи вниз (менше); подвійний дотик — 10%';
   zc.appendChild(zb); document.querySelector('.tlzoom').appendChild(zc);
   const ztr = zc.querySelector('.vstrack'); let zd = null, zt = 0;
   const vOf = p => 1 - TL_PCTS.indexOf(p) / (N - 1);
@@ -5312,7 +5313,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   const zup = () => {
     if (!zd) return; const tap = !zd.moved; zd = null; zc.classList.remove('drag'); zb.style.top = '';
     if (!tap) return; const now = performance.now();
-    if (now - zt < 350) { zt = 0; setTlPct(100); } else zt = now;
+    if (now - zt < 350) { zt = 0; setTlPct(10); } else zt = now;
   };
   zb.addEventListener('pointerup', zup); zb.addEventListener('pointercancel', zup);
 })();
@@ -6240,7 +6241,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v171';
+const APP_VER = 'v172';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
