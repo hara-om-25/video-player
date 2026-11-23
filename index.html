@@ -92,7 +92,7 @@ body.f-hdrpl .plpop.on { display: block; }
 .plpop #playlist { max-height: none; }
 body.f-hdrpl.f-vslider .panel.stage > .progress { position: absolute; z-index: 18; top: 8px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.7); border-radius: 8px; padding: 6px 12px; }
 header .now { color: var(--dim); font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-header .hdur { flex: none; font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
+header .hdur { flex: none; font-size: 20px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
 header button { padding: 6px 9px; font-size: 13px; }
 header .ver { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; background: none; border: 1px solid transparent; padding: 6px 8px; }
 header .ver:hover { border-color: var(--surf3); color: var(--text); }
@@ -180,18 +180,18 @@ main {
 .fsbtn svg { width: 100%; height: 100%; display: block; }
 .vidbox.on ~ .fsbtn { display: block; }
 body.fs .vidbox ~ .fsbtn { display: none; }
-.fsexit { position: fixed; display: none; z-index: 16; right: calc(var(--jogR) * 1.15 + 12px); bottom: calc(12px + env(safe-area-inset-bottom)); }
+.fsexit { position: fixed; display: none; z-index: 16; right: calc(var(--tpW) + 12px); bottom: calc(12px + env(safe-area-inset-bottom)); }
 body.fs .fsexit { display: block; }
 /* шкала часу — і на весь екран: унизу ліворуч, до кнопки виходу; [ час ] — над нею */
 body.fs .footer { position: static; }
-body.fs .timeline { position: fixed; z-index: 16; left: 12px; right: calc(var(--jogR) * 1.15 + 76px); bottom: calc(10px + env(safe-area-inset-bottom)); padding: 0; }
+body.fs .timeline { position: fixed; z-index: 16; left: 12px; right: calc(var(--tpW) + 76px); bottom: calc(10px + env(safe-area-inset-bottom)); padding: 0; }
 body.fs .markctl.ovl { bottom: calc(56px + env(safe-area-inset-bottom)); }
 body.fs .panel.stage { position: fixed; inset: 0; z-index: 12; border: 0; border-radius: 0; max-height: none; background: #000; }
 body.fs .vidbox { flex: 1; aspect-ratio: auto; max-height: none; background: #000; }
 body.fs .spdrow { position: fixed; z-index: 16; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 0; border: 0; background: none; }
 body.fs .spdrow .speed button, body.fs #btnMark { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.18); }
 body.fs .spdrow .speed { background: none; border: 0; box-shadow: none; }
-body.fs #btnMark { position: fixed; z-index: 16; right: 12px; bottom: calc(var(--jogR) * 1.15 + 12px); margin: 0; }
+body.fs #btnMark { position: fixed; z-index: 16; right: 12px; bottom: calc(var(--tpH) + 12px); margin: 0; }
 /* сторінка не масштабується пальцями; масштабується лише відео (жести на #vidbox) */
 html, body { touch-action: pan-x pan-y; }
 .vidbox.on { touch-action: none; }
@@ -227,14 +227,14 @@ body.f-draw .panel.side { overflow: clip; }
 /* редактор: мітки без назв; дотик обирає мітку — кнопки ✎ / 🖌 у шапці діють на неї */
 #markList .item.sel { background: rgba(255,210,63,.22); outline: 2px solid var(--accent); outline-offset: -2px; }
 /* на весь екран 🖌 — праворуч, над віконцем швидкості; трохи прозорий, як інші кнопки */
-body.fs.f-draw #btnDraw { position: fixed; z-index: 16; right: 14px; bottom: calc(var(--jogR) * 1.15 + 132px); width: 52px; height: 46px; opacity: .8; }
+body.fs.f-draw #btnDraw { position: fixed; z-index: 16; right: 14px; bottom: calc(var(--tpH) + 132px); width: 52px; height: 46px; opacity: .8; }
 .drawbar { position: absolute; z-index: 20; left: 8px; right: 8px; top: 8px; display: none; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 6px; border-radius: 12px; background: rgba(0,0,0,.72); }
 .drawbar.on { display: flex; }
 /* малюємо: доки не «Готово» / «Скасувати», працюють лише панель малювання й полотно */
 body.drawing { pointer-events: none; }
 body.drawing #drawBar, body.drawing #drawBar *, body.drawing #drawCanvas.edit { pointer-events: auto; }
-body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawing #jog, body.drawing .fsbtn, body.drawing .fsexit { opacity: .45; }
+body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawing #jog, body.drawing .tpad, body.drawing .fsbtn, body.drawing .fsexit { opacity: .45; }
 .drawbar.moved { right: auto; max-width: calc(100% - 16px); }
 .drawbar .grip { flex: none; width: 34px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent);
   cursor: move; touch-action: none; border-radius: 9px; background: rgba(255,255,255,.08); }
@@ -349,11 +349,33 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 }
 
 /* ── нижній рядок і регулятор прокрутки ── */
-:root { --jogR: min(160px, 24vh); }   /* РП зменшено (і на весь екран теж) */
-.timeline { padding-right: calc(var(--jogR) + 10px); padding-bottom: 14px; }
+:root { --jogR: min(160px, 24vh); --tpW: 204px; --tpH: 112px; }   /* --tpW × --tpH — кут під кнопками ◁ ▷ (замість РП, з v148) */
+/* РП (крутилки) більше немає — замість неї кнопки з жовтого прозорого пластику з чорною, місцями стертою фарбою */
+.jog { display: none !important; }
+.tpad { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(var(--tpW) - 14px); height: calc(var(--tpH) - 14px);
+  display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: 34fr 58fr; gap: 7px 5px; user-select: none; touch-action: manipulation; }
+.tpad .key.sm { grid-row: 1; }
+.tpad .key.big { grid-row: 2; grid-column: span 3; }
+.key { position: relative; padding: 0; border: 0; border-radius: 9px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  /* корпус — жовтий прозорий пластик: світло проходить крізь нього, боки темніші */
+  background: radial-gradient(120% 90% at 50% 35%, rgba(255,226,110,.98), rgba(247,181,0,.92) 55%, rgba(170,110,0,.9));
+  box-shadow: 0 4px 0 rgba(150,95,0,.95), 0 5px 1px rgba(90,55,0,.9), 0 8px 12px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,240,170,.55), inset 0 -2px 3px rgba(120,70,0,.6);
+  transform: translateY(0); transition: transform .05s, box-shadow .05s, filter .2s; }
+/* верх — пофарбований чорним; фарба місцями стерта (малюється в JS: paintKey), позначка — витерта до пластику */
+.key > i { position: absolute; inset: 3px 3px 4px; border-radius: 7px; background-size: 100% 100%; pointer-events: none; }
+.key::after { content: ''; position: absolute; inset: 3px 3px 4px; border-radius: 7px; pointer-events: none;   /* блиск пластику */
+  background: linear-gradient(170deg, rgba(255,255,255,.22), rgba(255,255,255,.04) 38%, rgba(255,255,255,0) 60%, rgba(0,0,0,.18)); }
+.key:active, .key.down { transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(150,95,0,.95), 0 2px 1px rgba(90,55,0,.9), 0 3px 5px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,240,170,.55), inset 0 -1px 2px rgba(120,70,0,.6); }
+.key.on { background: radial-gradient(120% 90% at 50% 35%, #fff3b0, #ffd23f 55%, #e09a00);   /* увімкнена — пластик світиться зсередини */
+  box-shadow: 0 4px 0 rgba(170,110,0,.95), 0 5px 1px rgba(90,55,0,.9), 0 0 14px 2px rgba(255,200,40,.7), inset 0 0 0 1px rgba(255,250,210,.8); }
+.key.on.down { box-shadow: 0 1px 0 rgba(170,110,0,.95), 0 0 14px 2px rgba(255,200,40,.7), inset 0 0 0 1px rgba(255,250,210,.8); }
+.key.on > i { filter: drop-shadow(0 0 3px rgba(255,210,60,.9)); }
+body.fs .tpad { opacity: .85; }
+.timeline { padding-right: calc(var(--tpW) + 10px); padding-bottom: 14px; }
 .transport {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  padding: 6px calc(var(--jogR) + 12px) calc(12px + env(safe-area-inset-bottom)) 12px;
+  padding: 6px calc(var(--tpW) + 12px) calc(12px + env(safe-area-inset-bottom)) 12px;
 }
 .transport .star { width: 64px; height: 64px; padding: 0; font-size: 38px; color: var(--star); border-radius: 10px; }
 .jogval {
@@ -499,7 +521,18 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
   .transport .nav { padding: 8px 4px; }
-  :root { --jogR: min(95px, 14vh); }
+  :root { --jogR: min(95px, 14vh); --tpW: 0px; --tpH: 64px; }
+  /* телефон: кнопки — окремим рядком на всю ширину внизу: −10 −5 −2 ◁ ▷ 2 5 10 */
+  .tpad { left: 10px; right: 10px; width: auto; height: 50px; grid-template-columns: 1fr 1fr 1fr 1.7fr 1.7fr 1fr 1fr 1fr; grid-template-rows: 1fr; gap: 5px; }
+  .tpad .key.sm, .tpad .key.big { grid-row: 1; grid-column: auto; }
+  .tpad .key[data-r="-1"] { order: 1; } .tpad .key[data-r="1"] { order: 2; } .tpad .key[data-r="2"], .tpad .key[data-r="5"], .tpad .key[data-r="10"] { order: 3; }
+  .footer { padding-bottom: calc(var(--tpH) + env(safe-area-inset-bottom)); }
+  body.fs .timeline { bottom: calc(var(--tpH) + 6px + env(safe-area-inset-bottom)); }
+  .fsexit { bottom: calc(var(--tpH) + 8px + env(safe-area-inset-bottom)) !important; }
+  /* на весь екран: вихід — у рядку шкали праворуч, тож ★, «Обрізати», швидкість і 🖌 — вище нього */
+  html body.fs.f-vslider #btnMark, html body.fs.f-vslider .actions .r2 { bottom: calc(var(--tpH) + 66px); }
+  html body.fs.f-vslider .vspeed { bottom: calc(var(--tpH) + 130px); }
+  html body.fs.f-draw #btnDraw { bottom: calc(var(--tpH) + 178px); }
   header { display: flex; flex-wrap: wrap; }
   .hc3 { width: 100%; }
   .hc1 { flex: 1; }
@@ -520,8 +553,8 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .markctl .grp { gap: 8px; }
   .pfoot .sq { width: 48px; height: 48px; }
   .fsbtn { top: 10px; bottom: auto; right: 10px; width: 44px; height: 44px; padding: 8px; }
-  .fsexit { top: auto; right: calc(var(--jogR) * 1.15 + 10px); bottom: calc(12px + env(safe-area-inset-bottom)); }
-  body.fs .markctl.ovl { bottom: calc(var(--jogR) * 1.15 + 24px + env(safe-area-inset-bottom)); }
+  .fsexit { top: auto; right: calc(var(--tpW) + 10px); bottom: calc(12px + env(safe-area-inset-bottom)); }
+  body.fs .markctl.ovl { bottom: calc(var(--tpH) + 24px + env(safe-area-inset-bottom)); }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
 @media (max-width: 480px) {     /* вузький телефон: 11 кнопок мають уміститись в один рядок */
@@ -543,7 +576,7 @@ body.f-vslider { --cols: 150px minmax(0, 1fr) 150px; }   /* відео яком�
 .lastrow { display: none; }
 body.f-vslider .footer { display: flex; align-items: center; }
 body.f-vslider .timeline { flex: 1; min-width: 0; padding-right: 12px; }
-body.f-vslider .lastrow { display: flex; gap: 6px; margin-right: calc(var(--jogR) * 1.15 + 8px); padding-bottom: 8px; }
+body.f-vslider .lastrow { display: flex; gap: 6px; margin-right: calc(var(--tpW) + 8px); padding-bottom: 8px; }
 body.f-vslider .lastrow .act { padding: 6px 9px; font-size: 13px; font-weight: 700; color: var(--accent); border-color: var(--accent); }
 body.f-vslider .actions .lastcol { display: none !important; }
 /* вузька панель «Мітки»: час і ✎ у першому рядку, назва — під ними */
@@ -589,11 +622,11 @@ body.f-vspd #btnMark { position: absolute; right: 10px; top: var(--vstar, auto);
   background: var(--surf2); border: 1px solid var(--surf3);   /* без жовтої рамки */ color: var(--accent); font-size: 15px; font-weight: 700; text-align: center;
   touch-action: none; cursor: ns-resize; user-select: none; }
 /* повний екран (відеоплеєр): віконце швидкості й ★ — праворуч, над регулятором, як у звичайному вигляді */
-body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh; bottom: calc(var(--jogR) * 1.15 + 84px); z-index: 16; }
-body.fs.f-vslider #btnMark { position: fixed; top: auto; left: auto; right: 14px; bottom: calc(var(--jogR) * 1.15 + 20px); }
+body.fs.f-vslider .vspeed { position: fixed; left: auto; right: 12px; top: 12vh; bottom: calc(var(--tpH) + 84px); z-index: 16; }
+body.fs.f-vslider #btnMark { position: fixed; top: auto; left: auto; right: 14px; bottom: calc(var(--tpH) + 20px); }
 body.fs.f-vslider .vspeed:not(.drag) .vsbox { background: rgba(0,0,0,.55); }
 /* «Обрізать» і ↺ — і на весь екран: «Обрізать» ліворуч від ★, ↺ ліворуч від віконця швидкості; трохи прозорі */
-body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: 72px; bottom: calc(var(--jogR) * 1.15 + 20px); }
+body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: 72px; bottom: calc(var(--tpH) + 20px); }
 body.fs.f-vslider .actions #btnTrim, body.fs.f-vslider .actions #btnSaveTrim, body.fs.f-vslider #vspeed #btnUntrim { opacity: .7; }
 /* свайп-видалення; у списках вертикальна прокрутка лишається */
 #playlist .item, #markList .item, #clipList .item { touch-action: pan-y; }
@@ -736,6 +769,11 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 <!-- регулятор прокрутки: центр — у правому нижньому куті, видно чверть -->
 <button id="btnFsExit" class="fsbtn fsexit" title="Вийти з повного екрана  ( Esc )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></svg></button>
 <svg class="jog" id="jog" viewBox="-115 -115 230 230" aria-label="Регулятор прокрутки"></svg>
+<div class="tpad" id="tpad">
+  <button class="key sm" data-r="-10" title="Назад ×10"><i></i></button><button class="key sm" data-r="-5" title="Назад ×5"><i></i></button><button class="key sm" data-r="-2" title="Назад ×2"><i></i></button>
+  <button class="key sm" data-r="2" title="Вперед ×2"><i></i></button><button class="key sm" data-r="5" title="Вперед ×5"><i></i></button><button class="key sm" data-r="10" title="Вперед ×10"><i></i></button>
+  <button class="key big" data-r="-1" title="Назад (зі швидкістю з віконця)"><i></i></button><button class="key big" data-r="1" title="Пуск / пауза"><i></i></button>
+</div>
 
 <div class="speedmenu" id="speedMenu"></div>
 
@@ -3346,26 +3384,21 @@ $('setOk').onclick = () => $('dlgSet').close();
 function layoutActions() {
   const sp = $('aspacer'); if (!sp) return;
   sp.style.height = '0px';
-  const RR = $('jog').getBoundingClientRect().width / 2, W = innerWidth, H = innerHeight;   // з написом «± N сек» над колесом
-  const R = RR;
+  const P = $('tpad').getBoundingClientRect(), W = innerWidth, H = innerHeight;   // кут, зайнятий кнопками ◁ ▷
+  const padL = P.left - 6, padT = P.top - 6;
   let need = 0;
   for (const row of document.querySelectorAll('.actions .r1, .actions .r2, .actions .lastcol')) {
-    // напис «± N» над колесом є лише навпроти ямки; для стовпчика 60/30/10 досить краю самого колеса
-    const R = row.classList.contains('lastcol') ? RR * 0.87 : RR;
     let right = 0;
     for (const c of row.children) if (c.offsetParent) right = Math.max(right, c.getBoundingClientRect().right);
-    const free = W - 8 - right;                       // скільки місця праворуч від рядка
-    if (free >= R) continue;
-    const dyNeed = Math.sqrt(R * R - free * free);     // на такій висоті від низу коло вже не заходить
-    const dyNow = H - row.getBoundingClientRect().bottom;
-    need = Math.max(need, dyNeed - dyNow);
+    if (right <= padL) continue;                       // праворуч від рядка кнопок немає
+    need = Math.max(need, row.getBoundingClientRect().bottom - padT);
   }
   sp.style.height = Math.max(0, Math.ceil(need)) + 'px';
-  if (FEAT.vspd && !matchMedia('(max-width: 860px)').matches) {   // шкала й ★ — біля правого краю панелі, над колом регулятора
+  if (FEAT.vspd && !matchMedia('(max-width: 860px)').matches) {   // шкала й ★ — біля правого краю панелі, одразу над кнопками
     const side = document.querySelector('.panel.side'), pr = side.getBoundingClientRect();
-    const dx = W - (pr.right - 8 - 28);                      // відстань стовпчика до правого краю вікна
-    const circTop = dx < R ? H - Math.sqrt(R * R - dx * dx) : H;
-    const starBottom = Math.min(pr.bottom - 8, circTop - 8), starTop = starBottom - 52;
+    const colX = pr.right - 8 - 56;                           // лівий край стовпчика ★ / швидкості
+    const top = colX + 56 > padL ? padT : H;
+    const starBottom = Math.min(pr.bottom - 8, top - 4), starTop = starBottom - 52;
     side.style.setProperty('--vstar', Math.max(120, starTop - pr.top) + 'px');
     side.style.setProperty('--vsb', Math.max(0, pr.bottom - starTop + 8) + 'px');
   }
@@ -4838,6 +4871,139 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
 
+/* ── кнопки ◁ ▷ і швидкості −10 −5 −2 / 2 5 10 (замість РП, з v148) ──
+   ▷ — пуск / пауза (швидкість з віконця); ◁ — відтворення назад зі швидкістю з віконця;
+   малі — назад / вперед з цією швидкістю. Увімкнена кнопка світиться; ще раз — пауза.
+   Вигляд: жовтий прозорий пластик, верх пофарбований чорним, фарба місцями стерта (paintKey). */
+const Tp = (() => {
+  const pad = $('tpad'), keys = [...pad.querySelectorAll('.key')];
+  let mode = 0, revT = null, switching = false;   // mode: 0 — стоїть; 1 — звичайне; >1 — швидко вперед; −1 — назад з віконця; <−1 — назад швидко
+  // клацання фізичної кнопки: сухий клац пластику + глухий стук упора; відпустив — тихіший клац
+  let ac = null;
+  const click = down => {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume();
+      const t = ac.currentTime + 0.005, n = Math.round(ac.sampleRate * 0.025), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * (down ? 0.1 : 0.06)));
+      const src = ac.createBufferSource(); src.buffer = b;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = down ? 2300 : 3600; bp.Q.value = 1.4;
+      const g = ac.createGain(); g.gain.value = down ? 1.1 : 0.5;
+      src.connect(bp).connect(g).connect(ac.destination); src.start(t);
+      if (down) {
+        const o = ac.createOscillator(), og = ac.createGain();
+        o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(80, t + 0.035);
+        og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        o.connect(og).connect(ac.destination); o.start(t); o.stop(t + 0.06);
+      }
+    } catch {}
+  };
+  const stopStep = () => { if (revT) { clearInterval(revT); revT = null; audio.muted = false; } };
+  const reverse = r => {
+    if (audio.videoWidth && Rev.supported) { stopStep(); Rev.active ? Rev.setRate(r) : Rev.start(r); return; }
+    // аудіо (або без «назад» для відео): кроки назад, звук на цей час вимкнено
+    if (Rev.active) Rev.stop(false);
+    audio.pause(); audio.muted = true; clearInterval(revT);
+    revT = setInterval(() => {
+      const t = audio.currentTime - r * 0.1;
+      if (t <= T0()) { audio.currentTime = T0(); set(0); return; }
+      audio.currentTime = t; updateTime();
+    }, 100);
+  };
+  const render = () => {
+    keys.forEach(k => k.classList.toggle('on', +k.dataset.r === mode && mode !== 0));
+    const sd = mode === 1 || mode === 0 ? 0 : Math.sign(mode), sk = mode === -1 ? speed : Math.abs(mode);
+    if (sd !== shuttleDir || (sd && sk !== shuttleK)) { shuttleDir = sd; shuttleK = sd ? Math.min(5, sk) : 0; renderStatus(); }
+  };
+  function set(m) {
+    if (!hasTrack()) { mode = 0; render(); return toast('Спочатку відкрийте файл'); }
+    switching = true; clipStopAt = null;
+    try {
+      if (m >= 0) { stopStep(); if (Rev.active) Rev.stop(false); }
+      if (m === 0) { setRate(speed); audio.pause(); }
+      else if (m > 0) { setRate(m === 1 ? speed : m); if (audio.paused) playSafe(); }
+      else { setRate(speed); reverse(m === -1 ? speed : -m); }
+      mode = m;
+    } finally { switching = false; }
+    render();
+  }
+  keys.forEach(k => {
+    k.addEventListener('pointerdown', e => { e.preventDefault(); k.classList.add('down'); click(true); try { k.setPointerCapture(e.pointerId); } catch {} });
+    const up = (e, go) => {
+      if (!k.classList.contains('down')) return;
+      k.classList.remove('down'); click(false);
+      if (!go) return;
+      const r = k.getBoundingClientRect(); if (e.clientX < r.left - 10 || e.clientX > r.right + 10 || e.clientY < r.top - 10 || e.clientY > r.bottom + 10) return;
+      const v = +k.dataset.r;
+      if (v === 1) set(mode === 1 && !audio.paused ? 0 : 1);          // ▷ — пуск / пауза
+      else set(mode === v ? 0 : v);                                    // ще раз ту саму — стоп
+      if (FEAT.video && audio.videoWidth && mode >= 0 && audio.paused) Rev.prepareSoon();
+    };
+    k.addEventListener('pointerup', e => up(e, true)); k.addEventListener('pointercancel', e => up(e, false));
+    k.addEventListener('click', e => e.preventDefault());
+  });
+  // відтворення змінили інакше (дотик по статусу, пробіл, кінець «назад»…) — кнопки й швидкість за ним
+  audio.addEventListener('play', () => { if (switching) return; stopStep(); if (mode !== 1 && !(mode > 1)) { mode = 1; render(); } });
+  audio.addEventListener('pause', () => { if (switching || Rev.active || revT) return; if (mode > 1) setRate(speed); if (mode) { mode = 0; render(); } });
+  setInterval(() => { if (mode < 0 && !Rev.active && !revT && !switching) { mode = audio.paused ? 0 : 1; render(); } }, 250);
+
+  // ── фарба на кнопках: чорна, стерта по краях і там, де тисне палець; позначка — витерта до пластику ──
+  const hash = s => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const rng = seed => () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  function noise(W, H, cell, rnd) {          // плавний шум (значення в вузлах сітки, білінійно)
+    const gw = Math.ceil(W / cell) + 2, gh = Math.ceil(H / cell) + 2, g = new Float32Array(gw * gh).map(() => rnd());
+    return (x, y) => { const fx = x / cell, fy = y / cell, x0 = fx | 0, y0 = fy | 0, u = fx - x0, v = fy - y0, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v), i = y0 * gw + x0;
+      return (g[i] * (1 - su) + g[i + 1] * su) * (1 - sv) + (g[i + gw] * (1 - su) + g[i + gw + 1] * su) * sv; };
+  }
+  const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function paintKey(k) {
+    const el = k.firstElementChild, r = el.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
+    const d = Math.min(3, devicePixelRatio || 1), W = Math.round(r.width * d), H = Math.round(r.height * d), sz = W + 'x' + H;
+    if (el.dataset.sz === sz) return; el.dataset.sz = sz;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    const gr = x.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#262626'); gr.addColorStop(0.5, '#151515'); gr.addColorStop(1, '#0a0a0a');
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    const S = Math.min(W, H), rnd = rng(hash('key' + k.dataset.r)), n1 = noise(W, H, Math.max(3 * d, S * 0.13), rnd), n2 = noise(W, H, Math.max(1.2 * d, S * 0.035), rnd);
+    const id = x.getImageData(0, 0, W, H), p = id.data, fx = (k.dataset.r * 7919 % 13) / 40 - 0.15;
+    for (let yy = 0; yy < H; yy++) for (let xx = 0; xx < W; xx++) {
+      const nx = xx / W * 2 - 1, ny = yy / H * 2 - 1;
+      // стирається краями (до них торкаються найчастіше) і плямою під пальцем трохи нижче середини
+      // відстань до краю в пікселях: фарба стерта вузькою нерівною смужкою вздовж краю і трохи на кутах
+      const ed = Math.min(xx, yy, W - 1 - xx, H - 1 - yy) / S, edge = 1 - sstep(0.015, 0.12, ed), corner = sstep(1.15, 1.42, Math.hypot(nx, ny));
+      const finger = Math.max(0, 1 - Math.hypot((nx - fx) * 1.1, (ny - 0.1) * 1.3) / 0.8);
+      const wear = 0.08 + 0.62 * edge * edge + 0.25 * corner + 0.12 * finger * finger;
+      const n = n1(xx, yy) * 0.7 + n2(xx, yy) * 0.3, a = sstep(wear - 0.035, wear + 0.035, n);
+      const i = (yy * W + xx) * 4;
+      // де палець — фарба затерта до блиску й світліша
+      const pol = 1 + 0.6 * finger * finger; p[i] = Math.min(255, p[i] * pol); p[i + 1] = Math.min(255, p[i + 1] * pol); p[i + 2] = Math.min(255, p[i + 2] * pol);
+      p[i + 3] = Math.round(p[i + 3] * a * (1 - 0.1 * finger * finger));
+    }
+    x.putImageData(id, 0, 0);
+    // кілька тонких подряпин
+    x.globalCompositeOperation = 'destination-out'; x.lineCap = 'round';
+    for (let s = 0, ns = S > 60 * d ? 3 : 1; s < ns; s++) {
+      const x0 = rnd() * W, y0 = rnd() * H, L = (0.15 + rnd() * 0.35) * W, a = (rnd() - 0.5) * 0.9;
+      x.globalAlpha = 0.2 + rnd() * 0.3; x.lineWidth = (0.3 + rnd() * 0.4) * d;
+      x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(x0 + L / 2, y0 + Math.sin(a) * L / 2 + (rnd() - 0.5) * 4 * d, x0 + Math.cos(a) * L, y0 + Math.sin(a) * L); x.stroke();
+    }
+    // позначка: фарбу витерто до жовтого пластику
+    x.globalAlpha = 1; const v = +k.dataset.r;
+    if (Math.abs(v) === 1) {
+      const h = H * 0.46, w = h * 0.86, cx = W / 2, cy = H / 2, s = v > 0 ? 1 : -1;
+      x.lineWidth = Math.max(2, H * 0.085); x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(cx + s * w / 2, cy); x.lineTo(cx - s * w / 2, cy - h / 2); x.lineTo(cx - s * w / 2, cy + h / 2); x.closePath(); x.stroke();
+    } else {
+      x.font = `700 ${Math.round(Math.min(H * 0.56, W * 0.5))}px Tektur, system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(v < 0 ? '−' + -v : String(v), W / 2, H / 2 + H * 0.04);
+    }
+    el.style.backgroundImage = `url(${c.toDataURL()})`;
+  }
+  const paintAll = () => keys.forEach(paintKey);
+  let pt = 0; addEventListener('resize', () => { clearTimeout(pt); pt = setTimeout(paintAll, 150); });
+  requestAnimationFrame(paintAll);
+  if (document.fonts) document.fonts.ready.then(() => { keys.forEach(k => { k.firstElementChild.dataset.sz = ''; }); paintAll(); });
+  return { set, mode: () => mode };
+})();
+
 audio.onplay = () => setPlayIcon(true);
 audio.onpause = () => { if (Rev.active) return; setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
 audio.onended = () => {
@@ -5823,7 +5989,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v147';
+const APP_VER = 'v148';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
