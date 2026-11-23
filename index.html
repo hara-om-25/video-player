@@ -395,7 +395,7 @@ html body.f-wave #btnMark { color: var(--star); }
 /* аудіоплеєр (v158): жовта з чорними літерами — лише «Встановити»; решта кнопок — чорні з жовтими літерами й обводкою */
 html body.f-wave button.accent:not(#btnInstall):not(#btnAdd):not(#btnSaveClip), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 html body.f-wave #btnInstall, html body.f-wave #btnAdd, html body.f-wave #btnSaveClip { background: var(--accent); color: #111; border-color: var(--accent); }
-html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: 42px; margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
+html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: var(--kw, 56px); margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
 html body.f-wave .warail #btnSaveClip b { font-size: 15px; }
 html body.f-wave .panel.side .actions { border-top: 0; }   /* v164: без смужки під мітками */   /* «+» — жовта, як «Встановити» (v160) */
 body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
@@ -410,7 +410,7 @@ body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
 body.f-wave .timeline .tlzoom { margin-left: 10px; }
 @media (min-width: 861px) and (max-width: 1150px) {    /* вужчий планшет: кнопки вміщаються в рядок */
   html body.f-wave { --kw: 40px; }
-  html body.f-wave .tpad { gap: 5px; }
+  html body.f-wave .tpad { gap: 5px; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.3) repeat(3, var(--kw)); }
   html body.f-wave .markctl.ovl { gap: 10px; }
 }
 @media (max-width: 860px) {
@@ -427,13 +427,13 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
-  body.f-wave .panel.stage { height: 250px; }
+  body.f-wave .panel.stage { height: 270px; }
   body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
-  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.3) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 12px); gap: 6px; align-items: center; }
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.7) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 26px); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
   body.f-wave .tpad .key.sm { font-size: 16px; height: var(--kw); }
-  body.f-wave .tpad .key.big { height: calc(var(--kw) + 12px); }
-  body.f-wave .tpad .key.big svg { width: 44px; height: 44px; }   /* ▷ — більша (v162) */
+  body.f-wave .tpad .key.big { height: calc(var(--kw) + 26px); }
+  body.f-wave .tpad .key.big svg { width: 54px; height: 54px; }   /* ▷ — ще більша (v166) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
   html body.f-wave .panel.side > .sec { position: static; flex: 0 0 auto; min-height: 0; max-height: 100%; }
@@ -5145,7 +5145,13 @@ const Wave = (() => {
       ctx.beginPath(); ctx.moveTo(x + dir * w, y0); ctx.lineTo(x, y0); ctx.lineTo(x, y1); ctx.lineTo(x + dir * w, y1); ctx.stroke();
     }
     // мітки — тонкі риски
-    if (data) for (const mk of data.marks) { const x = (mk.t - t0) * pps; if (x >= 0 && x <= W) { ctx.fillStyle = 'rgba(255,214,63,.5)'; ctx.fillRect(x - d / 2, 0, d, H * 0.18); } }
+    // мітки — зірочка вгорі й тонка риска під нею, як на шкалі (v166)
+    if (data && data.marks.length) {
+      const fs = Math.round(15 * d); ctx.font = `${fs}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      for (const mk of data.marks) { const x = (mk.t - t0) * pps; if (x < -fs || x > W + fs) continue;
+        ctx.fillStyle = 'rgba(255,214,63,.55)'; ctx.fillRect(x - d / 2, fs, d, H * 0.16);
+        ctx.fillStyle = '#ffd63f'; ctx.fillText('★', x, 0); }
+    }
     // поточне місце — біла риска посередині
     ctx.fillStyle = '#fff'; ctx.fillRect(Math.round(W / 2 - d), 0, Math.round(2 * d), H);
   })();
@@ -6209,7 +6215,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v165';
+const APP_VER = 'v166';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
