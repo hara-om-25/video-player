@@ -356,21 +356,12 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
   display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: 34fr 58fr; gap: 7px 5px; user-select: none; touch-action: manipulation; }
 .tpad .key.sm { grid-row: 1; }
 .tpad .key.big { grid-row: 2; grid-column: span 3; }
-.key { position: relative; padding: 0; border: 0; border-radius: 9px; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  /* корпус — жовтий прозорий пластик: світло проходить крізь нього, боки темніші */
-  background: radial-gradient(120% 90% at 50% 35%, rgba(255,226,110,.98), rgba(247,181,0,.92) 55%, rgba(170,110,0,.9));
-  box-shadow: 0 4px 0 rgba(150,95,0,.95), 0 5px 1px rgba(90,55,0,.9), 0 8px 12px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,240,170,.55), inset 0 -2px 3px rgba(120,70,0,.6);
-  transform: translateY(0); transition: transform .05s, box-shadow .05s, filter .2s; }
-/* верх — рівно пофарбований чорним (малюється в JS: paintKey), знак вигравіюваний лазером до пластику й світиться */
-.key > i { position: absolute; inset: 3px 3px 4px; border-radius: 7px; background-size: 100% 100%; pointer-events: none; filter: drop-shadow(0 0 1.5px rgba(255,215,80,.55)); }
-.key::after { content: ''; position: absolute; inset: 3px 3px 4px; border-radius: 7px; pointer-events: none;   /* блиск пластику */
-  background: linear-gradient(170deg, rgba(255,255,255,.22), rgba(255,255,255,.04) 38%, rgba(255,255,255,0) 60%, rgba(0,0,0,.18)); }
-.key:active, .key.down { transform: translateY(3px);
-  box-shadow: 0 1px 0 rgba(150,95,0,.95), 0 2px 1px rgba(90,55,0,.9), 0 3px 5px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,240,170,.55), inset 0 -1px 2px rgba(120,70,0,.6); }
-.key.on { background: radial-gradient(120% 90% at 50% 35%, #fff3b0, #ffd23f 55%, #e09a00);   /* увімкнена — пластик світиться зсередини */
-  box-shadow: 0 4px 0 rgba(170,110,0,.95), 0 5px 1px rgba(90,55,0,.9), 0 0 14px 2px rgba(255,200,40,.7), inset 0 0 0 1px rgba(255,250,210,.8); }
-.key.on.down { box-shadow: 0 1px 0 rgba(170,110,0,.95), 0 0 14px 2px rgba(255,200,40,.7), inset 0 0 0 1px rgba(255,250,210,.8); }
-.key.on > i { filter: drop-shadow(0 0 3px rgba(255,210,60,.9)); }
+.key { padding: 0; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--accent); border-color: var(--accent);   /* як 60с / 30с / 10с (з v151) */
+  display: flex; align-items: center; justify-content: center; line-height: 1; }
+.key.big { font-size: 20px; }
+.key > i { font-style: normal; pointer-events: none; display: flex; }
+.key svg { width: 24px; height: 24px; display: block; }
+.key.on { background: var(--accent); color: #111; }      /* увімкнена (◁ / ▷) */
 body.fs .tpad { opacity: .85; }
 .timeline { padding-right: calc(var(--tpW) + 10px); padding-bottom: 14px; }
 .transport {
@@ -4871,6 +4862,32 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
 
+/* клацання фізичної кнопки — для всіх кнопок застосунку (з v151): сухий клац + глухий стук упора; відпустив — тихіший клац */
+let btnAC = null;
+function btnClick(down) {
+    try {
+      btnAC = btnAC || new (window.AudioContext || window.webkitAudioContext)(); if (btnAC.state === 'suspended') btnAC.resume();
+      const t = btnAC.currentTime + 0.005, n = Math.round(btnAC.sampleRate * 0.025), b = btnAC.createBuffer(1, n, btnAC.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * (down ? 0.1 : 0.06)));
+      const src = btnAC.createBufferSource(); src.buffer = b;
+      const bp = btnAC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = down ? 2300 : 3600; bp.Q.value = 1.4;
+      const g = btnAC.createGain(); g.gain.value = down ? 1.1 : 0.5;
+      src.connect(bp).connect(g).connect(btnAC.destination); src.start(t);
+      if (down) {
+        const o = btnAC.createOscillator(), og = btnAC.createGain();
+        o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(80, t + 0.035);
+        og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        o.connect(og).connect(btnAC.destination); o.start(t); o.stop(t + 0.06);
+      }
+    } catch {}
+}
+(() => {
+  let pressed = null;
+  const sel = 'button, .act, label.srow, .key';
+  document.addEventListener('pointerdown', e => { const b = e.target.closest(sel); if (!b || b.disabled) return; pressed = b; btnClick(true); }, true);
+  const up = () => { if (pressed) { pressed = null; btnClick(false); } };
+  document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', () => { pressed = null; }, true);
+})();
 /* ── кнопки ◁ ▷ і перескоку −10 −5 −2 / 2 5 10 с (замість РП, з v148) ──
    ▷ — пуск / пауза (швидкість з віконця); ◁ — відтворення назад зі швидкістю з віконця;
    малі — перескок назад / вперед на стільки секунд (з v150). Увімкнена кнопка світиться; ще раз — пауза.
@@ -4878,25 +4895,7 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
 const Tp = (() => {
   const pad = $('tpad'), keys = [...pad.querySelectorAll('.key')];
   let mode = 0, revT = null, switching = false;   // mode: 0 — стоїть; 1 — звичайне; >1 — швидко вперед; −1 — назад з віконця; <−1 — назад швидко
-  // клацання фізичної кнопки: сухий клац пластику + глухий стук упора; відпустив — тихіший клац
-  let ac = null;
-  const click = down => {
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume();
-      const t = ac.currentTime + 0.005, n = Math.round(ac.sampleRate * 0.025), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
-      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * (down ? 0.1 : 0.06)));
-      const src = ac.createBufferSource(); src.buffer = b;
-      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = down ? 2300 : 3600; bp.Q.value = 1.4;
-      const g = ac.createGain(); g.gain.value = down ? 1.1 : 0.5;
-      src.connect(bp).connect(g).connect(ac.destination); src.start(t);
-      if (down) {
-        const o = ac.createOscillator(), og = ac.createGain();
-        o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(80, t + 0.035);
-        og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-        o.connect(og).connect(ac.destination); o.start(t); o.stop(t + 0.06);
-      }
-    } catch {}
-  };
+  const click = btnClick;
   const stopStep = () => { if (revT) { clearInterval(revT); revT = null; audio.muted = false; } };
   const reverse = r => {
     if (audio.videoWidth && Rev.supported) { stopStep(); Rev.active ? Rev.setRate(r) : Rev.start(r); return; }
@@ -4934,10 +4933,10 @@ const Tp = (() => {
     seek(audio.currentTime + sec);
   }
   keys.forEach(k => {
-    k.addEventListener('pointerdown', e => { e.preventDefault(); k.classList.add('down'); click(true); try { k.setPointerCapture(e.pointerId); } catch {} });
+    k.addEventListener('pointerdown', e => { e.preventDefault(); k.classList.add('down'); try { k.setPointerCapture(e.pointerId); } catch {} });
     const up = (e, go) => {
       if (!k.classList.contains('down')) return;
-      k.classList.remove('down'); click(false);
+      k.classList.remove('down');
       if (!go) return;
       const r = k.getBoundingClientRect(); if (e.clientX < r.left - 10 || e.clientX > r.right + 10 || e.clientY < r.top - 10 || e.clientY > r.bottom + 10) return;
       const v = +k.dataset.r;
@@ -4954,35 +4953,13 @@ const Tp = (() => {
   audio.addEventListener('pause', () => { if (switching || Rev.active || revT) return; if (mode > 1) setRate(speed); if (mode) { mode = 0; render(); } });
   setInterval(() => { if (mode < 0 && !Rev.active && !revT && !switching) { mode = audio.paused ? 0 : 1; render(); } }, 250);
 
-  // ── верх кнопок: рівна чорна фарба; знак вигравіюваний лазером до жовтого пластику ──
-  function paintKey(k) {
-    const el = k.firstElementChild, r = el.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
-    const d = Math.min(3, devicePixelRatio || 1), W = Math.round(r.width * d), H = Math.round(r.height * d), sz = W + 'x' + H;
-    if (el.dataset.sz === sz) return; el.dataset.sz = sz;
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-    const gr = x.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#262626'); gr.addColorStop(0.5, '#151515'); gr.addColorStop(1, '#0a0a0a');
-    x.fillStyle = gr; x.fillRect(0, 0, W, H);
-    // нова кнопка: рівна чорна фарба з ледь помітним сатиновим переливом і тонкою фаскою по краю
-    const S = Math.min(W, H);
-    const sh = x.createRadialGradient(W * 0.35, H * 0.2, 0, W * 0.35, H * 0.2, Math.max(W, H));
-    sh.addColorStop(0, 'rgba(255,255,255,.07)'); sh.addColorStop(0.6, 'rgba(255,255,255,0)'); x.fillStyle = sh; x.fillRect(0, 0, W, H);
-    x.lineWidth = Math.max(1, d); x.strokeStyle = 'rgba(255,255,255,.10)'; x.strokeRect(d * 0.5, d * 0.5, W - d, H - d);
-    // позначка: фарбу випалено лазером до жовтого пластику — чіткі краї
-    x.globalCompositeOperation = 'destination-out'; x.globalAlpha = 1; x.fillStyle = x.strokeStyle = '#000'; const v = +k.dataset.r;
-    if (Math.abs(v) === 1) {
-      const h = H * 0.46, w = h * 0.86, cx = W / 2, cy = H / 2, s = v > 0 ? 1 : -1;
-      x.lineWidth = Math.max(2, H * 0.085); x.lineJoin = 'round';
-      x.beginPath(); x.moveTo(cx + s * w / 2, cy); x.lineTo(cx - s * w / 2, cy - h / 2); x.lineTo(cx - s * w / 2, cy + h / 2); x.closePath(); x.stroke();
-    } else {
-      x.font = `700 ${Math.round(Math.min(H * 0.56, W * 0.5))}px Tektur, system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText(v < 0 ? '−' + -v : String(v), W / 2, H / 2 + H * 0.04);
-    }
-    el.style.backgroundImage = `url(${c.toDataURL()})`;
-  }
-  const paintAll = () => keys.forEach(paintKey);
-  let pt = 0; addEventListener('resize', () => { clearTimeout(pt); pt = setTimeout(paintAll, 150); });
-  requestAnimationFrame(paintAll);
-  if (document.fonts) document.fonts.ready.then(() => { keys.forEach(k => { k.firstElementChild.dataset.sz = ''; }); paintAll(); });
+  // знаки: ◁ ▷ — контурні трикутники (SVG), малі — числа
+  keys.forEach(k => {
+    const v = +k.dataset.r;
+    k.firstElementChild.innerHTML = Math.abs(v) === 1
+      ? `<svg viewBox="0 0 24 24"><path d="${v > 0 ? 'M7 4.5 19.5 12 7 19.5Z' : 'M17 4.5 4.5 12 17 19.5Z'}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`
+      : (v < 0 ? '−' + -v : String(v));
+  });
   return { set, mode: () => mode };
 })();
 
@@ -5971,7 +5948,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v150';
+const APP_VER = 'v151';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
