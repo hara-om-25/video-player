@@ -4909,7 +4909,7 @@ const Tp = (() => {
     }, 100);
   };
   const render = () => {
-    keys.forEach(k => k.classList.toggle('on', +k.dataset.r === mode && mode !== 0));
+    keys.forEach(k => { const on = +k.dataset.r === mode && mode !== 0; k.classList.toggle('on', on); legend(k, on); });
     const sd = mode === 1 || mode === 0 ? 0 : Math.sign(mode), sk = mode === -1 ? speed : Math.abs(mode);
     if (sd !== shuttleDir || (sd && sk !== shuttleK)) { shuttleDir = sd; shuttleK = sd ? Math.min(5, sk) : 0; renderStatus(); }
   };
@@ -4953,13 +4953,15 @@ const Tp = (() => {
   audio.addEventListener('pause', () => { if (switching || Rev.active || revT) return; if (mode > 1) setRate(speed); if (mode) { mode = 0; render(); } });
   setInterval(() => { if (mode < 0 && !Rev.active && !revT && !switching) { mode = audio.paused ? 0 : 1; render(); } }, 250);
 
-  // знаки: ◁ ▷ — контурні трикутники (SVG), малі — числа
-  keys.forEach(k => {
-    const v = +k.dataset.r;
-    k.firstElementChild.innerHTML = Math.abs(v) === 1
-      ? `<svg viewBox="0 0 24 24"><path d="${v > 0 ? 'M7 4.5 19.5 12 7 19.5Z' : 'M17 4.5 4.5 12 17 19.5Z'}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`
-      : (v < 0 ? '−' + -v : String(v));
-  });
+  // знаки: ◁ ▷ — контурні трикутники (SVG), поки грає в цей бік — знак паузи ❚❚; малі — числa
+  const PAUSE = '<svg viewBox="0 0 24 24"><path d="M7 5h3.2v14H7zM13.8 5H17v14h-3.2z" fill="currentColor"/></svg>';
+  const legend = (k, on) => {
+    const v = +k.dataset.r, el = k.firstElementChild, key = Math.abs(v) === 1 && on ? 'p' : 'n';
+    if (el.dataset.lg === key) return; el.dataset.lg = key;
+    el.innerHTML = Math.abs(v) !== 1 ? (v < 0 ? '−' + -v : String(v)) : on ? PAUSE
+      : `<svg viewBox="0 0 24 24"><path d="${v > 0 ? 'M7 4.5 19.5 12 7 19.5Z' : 'M17 4.5 4.5 12 17 19.5Z'}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
+  };
+  keys.forEach(k => legend(k, false));
   return { set, mode: () => mode };
 })();
 
@@ -5948,7 +5950,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v151';
+const APP_VER = 'v152';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
