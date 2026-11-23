@@ -5115,9 +5115,21 @@ function btnClick(down) {
 (() => {
   let pressed = null;
   const sel = 'button, .act, label.srow, .key, .vsbox, [role=button]';   // v178: і віконця ×1 / секунд / % — теж клацають
-  document.addEventListener('pointerdown', e => { const b = e.target.closest(sel); if (!b || b.disabled) return; pressed = b; btnClick(true); }, true);
-  const up = () => { if (pressed) { pressed = null; btnClick(false); } };
-  document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', () => { pressed = null; }, true);
+  // v203: поки кнопку натиснуто — кольори навпаки (жовте з чорним ↔ чорне з жовтим)
+  const inv = b => {
+    const cs = getComputedStyle(b), bg = cs.backgroundColor, fg = cs.color;
+    const clear = !bg || bg === 'transparent' || /rgba\(.*,\s*0\)$/.test(bg);
+    b.dataset.invBg = b.style.background; b.dataset.invFg = b.style.color; b.dataset.invT = Date.now();
+    b.style.setProperty('background', fg, 'important'); b.style.setProperty('color', clear ? '#111' : bg, 'important');
+  };
+  const uninv = b => {
+    if (!b || b.dataset.invT == null) return;
+    const left = Math.max(0, 110 - (Date.now() - +b.dataset.invT));     // щоб і короткий дотик було видно
+    setTimeout(() => { b.style.background = b.dataset.invBg || ''; b.style.color = b.dataset.invFg || ''; delete b.dataset.invT; }, left);
+  };
+  document.addEventListener('pointerdown', e => { const b = e.target.closest(sel); if (!b || b.disabled) return; pressed = b; btnClick(true); inv(b); }, true);
+  const up = () => { if (pressed) { uninv(pressed); pressed = null; btnClick(false); } };
+  document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', () => { uninv(pressed); pressed = null; }, true);
   // v182: запасний шлях — якщо натискання не дало pointerdown (вікна з клавіатурою на Android), клацаємо на click / Enter у полі
   document.addEventListener('click', e => { const b = e.target.closest(sel); if (b && !b.disabled && performance.now() - btnLast > 300) { btnClick(true); setTimeout(() => btnClick(false), 70); } }, true);
   document.addEventListener('submit', () => { if (performance.now() - btnLast > 300) { btnClick(true); setTimeout(() => btnClick(false), 70); } }, true);
@@ -6399,7 +6411,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v202';
+const APP_VER = 'v203';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
