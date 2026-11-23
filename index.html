@@ -497,7 +497,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
   html body.f-vslider:not(.fs) #btnMark { height: 44px; margin-top: 6px; }
   /* v204: на весь екран — той самий блок і в тому ж порядку, що й у звичайному вигляді: над кнопками ◁ ▷ */
-  html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 60px + 106px + 12px); }
+  html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 60px + 106px + 17px); }   /* v211: точно як у звичайному вигляді */
   /* v207: блок кнопок піднято на рядок; під ним, на рівні шкали, — ▷ масштабу, «%» і ×1 */
   html body.f-vslider:not(.f-wave) .tpad { bottom: calc(70px + env(safe-area-inset-bottom)); }   /* v209: проміжок до ▷ % ×1 — 22 px */
   /* як в аудіоплеєрі: шкала тягнеться до ▷, далі «%» і ×1 (×1 — під «+10») */
@@ -516,7 +516,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   /* v210: на весь екран шкала — до ▷ масштабу; вихід — вище, ліворуч від кнопок (не на шкалі) */
   html body.fs.f-vslider:not(.f-wave) .timeline { right: calc(10px + 38px + 64px + (268px - 24px) / 5 + 12px + 8px); }
   html body.fs.f-vslider:not(.f-wave) .fsexit { right: calc(268px + 10px + 10px); bottom: calc(70px + env(safe-area-inset-bottom)); }
-  html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 12px); bottom: var(--fb); gap: 6px; opacity: .85; }
+  html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 11px); bottom: var(--fb); gap: 6px; opacity: .85; }
   html body.fs.f-vslider #btnMark { position: fixed; z-index: 16; top: auto; left: auto; right: 10px; width: var(--kc); height: 44px; margin: 0; bottom: var(--fb); opacity: .85; }
   html body.fs.f-vslider .actions #btnTrim, html body.fs.f-vslider .actions #btnSaveTrim, html body.fs.f-vslider .trimrow #btnUntrim { opacity: 1; }
   html body.fs.f-draw #btnDraw { bottom: calc(var(--fb) + 104px); right: 10px; }
@@ -6448,7 +6448,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v210';
+const APP_VER = 'v211';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
