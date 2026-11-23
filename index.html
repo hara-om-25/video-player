@@ -480,7 +480,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
 }
 /* відеоплеєр і редактор (v173): малі кнопки — квадратні й більші; ряди ◁ 2 5 10 / −10 −5 −2 ▷ */
 @media (min-width: 861px) {
-  body.f-vslider { --tpW: 284px; --tpH: 122px; }
+  body.f-vslider { --tpW: 284px; --tpH: 172px; }
   html body.f-hdrpl.f-vslider, html body.f-hdrpl.f-vslider.app-video { --cols: minmax(0, 1fr) 268px; }
   /* v181: «Обрізати / Зберегти» — більші, на всю ширину ліворуч від ★ */
   html body.f-vslider:not(.fs) .actions .r2 { left: 10px; right: 74px; gap: 6px; }
@@ -497,7 +497,20 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
   html body.f-vslider:not(.fs) #btnMark { height: 44px; margin-top: 6px; }
   /* v204: на весь екран — той самий блок і в тому ж порядку, що й у звичайному вигляді: над кнопками ◁ ▷ */
-  html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 106px + 12px); }
+  html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 50px + 106px + 12px); }
+  /* v207: блок кнопок піднято на рядок; під ним, на рівні шкали, — ▷ масштабу, «%» і ×1 */
+  html body.f-vslider:not(.f-wave) .tpad { bottom: calc(60px + env(safe-area-inset-bottom)); }
+  html body.f-vslider:not(.f-wave) .brow { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); width: 268px; height: 44px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; align-items: stretch; }
+  html body.f-vslider:not(.f-wave) .brow > * { height: 44px; }
+  html body.f-vslider:not(.f-wave) .brow #tlR { grid-column: 1; width: auto; height: 44px; }
+  html body.f-vslider:not(.f-wave) .brow .tlzoom { grid-column: 2 / span 2; width: auto; margin: 0; }
+  html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz, html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { width: 100%; }
+  html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 2px; }
+  html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 4 / span 2; width: auto; height: 44px; }
+  html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { width: 100%; }
+  html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { height: 44px; }
+  html body.fs.f-vslider:not(.f-wave) .brow { opacity: .85; }
   html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 12px); bottom: var(--fb); gap: 6px; opacity: .85; }
   html body.fs.f-vslider #btnMark { position: fixed; z-index: 16; top: auto; left: auto; right: 10px; width: var(--kc); height: 44px; margin: 0; bottom: var(--fb); opacity: .85; }
   html body.fs.f-vslider .actions #btnTrim, html body.fs.f-vslider .actions #btnSaveTrim, html body.fs.f-vslider .trimrow #btnUntrim { opacity: 1; }
@@ -3718,6 +3731,9 @@ if (FEAT.hdrpl) {
     const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
     sp.className = 'ftspd'; sp.appendChild($('vspeed'));
     tl.append(document.querySelector('.tlzoom'), sp);
+    if (!matchMedia('(max-width: 860px)').matches) {   // v207: планшет — ▷ % ×1 окремим рядком під кнопками ◁ ▷
+      const br = document.createElement('div'); br.className = 'brow'; br.append($('tlR'), document.querySelector('.tlzoom'), sp); document.body.appendChild(br);
+    }
   }
   const open = on => {
     if (on) { pop.style.top = Math.round(document.querySelector('header').getBoundingClientRect().bottom + 4) + 'px'; renderPlaylist(); }
@@ -6427,7 +6443,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v206';
+const APP_VER = 'v207';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
