@@ -585,6 +585,13 @@ body.f-ai #btnAI { display: inline-block; }
 #dlgAI .airow input { flex: 1; min-width: 0; font-size: 15px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--surf3); background: var(--surface); color: var(--text); user-select: text; }
 #dlgAI .airow button { flex: none; padding: 6px 10px; font-size: 17px; }
 #dlgAI .ainone { color: var(--dim); font-size: 13px; padding: 6px; }
+/* v197: вікно вибору — посередині екрана; текст ліворуч, кнопки праворуч в одну лінію по вертикалі */
+#dlgPick { position: fixed; inset: 0; margin: auto; height: fit-content; }
+#dlgPick[open] { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center; }
+#dlgPick > h3 { grid-column: 1; grid-row: 1; margin: 0 0 4px; }
+#dlgPick > p { grid-column: 1; grid-row: 2; margin: 0; }
+#dlgPick > #pkBtns { grid-column: 2; grid-row: 1 / span 2; margin: 0; align-self: center; flex-wrap: nowrap; }
+@media (max-width: 640px) { #dlgPick[open] { grid-template-columns: 1fr; } #dlgPick > #pkBtns { grid-column: 1; grid-row: 3; margin-top: 14px; } }
 #dlgPick .pkck { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 15px; color: var(--text); cursor: pointer; }
 #dlgPick .pkck input { width: 24px; height: 24px; accent-color: var(--accent); }
 #btnSet svg { width: 100%; height: 100%; display: block; pointer-events: none; }
@@ -6382,7 +6389,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v196';
+const APP_VER = 'v197';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
