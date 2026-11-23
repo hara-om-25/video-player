@@ -5819,6 +5819,13 @@ if (FEAT.vslider) { setVol(getSetting('vvol', 1), true); setBri(getSetting('vbri
 // а body.fs лишає видимими тільки відео, [ час ], РП, вихід, ★ і швидкість.
 function setFs(on) {
   const d = document, el = d.documentElement, inFs = d.fullscreenElement || d.webkitFullscreenElement;
+  // v213: вихід — точно там, де була кнопка «на весь екран» (відеоплеєр і редактор, планшет)
+  if (on && FEAT.vslider && !d.body.classList.contains('fs') && !matchMedia('(max-width: 860px)').matches) {
+    const r = $('btnFs').getBoundingClientRect(), x = $('btnFsExit');
+    if (r.width) { x.style.setProperty('left', r.left + 'px', 'important'); x.style.setProperty('top', r.top + 'px', 'important');
+      x.style.setProperty('right', 'auto', 'important'); x.style.setProperty('bottom', 'auto', 'important');
+      x.style.setProperty('width', r.width + 'px', 'important'); x.style.setProperty('height', r.height + 'px', 'important'); }
+  }
   d.body.classList.toggle('fs', on);
   // системний повний екран Chrome показує підказку «щоб вийти…» — тому лише якщо ввімкнено в ⚙ (sysFs)
   if (on && !inFs && getSetting('sysFs', false)) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }
@@ -6448,7 +6455,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v212';
+const APP_VER = 'v213';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
