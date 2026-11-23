@@ -366,9 +366,12 @@ body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touc
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
 body.f-wave .panel.playlist > .stagelogo { display: block; flex: 1; min-height: 0; width: 46%; max-width: 160px; margin: 10px auto; }
-body.f-wave .bigplay { display: none; }      /* стан видно на ◁ / ▷ */
+body.f-wave .bigplay { display: none; }      /* стан видно на ▷ */
+body.f-wave .tpad .key[data-r="-1"] { display: none; }   /* аудіоплеєр: ◁ не потрібна (v155) */
 @media (max-width: 860px) {
   body.f-wave .wave { flex: none; height: 120px; }
+  body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
+  body.f-wave .tpad .key.sm { font-size: 16px; }
   body.f-wave .panel.playlist > .stagelogo { max-width: 90px; flex: none; }
 }
 @media (min-width: 861px) {
@@ -377,7 +380,14 @@ body.f-wave .bigplay { display: none; }      /* стан видно на ◁ / �
   body.f-wave .panel.playlist { grid-column: 1; grid-row: 1 / span 2; }
   body.f-wave .panel.side { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
-  body.f-wave .tpad { position: static; width: 210px; height: 96px; margin-left: auto; }
+  /* без ◁; квадратні 2 5 10 / −10 −5 −2 і ▷ праворуч на обидва ряди (v155) */
+  body.f-wave .panel.stage { height: 218px; }
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, 50px) 110px; grid-template-rows: 50px 50px; gap: 7px; }
+  body.f-wave .tpad .key[data-r="2"], body.f-wave .tpad .key[data-r="5"], body.f-wave .tpad .key[data-r="10"] { grid-row: 1; grid-column: auto; }
+  body.f-wave .tpad .key[data-r="-10"], body.f-wave .tpad .key[data-r="-5"], body.f-wave .tpad .key[data-r="-2"] { grid-row: 2; grid-column: auto; }
+  body.f-wave .tpad .key[data-r="1"] { grid-row: 1 / span 2; grid-column: 4; }
+  body.f-wave .tpad .key.sm { font-size: 17px; }
+  body.f-wave .tpad .key.big svg { width: 34px; height: 34px; }
   html body.f-wave .panel.side > .sec { position: absolute; left: 0; top: 0; bottom: 0; right: 80px; }   /* мітки — уся ширина, праворуч стовпчик ×1 / ★ */
 }
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
@@ -3417,7 +3427,7 @@ function layoutActions() {
     const colX = pr.right - 8 - 56;                           // лівий край стовпчика ★ / швидкості
     const top = colX + 56 > padL ? padT : H;
     const starBottom = Math.min(pr.bottom - 8, top - 4), starTop = starBottom - 52;
-    side.style.setProperty('--vstar', Math.max(120, starTop - pr.top) + 'px');
+    side.style.setProperty('--vstar', Math.max(FEAT.wave ? 40 : 120, starTop - pr.top) + 'px');
     side.style.setProperty('--vsb', Math.max(0, pr.bottom - starTop + 8) + 'px');
   }
 }
@@ -6078,7 +6088,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v154';
+const APP_VER = 'v155';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
