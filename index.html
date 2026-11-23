@@ -481,21 +481,28 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider:not(.fs) .footer { padding-right: calc(var(--tpW) - 4px); }   /* шкала — до блоку кнопок, ▷ масштабу не під ними */
   /* v198: краї — як у блоку кнопок під ними: «Обрізати…10с» — від лівого краю ◁ до правого краю «5», ×1 і ★ — точно над «10» */
   html body.f-vslider:not(.fs) .actions .r2 { left: 0; right: calc((100% - 24px) * 2 / 5 + 12px); }   /* v202 (як v200): до правого краю «2»; над «5» — місце для ↺ */
-  html body.f-vslider:not(.fs) .trimrow #btnUntrim { position: absolute; top: 0; bottom: 0; left: calc(100% + 6px); width: calc((100% - 12px) / 3) !important; }
+  html body.f-vslider .trimrow #btnUntrim { position: absolute; top: 0; bottom: 0; left: calc(100% + 6px); width: calc((100% - 12px) / 3) !important; }
   /* коли є обрізка, ↺ — у вільній колонці над «5» (тоді «Обрізати» і MP4 не тісняться) */
-  html body.f-vslider:not(.fs) .trimrow { position: relative; }
-  html body.f-vslider:not(.fs) .trimrow:has(#btnUntrim.on) #btnTrim { font-size: 15px !important; padding: 0 6px; }
-  html body.f-vslider:not(.fs) .trimrow:has(#btnUntrim.on) #btnSaveTrim { width: 54px; font-size: 15px !important; }
+  html body.f-vslider .trimrow { position: relative; }
+  html body.f-vslider .trimrow:has(#btnUntrim.on) #btnTrim { font-size: 15px !important; padding: 0 6px; }
+  html body.f-vslider .trimrow:has(#btnUntrim.on) #btnSaveTrim { width: 54px; font-size: 15px !important; }
   html body.f-vslider:not(.fs) .vspeed { right: 0; width: calc((100% - 24px) / 5); }
-  html body.f-vslider:not(.fs) .vspeed .vsbox { min-width: 0; width: 100%; }
+  html body.f-vslider .vspeed .vsbox { min-width: 0; width: 100%; }
   html body.f-vslider:not(.fs) #btnMark { right: 0; width: calc((100% - 24px) / 5); }
   /* v196: ×1 — на одній висоті з «Обрізати», ★ — з 60с 30с 10с (обидві 44 px) */
   html body.f-vslider:not(.fs) .vspeed { bottom: calc(var(--vsb, 80px) - 10px); }
-  html body.f-vslider:not(.fs) .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  html body.f-vslider .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
   html body.f-vslider:not(.fs) #btnMark { height: 44px; margin-top: 6px; }
+  /* v204: на весь екран — той самий блок і в тому ж порядку, що й у звичайному вигляді: над кнопками ◁ ▷ */
+  html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 106px + 12px); }
+  html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 12px); bottom: var(--fb); gap: 6px; opacity: .85; }
+  html body.fs.f-vslider #btnMark { position: fixed; z-index: 16; top: auto; left: auto; right: 10px; width: var(--kc); height: 44px; margin: 0; bottom: var(--fb); opacity: .85; }
+  html body.fs.f-vslider .vspeed { position: fixed; z-index: 16; left: auto; right: 10px; width: var(--kc); top: 12vh; bottom: calc(var(--fb) + 50px); }
+  html body.fs.f-vslider .actions #btnTrim, html body.fs.f-vslider .actions #btnSaveTrim, html body.fs.f-vslider .trimrow #btnUntrim { opacity: 1; }
+  html body.fs.f-draw #btnDraw { bottom: calc(var(--fb) + 104px); right: 10px; }
   html body.f-vslider .actions .r2 .lastrow { display: flex; margin: 0; padding: 0; gap: 6px; }
   html body.f-vslider .actions .r2 .lastrow .act { flex: 1; height: 44px; padding: 0; font-size: 15px; border-radius: 9px; }
-  html body.f-vslider:not(.fs) .actions #btnTrim, html body.f-vslider:not(.fs) .actions #btnSaveTrim { height: 44px; font-size: 15px; border-radius: 9px; }   /* v179: мітки — завширшки як блок кнопок */
+  html body.f-vslider .actions #btnTrim, html body.f-vslider .actions #btnSaveTrim { height: 44px; font-size: 15px; border-radius: 9px; }   /* v179: мітки — завширшки як блок кнопок */
   /* v191: сітка 5 × 50 — ◁ на дві колонки, «2» над «−2», ▷ на дві колонки (симетрично) */
   body.f-vslider .tpad { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: 50px 50px; gap: 6px; width: 268px; height: 106px; }
   body.f-vslider .tpad .key { width: auto; height: 50px; font-size: 15px; grid-column: auto; grid-row: auto; }
@@ -6411,7 +6418,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v203';
+const APP_VER = 'v204';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
