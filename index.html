@@ -5005,7 +5005,9 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
 
 /* клацання фізичної кнопки — для всіх кнопок застосунку (з v151): сухий клац + глухий стук упора; відпустив — тихіший клац */
 let btnAC = null;
+let btnLast = 0;
 function btnClick(down) {
+  btnLast = performance.now();
     try {
       btnAC = btnAC || new (window.AudioContext || window.webkitAudioContext)(); if (btnAC.state === 'suspended') btnAC.resume();
       const t = btnAC.currentTime + 0.005, n = Math.round(btnAC.sampleRate * 0.025), b = btnAC.createBuffer(1, n, btnAC.sampleRate), d = b.getChannelData(0);
@@ -5028,6 +5030,9 @@ function btnClick(down) {
   document.addEventListener('pointerdown', e => { const b = e.target.closest(sel); if (!b || b.disabled) return; pressed = b; btnClick(true); }, true);
   const up = () => { if (pressed) { pressed = null; btnClick(false); } };
   document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', () => { pressed = null; }, true);
+  // v182: запасний шлях — якщо натискання не дало pointerdown (вікна з клавіатурою на Android), клацаємо на click / Enter у полі
+  document.addEventListener('click', e => { const b = e.target.closest(sel); if (b && !b.disabled && performance.now() - btnLast > 300) { btnClick(true); setTimeout(() => btnClick(false), 70); } }, true);
+  document.addEventListener('submit', () => { if (performance.now() - btnLast > 300) { btnClick(true); setTimeout(() => btnClick(false), 70); } }, true);
 })();
 /* ── кнопки ◁ ▷ і перескоку −10 −5 −2 / 2 5 10 с (замість РП, з v148) ──
    ▷ — пуск / пауза (швидкість з віконця); ◁ — відтворення назад зі швидкістю з віконця;
@@ -6273,7 +6278,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v181';
+const APP_VER = 'v182';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
