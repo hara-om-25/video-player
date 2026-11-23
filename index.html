@@ -479,6 +479,11 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   /* v181: «Обрізати / Зберегти» — більші, на всю ширину ліворуч від ★ */
   html body.f-vslider:not(.fs) .actions .r2 { left: 10px; right: 74px; gap: 6px; }
   html body.f-vslider:not(.fs) .footer { padding-right: calc(var(--tpW) - 4px); }   /* шкала — до блоку кнопок, ▷ масштабу не під ними */
+  /* v198: краї — як у блоку кнопок під ними: «Обрізати…10с» — від лівого краю ◁ до правого краю «5», ×1 і ★ — точно над «10» */
+  html body.f-vslider:not(.fs) .actions .r2 { left: 0; right: calc((100% - 24px) / 5 + 6px); }
+  html body.f-vslider:not(.fs) .vspeed { right: 0; width: calc((100% - 24px) / 5); }
+  html body.f-vslider:not(.fs) .vspeed .vsbox { min-width: 0; width: 100%; }
+  html body.f-vslider:not(.fs) #btnMark { right: 0; width: calc((100% - 24px) / 5); }
   /* v196: ×1 — на одній висоті з «Обрізати», ★ — з 60с 30с 10с (обидві 44 px) */
   html body.f-vslider:not(.fs) .vspeed { bottom: calc(var(--vsb, 80px) - 10px); }
   html body.f-vslider:not(.fs) .vspeed .vsbox { height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
@@ -6389,7 +6394,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v197';
+const APP_VER = 'v198';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
