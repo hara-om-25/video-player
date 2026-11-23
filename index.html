@@ -3493,7 +3493,17 @@ async function pickDir(key, mode) {
 $('btnSet').onclick = showSet;
 $('setOpenBtn').onclick = () => pickDir('dir:open', 'read');
 $('setSaveBtn').onclick = () => pickDir('dir:save', 'readwrite');
-$('setSysFs').onchange = e => setSetting('sysFs', e.target.checked);
+$('setSysFs').onchange = e => {      // v188: діє одразу (дотик до галочки — дозволений жест для повного екрана)
+  const on = e.target.checked, d = document, inFs = d.fullscreenElement || d.webkitFullscreenElement;
+  setSetting('sysFs', on);
+  if (on && !inFs) {
+    const el = d.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
+    const r = f ? f.call(el) : null;
+    if (r && r.then) r.then(() => { if (!d.body.classList.contains('fs')) (d.exitFullscreen || d.webkitExitFullscreen).call(d); toast('Готово: на весь екран панелі Android ховатимуться', 2200); })
+      .catch(() => toast('Браузер не дозволив ховати панелі Android', 2500));
+    else if (!f) toast('Цей браузер не вміє ховати панелі Android', 2500);
+  } else if (!on) { if (inFs) (d.exitFullscreen || d.webkitExitFullscreen).call(d); toast('Панелі Android більше не ховаються', 1800); }
+};
 $('setStar').onchange = e => { editCfg.starEnd = e.target.checked; setSetting('editcfg', editCfg); };
 $('setOk').onclick = () => $('dlgSet').close();
 // Рядки «Останні» і «Обрізать ↺ ± сек» піднімаються рівно настільки, щоб регулятор
@@ -6287,7 +6297,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v187';
+const APP_VER = 'v188';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
