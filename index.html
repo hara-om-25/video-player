@@ -377,7 +377,10 @@ body.f-wave .waverow .wave { flex: 1; min-width: 0; height: auto; }
 body.f-wave .warail { position: relative; flex: none; width: 60px; display: flex; flex-direction: column; justify-content: flex-end; }
 html body.f-wave .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 58px; width: 56px; height: 240px; z-index: 5; }
 html body.f-wave #btnMark { position: static; width: 58px; height: 50px; font-size: 30px; padding: 0; }
-html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--accent); color: #111; border-color: var(--accent) !important; }
+/* навпаки (v157): ×1 і ★ — темні з жовтою обводкою, і «Копіювати» / «Відновити» — такі самі */
+html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
+html body.f-wave #btnMark { color: var(--star); }
+html body.f-wave #btnBackup, html body.f-wave #btnRestore { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 @media (max-width: 860px) {
   body.f-wave .waverow { flex: none; height: 120px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
@@ -392,10 +395,11 @@ html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--a
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
   body.f-wave .panel.stage { height: 218px; }
-  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, 44px) 60px repeat(3, 44px); grid-template-rows: 44px; gap: 6px; }
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, 44px) 96px repeat(3, 44px); grid-template-rows: 52px; gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
-  body.f-wave .tpad .key.sm { font-size: 16px; }
-  body.f-wave .tpad .key.big svg { width: 28px; height: 28px; }
+  body.f-wave .tpad .key.sm { font-size: 16px; height: 44px; }
+  body.f-wave .tpad .key.big { height: 52px; }
+  body.f-wave .tpad .key.big svg { width: 36px; height: 36px; }   /* ▷ — більша (v157) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
   html body.f-wave .panel.side > .sec { position: absolute; inset: 0; }   /* мітки — уся ширина */
@@ -6102,7 +6106,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v156';
+const APP_VER = 'v157';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
