@@ -454,6 +454,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
 /* відеоплеєр і редактор (v173): малі кнопки — квадратні й більші; ряди ◁ 2 5 10 / −10 −5 −2 ▷ */
 @media (min-width: 861px) {
   body.f-vslider { --tpW: 284px; --tpH: 122px; }
+  html body.f-hdrpl.f-vslider, html body.f-hdrpl.f-vslider.app-video { --cols: minmax(0, 1fr) 268px; }   /* v179: мітки — завширшки як блок кнопок */
   body.f-vslider .tpad { display: flex; flex-wrap: wrap; align-content: space-between; gap: 6px; width: 268px; height: 106px; }
   body.f-vslider .tpad .key { flex: none; width: 50px; height: 50px; font-size: 15px; }
   body.f-vslider .tpad .key.big { width: 100px; }
@@ -3487,9 +3488,10 @@ $('setOk').onclick = () => $('dlgSet').close();
 function layoutActions() {
   // відеоплеєр і редактор на планшеті: панелі закінчуються над кнопками ◁ ▷ (кнопки не залазять на відео, v175)
   if (FEAT.vslider && !FEAT.wave) {
-    const m = document.querySelector('main'), wide = !matchMedia('(max-width: 860px)').matches;
-    m.style.paddingBottom = '';
-    if (wide) { const P = $('tpad').getBoundingClientRect(), F = document.querySelector('.footer').getBoundingClientRect(); if (F.top > P.top) m.style.paddingBottom = Math.ceil(F.top - P.top + 8) + 'px'; }
+    // v179: відео — до самої шкали, а панель міток (ширина як у блоку кнопок) закінчується над кнопками
+    const side = document.querySelector('.panel.side'), wide = !matchMedia('(max-width: 860px)').matches;
+    side.style.marginBottom = '';
+    if (wide) { const P = $('tpad').getBoundingClientRect(), S = side.getBoundingClientRect(); if (S.bottom > P.top - 8) side.style.marginBottom = Math.ceil(S.bottom - P.top + 8) + 'px'; }
   }
   const sp = $('aspacer'); if (!sp) return;
   sp.style.height = '0px';
@@ -6265,7 +6267,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v178';
+const APP_VER = 'v179';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
