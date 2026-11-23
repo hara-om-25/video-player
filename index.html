@@ -358,6 +358,28 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .tpad .key[data-r="-1"] { grid-column: 1 / span 3; }
 .tpad .key[data-r="-10"], .tpad .key[data-r="-5"], .tpad .key[data-r="-2"], .tpad .key[data-r="1"] { grid-row: 2; }
 .tpad .key[data-r="1"] { grid-column: 4 / span 3; }
+/* аудіоплеєр (з v154, FEAT.wave): ліворуч — «Фрагменти» з логотипом; праворуч — мітки на всю ширину, під ними звукова доріжка,
+   під нею [ час ] і кнопки ◁ ▷ −10…10 */
+.wave { display: none; }
+body.f-wave .vidbox { display: none; }
+body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
+body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
+body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
+body.f-wave .panel.playlist > .stagelogo { display: block; flex: 1; min-height: 0; width: 46%; max-width: 160px; margin: 10px auto; }
+body.f-wave .bigplay { display: none; }      /* стан видно на ◁ / ▷ */
+@media (max-width: 860px) {
+  body.f-wave .wave { flex: none; height: 120px; }
+  body.f-wave .panel.playlist > .stagelogo { max-width: 90px; flex: none; }
+}
+@media (min-width: 861px) {
+  body.f-wave { --tpW: 0px; --tpH: 0px; }
+  body.f-wave main { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  body.f-wave .panel.playlist { grid-column: 1; grid-row: 1 / span 2; }
+  body.f-wave .panel.side { grid-column: 2; grid-row: 1; }
+  body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
+  body.f-wave .tpad { position: static; width: 210px; height: 96px; margin-left: auto; }
+  html body.f-wave .panel.side > .sec { position: absolute; left: 0; top: 0; bottom: 0; right: 80px; }   /* мітки — уся ширина, праворуч стовпчик ×1 / ★ */
+}
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
 body.f-vspd .vspeed .vsbox, #btnMark { border-color: var(--accent) !important; }
 .key { padding: 0; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--accent); border-color: var(--accent);   /* як 60с / 30с / 10с (з v151) */
@@ -695,6 +717,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <div class="gest" id="gest"><svg viewBox="0 0 24 24" id="gestIco"></svg><span class="gbar"><i id="gestBar"></i></span><b id="gestVal"></b></div>
     <button id="bigPlay" class="bigplay" title="Пауза / відтворення  ( пробіл )"><svg viewBox="0 0 24 24" fill="currentColor"><g id="bigIco"></g></svg></button>
     <button id="btnFs" class="fsbtn" title="На весь екран  ( F )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button>
+    <canvas id="wave" class="wave"></canvas>
     <div class="markctl ovl">
       <div class="grp">
         <button id="btnStart" class="sq br" title="Початок фрагмента = поточна позиція  ( [ )">[<span id="lblStart" hidden></span></button>
@@ -3479,7 +3502,11 @@ if (FEAT.hdrpl) {
   document.querySelector('.hc2').appendChild($('btnAdd'));     // «+» — одразу після тривалості
   const pop = $('plPop');
   pop.appendChild($('playlist'));
-  if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
+  if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
+  if (FEAT.wave) {        // аудіоплеєр: логотип — у «Фрагментах», кнопки ◁ ▷ — у рядку з часом
+    document.querySelector('.panel.playlist').appendChild(document.querySelector('.stagelogo'));
+    document.querySelector('.markctl.ovl').appendChild($('tpad'));
+  }   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
   const open = on => {
     if (on) { pop.style.top = Math.round(document.querySelector('header').getBoundingClientRect().bottom + 4) + 'px'; renderPlaylist(); }
     pop.classList.toggle('on', on); $('plBtn').classList.toggle('on', on);
@@ -4969,6 +4996,103 @@ const Tp = (() => {
   return { set, mode: () => mode };
 })();
 
+/* ── аудіоплеєр: звукова доріжка під мітками (FEAT.wave, з v154) ──
+   Видно WIN секунд навколо поточного місця (біла риска посередині). Файл не розпаковується цілком:
+   шматки по CH секунд беруться через Slicer (як для MP3) у фоні, ближчі — першими; піки кешуються.
+   Тягнути пальцем уліво/вправо — перемотка; дотик — перейти в це місце. */
+const Wave = (() => {
+  if (!FEAT.wave) return { reset: () => {} };
+  const cv = $('wave'), ctx = cv.getContext('2d'), WIN = 24, CH = 6, RATE = 50;   // RATE — піків на секунду
+  let key = null, peaks = new Map(), queue = null, busy = false, whole = null, top = 0.05, ver = 0, lastKey = '';
+  const reset = () => { key = tracks[cur] ? tracks[cur].key : null; peaks = new Map(); whole = null; top = 0.05; ver++; };
+  const pk = (ab, from, n, step) => {        // n піків по step семплів, починаючи з from
+    const out = new Float32Array(n), chs = Math.min(2, ab.numberOfChannels), d = [];
+    for (let c = 0; c < chs; c++) d.push(ab.getChannelData(c));
+    for (let i = 0; i < n; i++) {
+      let m = 0; const a = Math.max(0, Math.floor(from + i * step)), b = Math.min(ab.length, Math.floor(from + (i + 1) * step));
+      for (const ch of d) for (let j = a; j < b; j++) { const v = ch[j] < 0 ? -ch[j] : ch[j]; if (v > m) m = v; }
+      out[i] = m; if (m > top) top = m;
+    }
+    return out;
+  };
+  async function load(i) {
+    const t = tracks[cur], k = key;
+    try {
+      if (whole === null) {
+        try { await Slicer.index(t.file, t.key, () => {}); whole = false; }
+        catch { whole = t.file.size <= 60 * 1024 * 1024 ? await decodeBuf(await t.file.arrayBuffer()) : 'no'; }
+      }
+      if (k !== key) return;
+      if (whole === 'no') { peaks.set(i, new Float32Array(CH * RATE)); return; }
+      if (whole) { peaks.set(i, pk(whole, i * CH * whole.sampleRate, CH * RATE, whole.sampleRate / RATE)); ver++; return; }
+      const s = i * CH, e = Math.min(dur() || s + CH, s + CH), idx = await Slicer.index(t.file, t.key, () => {});
+      const r = await Slicer.extract(t.file, idx, s, e), ab = await decodeBuf(r.data);
+      if (k !== key) return;
+      peaks.set(i, pk(ab, (s - r.t0) * ab.sampleRate, CH * RATE, ab.sampleRate / RATE)); ver++;
+    } catch (err) { console.warn('доріжка:', err); if (k === key) peaks.set(i, new Float32Array(CH * RATE)); }
+  }
+  async function pump(t) {                   // по одному шматку: спершу поточний, далі сусідні
+    if (busy || !hasTrack()) return;
+    const c = Math.floor(t / CH), last = Math.floor((dur() || 0) / CH), half = Math.ceil(WIN / 2 / CH) + 1;
+    for (let d = 0; d <= half; d++) for (const i of d ? [c + d, c - d] : [c]) {
+      if (i < 0 || i > last || peaks.has(i)) continue;
+      busy = true; peaks.set(i, null);
+      await load(i); busy = false; return;
+    }
+  }
+  const at = (t) => { const i = Math.floor(t / CH), p = peaks.get(i); if (!p) return p === null ? -1 : -2; return p[Math.min(p.length - 1, Math.floor((t - i * CH) * RATE))]; };
+  (function tick() {
+    requestAnimationFrame(tick);
+    if (!hasTrack()) { if (lastKey) { ctx.clearRect(0, 0, cv.width, cv.height); lastKey = ''; } return; }
+    if (tracks[cur].key !== key) reset();
+    const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), W = Math.round(r.width * d), H = Math.round(r.height * d);
+    if (W < 4 || H < 4) return;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const t = drag ? drag.t : Rev.active ? Rev.time() : audio.currentTime;
+    pump(t);
+    const k = t.toFixed(3) + '|' + ver + '|' + W + 'x' + H; if (k === lastKey) return; lastKey = k;
+    ctx.clearRect(0, 0, W, H);
+    const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(1, Math.round(d));
+    const lo = T0(), hi = T1();
+    for (let x = 0; x < W; x += bw + gap) {
+      const ta = t0 + x / pps, tb = t0 + (x + bw + gap) / pps;
+      if (tb < lo || ta > hi) continue;
+      let m = 0, miss = false;
+      for (let s = ta; s < tb; s += 1 / RATE) { const v = at(s); if (v < 0) { miss = true; break; } if (v > m) m = v; }
+      if (miss) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(x, mid - d / 2, bw, d); continue; }
+      const h = Math.max(d, Math.sqrt(m / top) * amp);
+      ctx.fillStyle = ta < t ? '#ffd23f' : 'rgba(255,210,63,.75)';
+      ctx.fillRect(x, mid - h, bw, h * 2);
+    }
+    // мітки — тонкі риски
+    if (data) for (const mk of data.marks) { const x = (mk.t - t0) * pps; if (x >= 0 && x <= W) { ctx.fillStyle = 'rgba(255,214,63,.5)'; ctx.fillRect(x - d / 2, 0, d, H * 0.18); } }
+    // поточне місце — біла риска посередині
+    ctx.fillStyle = '#fff'; ctx.fillRect(Math.round(W / 2 - d), 0, Math.round(2 * d), H);
+  })();
+  // тягни — перемотка; дотик — перейти сюди
+  let drag = null;
+  cv.addEventListener('pointerdown', e => {
+    if (!hasTrack()) return;
+    cv.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, t0: Rev.active ? Rev.time() : audio.currentTime, moved: false };
+    drag.t = drag.t0;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const r = cv.getBoundingClientRect(), dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 6) drag.moved = true;
+    if (drag.moved) { drag.t = Math.max(T0(), Math.min(T1(), drag.t0 - dx / (r.width / WIN))); }
+  });
+  const up = e => {
+    if (!drag) return;
+    const r = cv.getBoundingClientRect(), g = drag; drag = null;
+    if (Rev.active) Rev.stop(false);
+    seek(g.moved ? g.t : g.t0 + (e.clientX - (r.left + r.width / 2)) / (r.width / WIN));
+  };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
+  return { reset };
+})();
+
 audio.onplay = () => setPlayIcon(true);
 audio.onpause = () => { if (Rev.active) return; setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
 audio.onended = () => {
@@ -5954,7 +6078,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v153';
+const APP_VER = 'v154';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
