@@ -360,10 +360,10 @@ body.tlz .tledge { display: block; }
   font-size: 12px; line-height: 14px; text-align: center; pointer-events: none;
   z-index: 3; text-shadow: 0 0 2px #000, 0 0 2px #000;   /* v215: ★ — над бігунком, кільце її не закриває */
 }
-.bar .mk::after { content: ""; position: absolute; left: 6px; top: 13px; width: 2px; height: 10px; background: var(--star); opacity: .8; }
-.bar .knob {   /* v212: зелене кільце, прозоре всередині — під ним видно ★ */
+.bar .mks { position: absolute; top: 13px; width: 2px; margin-left: -1px; height: 10px; background: var(--star); opacity: .8; pointer-events: none; }   /* v219: риска мітки окремо — під бігунком */
+.bar .knob {   /* v212: зелене кільце; з v219 усередині суцільне — жовте під ним не просвічує, ★ — над ним */
   position: absolute; top: 7px; width: 21px; height: 21px; margin-left: -10.5px; border-radius: 50%; box-sizing: border-box;
-  background: rgba(76,175,80,.12); border: 3px solid var(--clip); box-shadow: 0 0 0 1px rgba(0,0,0,.5); left: 0; pointer-events: none; z-index: 2;
+  background: var(--bg); border: 3px solid var(--clip); box-shadow: 0 0 0 1px rgba(0,0,0,.5); left: 0; pointer-events: none; z-index: 2;
 }
 
 /* ── нижній рядок і регулятор прокрутки ── */
@@ -5524,7 +5524,7 @@ function renderBar(vv) {
   const v = vv || tlView(), A = v[0], B = v[0] + v[1];
   el.innerHTML =
     (FEAT.clips ? data.clips : []).filter(c => c.end > A && c.start < B).map(c => { const a = Math.max(c.start, A), e = Math.min(c.end, B); return `<div class="cliprange" style="left:${tlX(a, v)}%;width:${Math.max(0.3, (e - a) / v[1] * 100)}%" title="${esc(c.name)}"></div>`; }).join('') +
-    data.marks.filter(m => m.t >= A && m.t <= B).map(m => `<div class="mk" style="left:${tlX(m.t, v)}%" title="${esc(m.name)}">★</div>`).join('') + ticks(v);
+    data.marks.filter(m => m.t >= A && m.t <= B).map(m => `<div class="mks" style="left:${tlX(m.t, v)}%"></div><div class="mk" style="left:${tlX(m.t, v)}%" title="${esc(m.name)}">★</div>`).join('') + ticks(v);
   renderSel(v);
 }
 
@@ -6461,7 +6461,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v218';
+const APP_VER = 'v219';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
