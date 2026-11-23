@@ -412,6 +412,9 @@ html body.f-wave dialog button.accent { background: var(--accent) !important; co
 html body.f-wave #markList .item { padding-top: 5px; padding-bottom: 5px; }   /* v190: мітки щільніше */
 html body.f-wave .panel.side .sec > h2 { display: flex; justify-content: flex-start; padding-left: 10px; }   /* «МІТКИ» — ліворуч, як «ФРАГМЕНТИ» */
 html body.f-wave .panel.side .sec > h2 > i:empty { display: none; }
+html body.f-wave .hhint { flex: 1; min-width: 0; margin-left: 14px; font-size: 12px; line-height: 1.35; letter-spacing: 0; text-transform: none; font-weight: 400; color: #6f7378; white-space: normal; text-align: left; }
+html body.f-wave .fragsec > h2 { flex-wrap: nowrap; align-items: center; }
+html body.f-wave .empty.hint { display: none; }
 html body.f-wave .panel.playlist .progress.on { position: relative; z-index: 2; display: inline-block; margin: 2px 10px 8px; padding: 6px 12px;
   background: rgba(10,11,12,.88); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.6); }   /* повідомлення — на темній підкладці з тінню */
 html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: var(--kw, 56px); margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
@@ -3646,6 +3649,12 @@ if (FEAT.hdrpl) {
   const pop = $('plPop');
   pop.appendChild($('playlist'));
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
+  if (FEAT.wave) {        // v192: підказки — у заголовках «Мітки» / «Фрагменти», праворуч від назви, у 2 рядки (видно завжди)
+    const hm = document.createElement('span'); hm.className = 'hhint'; hm.innerHTML = 'Натисніть ★, щоб поставити<br>мітку на поточній позиції';
+    document.querySelector('.panel.side .sec > h2 > span').after(hm);
+    const hf = document.createElement('span'); hf.className = 'hhint'; hf.innerHTML = 'Позначте [ початок і ] кінець, потім ⬇ —<br>фрагмент збережеться окремим MP3';
+    document.querySelector('.fragsec > h2 > span').after(hf);
+  }
   if (FEAT.wave) {        // аудіоплеєр: логотип — у «Фрагментах», кнопки ◁ ▷ — у рядку з часом
     document.querySelector('.panel.playlist').appendChild(document.querySelector('.stagelogo'));   // v186: логотип — у вільному місці «Фрагментів»
     document.querySelector('.markctl.ovl').appendChild($('tpad'));
@@ -5447,8 +5456,8 @@ function renderMarks() {
   const el = $('markList');
   try { Draw.dirty(); } catch {}
   if (!data) { el.innerHTML = '<div class="empty">Немає відкритого файлу</div>'; return; }
-  if (!data.marks.length) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити<br>мітку на поточній позиції</div>'; return; }
-  if (!data.marks.some(m => m.t >= T0())) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити<br>мітку на поточній позиції</div>'; return; }
+  if (!data.marks.length) { el.innerHTML = '<div class="empty hint">Натисніть ★, щоб поставити<br>мітку на поточній позиції</div>'; return; }
+  if (!data.marks.some(m => m.t >= T0())) { el.innerHTML = '<div class="empty hint">Натисніть ★, щоб поставити<br>мітку на поточній позиції</div>'; return; }
   let k = 0;
   if (FEAT.draw) {                      // редактор: лише номер і час (+ 🖌, якщо є малюнок)
     el.innerHTML = data.marks.map((m, i) => m.t < T0() ? '' : `
@@ -5741,7 +5750,7 @@ function renderClips() {
   const el = $('clipList');
   if (!data) { el.innerHTML = '<div class="empty">Немає відкритого файлу</div>'; return; }
   if (!data.clips.length) {
-    el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець, потім <b>⬇</b> —<br>фрагмент збережеться окремим MP3 з вашою назвою.</div>';
+    el.innerHTML = '<div class="empty hint">Позначте <b>[</b> початок і <b>]</b> кінець, потім <b>⬇</b> —<br>фрагмент збережеться окремим MP3 з вашою назвою.</div>';
     return;
   }
   const vid = isVideo(tracks[cur]);
@@ -6354,7 +6363,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v191';
+const APP_VER = 'v192';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
