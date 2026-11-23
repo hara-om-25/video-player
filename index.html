@@ -381,7 +381,11 @@ body.f-wave .vidbox { display: none; }
 body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
-body.f-wave .panel.playlist > .stagelogo { display: block; flex: 0 1 220px; min-height: 0; height: 220px; width: auto; aspect-ratio: 1; max-width: 62%; margin: auto; }
+/* v189: логотип — посередині всієї панелі «Фрагменти» (під заголовком), тлом під списком */
+body.f-wave .panel.playlist { position: relative; }
+body.f-wave .panel.playlist > .stagelogo { display: block; position: absolute; left: 50%; top: calc(50% + 24px); transform: translate(-50%, -50%);
+  height: min(240px, 62%); width: auto; aspect-ratio: 1; max-width: 62%; margin: 0; pointer-events: none; z-index: 0; }
+body.f-wave .panel.playlist .fragsec { position: relative; z-index: 1; }
 body.f-wave .panel.playlist .fragsec { flex: 0 0 auto; min-height: 0; max-height: 100%; }   /* посередині вільного місця; стискається, а не мітки */
 body.f-wave .fragsec .item { flex-wrap: nowrap; align-items: flex-start; }
 body.f-wave .fragsec .item .col { flex: 1 1 auto; }
@@ -428,7 +432,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .waverow { flex: none; height: 160px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
   body.f-wave .tpad .key.sm { font-size: 16px; }
-  body.f-wave .panel.playlist > .stagelogo { max-width: 90px; flex: none; min-height: 0; height: 90px; }
+  body.f-wave .panel.playlist > .stagelogo { height: 90px; }
 }
 @media (min-width: 861px) {
   body.f-wave { --tpW: 0px; --tpH: 0px; }
@@ -438,7 +442,13 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
-  body.f-wave .panel.stage { height: 236px; }   /* v176: доріжка нижча, без порожнечі над кнопками */
+  body.f-wave .panel.stage { height: 196px; }   /* v189: доріжка ще нижча */
+  html body.f-wave .warail #btnSaveClip { height: 44px; margin-bottom: 5px; }
+  html body.f-wave .warail #btnSaveClip svg { width: 46%; }
+  html body.f-wave .warail #btnSaveClip small { font-size: 12px; }
+  html body.f-wave .wzbox { height: 32px; margin-bottom: 5px; }
+  html body.f-wave .wzbox .vsbox { padding: 5px 2px; }
+  html body.f-wave #btnMark { height: 38px; font-size: 24px; }
   body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
   body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) + 30px) repeat(3, var(--kw)); grid-template-rows: var(--kw); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
@@ -6297,7 +6307,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v188';
+const APP_VER = 'v189';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
