@@ -365,7 +365,11 @@ body.f-wave .vidbox { display: none; }
 body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
-body.f-wave .panel.playlist > .stagelogo { display: block; flex: 1; min-height: 0; width: 46%; max-width: 160px; margin: 10px auto; }
+body.f-wave .panel.playlist > .stagelogo { display: block; flex: 1 1 auto; min-height: 120px; width: 62%; max-width: 260px; margin: 0 auto; }
+body.f-wave .panel.playlist .fragsec { flex: 0 1 auto; }
+body.f-wave .fragsec .item { flex-wrap: nowrap; align-items: flex-start; }
+body.f-wave .fragsec .item .col { flex: 1 1 auto; }
+body.f-wave .fragsec .item .acts { width: auto; padding-left: 0; gap: 10px; flex: none; }
 body.f-wave .bigplay { display: none; }      /* стан видно на ▷ */
 body.f-wave .tpad .key[data-r="-1"] { display: none; }   /* аудіоплеєр: ◁ не потрібна (v155) */
 .tpad .key[data-r="-10"], .tpad .key[data-r="-5"], .tpad .key[data-r="-2"] { order: 0; }
@@ -374,9 +378,9 @@ body.f-wave .tpad .key[data-r="1"] { order: 1; } body.f-wave .tpad .key[data-r="
 body.f-wave .panel.stage { overflow: visible; }
 body.f-wave .waverow { display: flex; gap: 10px; flex: 1; min-height: 100px; }
 body.f-wave .waverow .wave { flex: 1; min-width: 0; height: auto; }
-body.f-wave .warail { position: relative; flex: none; width: 60px; display: flex; flex-direction: column; justify-content: flex-end; }
+body.f-wave .warail { position: relative; flex: none; width: var(--kw, 56px); display: flex; flex-direction: column; justify-content: flex-end; }
 html body.f-wave .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 58px; width: 56px; height: 240px; z-index: 5; }
-html body.f-wave #btnMark { position: static; width: 58px; height: 50px; font-size: 30px; padding: 0; }
+html body.f-wave #btnMark { position: static; width: var(--kw, 56px); height: 50px; font-size: 30px; padding: 0; }
 /* навпаки (v157): ×1 і ★ — темні з жовтою обводкою, і «Копіювати» / «Відновити» — такі самі */
 html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 html body.f-wave #btnMark { color: var(--star); }
@@ -384,17 +388,19 @@ html body.f-wave #btnMark { color: var(--star); }
 html body.f-wave button.accent:not(#btnInstall):not(#btnAdd), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 html body.f-wave #btnInstall, html body.f-wave #btnAdd { background: var(--accent); color: #111; border-color: var(--accent); }   /* «+» — жовта, як «Встановити» (v160) */
 body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
-html body.f-wave .wzbox .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+html body.f-wave .wzbox .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 /* «◁ 100% ▷» — з жовтою обводкою (v161) */
 html body.f-wave .tlzoom button { border: 1px solid var(--accent); background: var(--surf2); }
 html body.f-wave .tlzoom b { border: 1px solid var(--accent); border-radius: 7px; padding: 6px 4px; margin: 0 4px; }
-body.f-wave .ftspd { position: relative; flex: none; width: 60px; height: 38px; margin-left: 10px; }
-html body.f-wave .ftspd .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; }
+html body.f-wave .wzbox .vsbox, html body.f-wave .ftspd .vsbox { min-width: 0; width: var(--kw, 56px); box-sizing: border-box; }
+body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 10px; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
+html body.f-wave .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; }
 body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
 body.f-wave .timeline .tlzoom { margin-left: 10px; }
 @media (min-width: 861px) and (max-width: 1150px) {    /* вужчий планшет: кнопки вміщаються в рядок */
-  html body.f-wave .tpad { grid-template-columns: repeat(3, 40px) 64px repeat(3, 40px); gap: 5px; }
+  html body.f-wave { --kw: 40px; }
+  html body.f-wave .tpad { gap: 5px; }
   html body.f-wave .markctl.ovl { gap: 10px; }
 }
 @media (max-width: 860px) {
@@ -411,11 +417,12 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
   body.f-wave .panel.stage { height: 218px; }
-  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, 44px) 96px repeat(3, 44px); grid-template-rows: 52px; gap: 6px; align-items: center; }
+  body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
+  body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.3) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 12px); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
-  body.f-wave .tpad .key.sm { font-size: 16px; height: 44px; }
-  body.f-wave .tpad .key.big { height: 52px; }
-  body.f-wave .tpad .key.big svg { width: 36px; height: 36px; }   /* ▷ — більша (v157) */
+  body.f-wave .tpad .key.sm { font-size: 16px; height: var(--kw); }
+  body.f-wave .tpad .key.big { height: calc(var(--kw) + 12px); }
+  body.f-wave .tpad .key.big svg { width: 44px; height: 44px; }   /* ▷ — більша (v162) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
   html body.f-wave .panel.side > .sec { position: absolute; inset: 0; }   /* мітки — уся ширина */
@@ -6162,7 +6169,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v161';
+const APP_VER = 'v162';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
