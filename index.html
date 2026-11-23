@@ -617,6 +617,16 @@ dialog .line textarea {
 dialog .line textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
 dialog .line .btns { display: flex; flex-direction: column; gap: 10px; flex: none; }
 dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
+/* v194: вікно назви — в один рядок: назва вікна | поле | Скасувати | ОК (менше місця, клавіатура не закриває) */
+#dlgForm { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; }
+#dlgForm > h3 { grid-column: 1; grid-row: 1; margin: 0; white-space: nowrap; }
+#dlgForm > p { grid-column: 1; grid-row: 2; margin: 2px 0 0; white-space: nowrap; }
+#dlgForm .line, #dlgForm .line .btns { display: contents; }
+#dlgForm .line textarea { grid-column: 2; grid-row: 1 / span 2; height: 48px; min-height: 0; resize: none; padding: 10px 12px; font-size: 18px; overflow: hidden; white-space: nowrap; }
+#dlgForm #dlgCancel { grid-column: 3; grid-row: 1 / span 2; height: 48px; flex: none; }
+#dlgForm #dlgOk { grid-column: 4; grid-row: 1 / span 2; height: 48px; flex: none; min-width: 90px; }
+@media (max-width: 640px) { #dlgForm { grid-template-columns: minmax(0, 1fr) auto auto; } #dlgForm > h3, #dlgForm > p { grid-column: 1 / -1; }
+  #dlgForm > p { grid-row: 2; margin-bottom: 8px; } #dlgForm .line textarea { grid-column: 1 / -1; grid-row: 3; } #dlgForm #dlgCancel { grid-column: 2; grid-row: 4; margin-top: 8px; } #dlgForm #dlgOk { grid-column: 3; grid-row: 4; margin-top: 8px; } }
 /* вікно назви — посередині вільного місця над клавіатурою (місце рахує JS) */
 #dlg { width: min(1000px, calc(100vw - 32px)); margin: 0; position: fixed; left: 50%; transform: translateX(-50%); }
 
@@ -6364,7 +6374,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v193';
+const APP_VER = 'v194';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
