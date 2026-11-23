@@ -380,7 +380,9 @@ html body.f-wave #btnMark { position: static; width: 58px; height: 50px; font-si
 /* навпаки (v157): ×1 і ★ — темні з жовтою обводкою, і «Копіювати» / «Відновити» — такі самі */
 html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 html body.f-wave #btnMark { color: var(--star); }
-html body.f-wave #btnBackup, html body.f-wave #btnRestore { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
+/* аудіоплеєр (v158): жовта з чорними літерами — лише «Встановити»; решта кнопок — чорні з жовтими літерами й обводкою */
+html body.f-wave button.accent:not(#btnInstall), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
+html body.f-wave #btnInstall { background: var(--accent); color: #111; border-color: var(--accent); }
 @media (max-width: 860px) {
   body.f-wave .waverow { flex: none; height: 120px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
@@ -6106,7 +6108,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v157';
+const APP_VER = 'v158';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
