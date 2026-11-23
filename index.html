@@ -6287,7 +6287,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v186';
+const APP_VER = 'v187';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -6307,9 +6307,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
   // Оновлення без перезапуску: при запуску, поверненні до застосунку і раз на 5 хв дивимось,
   // чи на сайті новіша версія; якщо так — перезавантажуємось (під час відтворення — після паузи).
-  let newVer = null;
+  // v187: перезавантажуємось лише коли нова версія вже встановилась (новий sw керує сторінкою) — інакше
+  // сторінка знову бралась зі старого кешу й лишалась старою; запасний час — 15 с
+  let newVer = null, swReady = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { swReady = true; applyUpdate(); });
   const applyUpdate = () => {
-    if (!newVer || !audio.paused) return;
+    if (!newVer || !swReady || !audio.paused) return;
     savePos(); toast('Оновлення до ' + newVer, 700);
     setTimeout(() => location.reload(), 750);
   };
@@ -6321,6 +6324,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if (m && +m[2] > +APP_VER.slice(1)) {
         newVer = m[1];
         const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update().catch(() => {});
+        setTimeout(() => { swReady = true; applyUpdate(); }, 15000);
         applyUpdate();
       }
     } catch {}
