@@ -353,9 +353,13 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 /* РП (крутилки) більше немає — замість неї кнопки з жовтого прозорого пластику з чорною, місцями стертою фарбою */
 .jog { display: none !important; }
 .tpad { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(var(--tpW) - 14px); height: calc(var(--tpH) - 14px);
-  display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: 34fr 58fr; gap: 7px 5px; user-select: none; touch-action: manipulation; }
-.tpad .key.sm { grid-row: 1; }
-.tpad .key.big { grid-row: 2; grid-column: span 3; }
+  display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: 1fr 1fr; gap: 7px 5px; user-select: none; touch-action: manipulation; }
+.tpad .key { grid-row: 1; }   /* зверху ◁ і 2 5 10, знизу −10 −5 −2 і ▷ (з v153) */
+.tpad .key[data-r="-1"] { grid-column: 1 / span 3; }
+.tpad .key[data-r="-10"], .tpad .key[data-r="-5"], .tpad .key[data-r="-2"], .tpad .key[data-r="1"] { grid-row: 2; }
+.tpad .key[data-r="1"] { grid-column: 4 / span 3; }
+/* віконце швидкості й ★ — з жовтою обводкою (з v153) */
+body.f-vspd .vspeed .vsbox, #btnMark { border-color: var(--accent) !important; }
 .key { padding: 0; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--accent); border-color: var(--accent);   /* як 60с / 30с / 10с (з v151) */
   display: flex; align-items: center; justify-content: center; line-height: 1; }
 .key.big { font-size: 20px; }
@@ -515,7 +519,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   :root { --jogR: min(95px, 14vh); --tpW: 0px; --tpH: 64px; }
   /* телефон: кнопки — окремим рядком на всю ширину внизу: −10 −5 −2 ◁ ▷ 2 5 10 */
   .tpad { left: 10px; right: 10px; width: auto; height: 50px; grid-template-columns: 1fr 1fr 1fr 1.7fr 1.7fr 1fr 1fr 1fr; grid-template-rows: 1fr; gap: 5px; }
-  .tpad .key.sm, .tpad .key.big { grid-row: 1; grid-column: auto; }
+  .tpad .key.sm, .tpad .key.big, .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
   .tpad .key[data-r="-1"] { order: 1; } .tpad .key[data-r="1"] { order: 2; } .tpad .key[data-r="2"], .tpad .key[data-r="5"], .tpad .key[data-r="10"] { order: 3; }
   .footer { padding-bottom: calc(var(--tpH) + env(safe-area-inset-bottom)); }
   body.fs .timeline { bottom: calc(var(--tpH) + 6px + env(safe-area-inset-bottom)); }
@@ -5950,7 +5954,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v152';
+const APP_VER = 'v153';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
