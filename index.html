@@ -381,8 +381,16 @@ html body.f-wave #btnMark { position: static; width: 58px; height: 50px; font-si
 html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 html body.f-wave #btnMark { color: var(--star); }
 /* аудіоплеєр (v158): жовта з чорними літерами — лише «Встановити»; решта кнопок — чорні з жовтими літерами й обводкою */
-html body.f-wave button.accent:not(#btnInstall), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
-html body.f-wave #btnInstall { background: var(--accent); color: #111; border-color: var(--accent); }
+html body.f-wave button.accent:not(#btnInstall):not(#btnAdd), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
+html body.f-wave #btnInstall, html body.f-wave #btnAdd { background: var(--accent); color: #111; border-color: var(--accent); }   /* «+» — жовта, як «Встановити» (v160) */
+body.f-wave .ftspd { position: relative; flex: none; width: 60px; height: 38px; margin-left: 10px; }
+html body.f-wave .ftspd .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; }
+body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
+body.f-wave .timeline .tlzoom { margin-left: 10px; }
+@media (min-width: 861px) and (max-width: 1150px) {    /* вужчий планшет: кнопки вміщаються в рядок */
+  html body.f-wave .tpad { grid-template-columns: repeat(3, 40px) 64px repeat(3, 40px); gap: 5px; }
+  html body.f-wave .markctl.ovl { gap: 10px; }
+}
 @media (max-width: 860px) {
   body.f-wave .waverow { flex: none; height: 120px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
@@ -3535,7 +3543,11 @@ if (FEAT.hdrpl) {
     // ×1 і ★ — праворуч від звукової доріжки (v156)
     const row = document.createElement('div'), rail = document.createElement('div');
     row.className = 'waverow'; rail.className = 'warail';
-    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); rail.append($('vspeed'), $('btnMark'));
+    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); rail.append($('btnMark'));
+    // «◁ 100% ▷» — праворуч від шкали, ×1 — у самому кутку (v160)
+    const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
+    sp.className = 'ftspd'; sp.appendChild($('vspeed'));
+    tl.append(document.querySelector('.tlzoom'), sp);
   }   // хід запису — поверх відео вгорі (в аудіоплеєрі лишається у «Фрагментах»)
   const open = on => {
     if (on) { pop.style.top = Math.round(document.querySelector('header').getBoundingClientRect().bottom + 4) + 'px'; renderPlaylist(); }
@@ -6119,7 +6131,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v159';
+const APP_VER = 'v160';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
