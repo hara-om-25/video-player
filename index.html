@@ -381,7 +381,8 @@ body.f-wave .vidbox { display: none; }
 body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
-body.f-wave .panel.side > .stagelogo { display: block; flex: 0 1 260px; min-height: 0; height: 260px; width: auto; aspect-ratio: 1; max-width: 62%; margin: auto; }   /* посередині вільного місця; стискається, а не мітки */
+body.f-wave .panel.playlist > .stagelogo { display: block; flex: 0 1 220px; min-height: 0; height: 220px; width: auto; aspect-ratio: 1; max-width: 62%; margin: auto; }
+body.f-wave .panel.playlist .fragsec { flex: 0 0 auto; min-height: 0; max-height: 100%; }   /* посередині вільного місця; стискається, а не мітки */
 body.f-wave .fragsec .item { flex-wrap: nowrap; align-items: flex-start; }
 body.f-wave .fragsec .item .col { flex: 1 1 auto; }
 body.f-wave .fragsec .item .acts { width: auto; padding-left: 0; gap: 10px; flex: none; }
@@ -427,7 +428,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .waverow { flex: none; height: 160px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
   body.f-wave .tpad .key.sm { font-size: 16px; }
-  body.f-wave .panel.side > .stagelogo { max-width: 90px; flex: none; min-height: 0; }
+  body.f-wave .panel.playlist > .stagelogo { max-width: 90px; flex: none; min-height: 0; height: 90px; }
 }
 @media (min-width: 861px) {
   body.f-wave { --tpW: 0px; --tpH: 0px; }
@@ -3612,7 +3613,7 @@ if (FEAT.hdrpl) {
   pop.appendChild($('playlist'));
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
   if (FEAT.wave) {        // аудіоплеєр: логотип — у «Фрагментах», кнопки ◁ ▷ — у рядку з часом
-    document.querySelector('.panel.side').appendChild(document.querySelector('.stagelogo'));   // v163: логотип — під мітками (ліворуч)
+    document.querySelector('.panel.playlist').appendChild(document.querySelector('.stagelogo'));   // v186: логотип — у вільному місці «Фрагментів»
     document.querySelector('.markctl.ovl').appendChild($('tpad'));
     // ×1 і ★ — праворуч від звукової доріжки (v156)
     const row = document.createElement('div'), rail = document.createElement('div');
@@ -6286,7 +6287,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v185';
+const APP_VER = 'v186';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
