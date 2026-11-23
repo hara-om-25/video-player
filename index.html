@@ -383,6 +383,12 @@ html body.f-wave #btnMark { color: var(--star); }
 /* аудіоплеєр (v158): жовта з чорними літерами — лише «Встановити»; решта кнопок — чорні з жовтими літерами й обводкою */
 html body.f-wave button.accent:not(#btnInstall):not(#btnAdd), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
 html body.f-wave #btnInstall, html body.f-wave #btnAdd { background: var(--accent); color: #111; border-color: var(--accent); }   /* «+» — жовта, як «Встановити» (v160) */
+body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
+html body.f-wave .wzbox .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
+/* «◁ 100% ▷» — з жовтою обводкою (v161) */
+html body.f-wave .tlzoom button { border: 1px solid var(--accent); background: var(--surf2); }
+html body.f-wave .tlzoom b { border: 1px solid var(--accent); border-radius: 7px; padding: 6px 4px; margin: 0 4px; }
 body.f-wave .ftspd { position: relative; flex: none; width: 60px; height: 38px; margin-left: 10px; }
 html body.f-wave .ftspd .vspeed { position: absolute; left: 2px; right: auto; top: auto; bottom: 0; width: 56px; height: 260px; z-index: 30; }
 body.f-wave .footer, body.f-wave .timeline { overflow: visible; }
@@ -5044,7 +5050,8 @@ const Tp = (() => {
    Тягнути пальцем уліво/вправо — перемотка; дотик — перейти в це місце. */
 const Wave = (() => {
   if (!FEAT.wave) return { reset: () => {} };
-  const cv = $('wave'), ctx = cv.getContext('2d'), WIN = 24, CH = 6, RATE = 50;   // RATE — піків на секунду
+  const cv = $('wave'), ctx = cv.getContext('2d'), CH = 6, RATE = 50;   // RATE — піків на секунду
+  let WIN = Math.min(600, Math.max(1, +getSetting('wwin', 10) || 10));      // скільки секунд видно (v161: 1…600, віконце над ★)
   let key = null, peaks = new Map(), queue = null, busy = false, whole = null, top = 0.05, ver = 0, lastKey = '';
   const reset = () => { key = tracks[cur] ? tracks[cur].key : null; peaks = new Map(); whole = null; top = 0.05; ver++; };
   const pk = (ab, from, n, step) => {        // n піків по step семплів, починаючи з from
@@ -5143,6 +5150,30 @@ const Wave = (() => {
     seek(g.moved ? g.t : g.t0 + (e.clientX - (r.left + r.width / 2)) / (r.width / WIN));
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
+  // віконце «скільки секунд видно» — як ×1: натиснув і ведеш угору (до 600 с) / вниз (до 1 с), подвійний дотик — 10 с
+  const wz = document.createElement('div'); wz.className = 'wzbox';
+  wz.innerHTML = '<div class="vspeed wz"><span class="vsl top">600</span><div class="vstrack"><i class="vsmid"></i></div><span class="vsl bot">1</span><b class="vsbox" title="Скільки секунд видно на доріжці: натисніть і ведіть вгору (до 600) чи вниз (до 1); подвійний дотик — 10">10</b></div>';
+  $('btnMark').before(wz);
+  const col = wz.firstElementChild, box = col.querySelector('.vsbox'), tr = col.querySelector('.vstrack'), LN = Math.log(600);
+  const nice = x => x < 10 ? Math.round(x) : x < 60 ? Math.round(x / 5) * 5 : x < 300 ? Math.round(x / 10) * 10 : Math.round(x / 30) * 30;
+  const setWin = (w, save = true) => {
+    WIN = Math.min(600, Math.max(1, nice(w))); box.textContent = WIN; ver++;
+    if (zd) { const h = tr.offsetHeight; box.style.top = (tr.offsetTop + h * (1 - Math.log(WIN) / LN)) + 'px'; }
+    if (save) setSetting('wwin', WIN);
+  };
+  let zd = null, zTap = 0;
+  box.addEventListener('pointerdown', e => { e.preventDefault(); box.setPointerCapture(e.pointerId); zd = { y: e.clientY, v: Math.log(WIN) / LN, moved: false }; col.classList.add('drag'); });
+  box.addEventListener('pointermove', e => {
+    if (!zd) return; const dy = zd.y - e.clientY; if (Math.abs(dy) > 4) zd.moved = true;
+    if (zd.moved) setWin(Math.exp(Math.max(0, Math.min(1, zd.v + dy / (tr.getBoundingClientRect().height || 240))) * LN));
+  });
+  const zup = () => {
+    if (!zd) return; const tap = !zd.moved; zd = null; col.classList.remove('drag'); box.style.top = '';
+    if (!tap) return; const now = performance.now();
+    if (now - zTap < 350) { zTap = 0; setWin(10); } else zTap = now;
+  };
+  box.addEventListener('pointerup', zup); box.addEventListener('pointercancel', zup);
+  setWin(WIN, false);
   return { reset };
 })();
 
@@ -6131,7 +6162,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v160';
+const APP_VER = 'v161';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
