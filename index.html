@@ -502,11 +502,13 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider:not(.f-wave) .tpad { bottom: calc(70px + env(safe-area-inset-bottom)); }   /* v209: проміжок до ▷ % ×1 — 22 px */
   /* як в аудіоплеєрі: шкала тягнеться до ▷, далі «%» і ×1 (×1 — під «+10») */
   html body.f-vslider:not(.f-wave) .brow { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); height: 44px;
-    display: grid; grid-template-columns: 38px 64px calc((268px - 24px) / 5); gap: 6px; align-items: end; height: 38px; }
+    display: grid; grid-template-columns: 38px 64px calc((268px - 24px) / 5) calc((268px - 24px) / 5); gap: 6px; align-items: end; height: 38px; }
+  html body.f-vslider:not(.f-wave) .brow #btnFs { position: static; display: block; grid-column: 4; width: auto; height: 38px; padding: 6px; }
+  html body.fs.f-vslider:not(.f-wave) .brow #btnFs { visibility: hidden; }
   html body.f-vslider:not(.f-wave) .brow > * { height: 38px; }   /* v209: розміром як в аудіоплеєрі */
   html body.f-vslider:not(.f-wave) .brow #tlR { grid-column: 1; width: auto; height: 38px; }
   html body.f-vslider:not(.f-wave) .brow .tlzoom { grid-column: 2; width: auto; margin: 0; }
-  html body.f-vslider:not(.f-wave):not(.fs) .footer { padding-right: calc(10px + 38px + 64px + (268px - 24px) / 5 + 12px + 8px); }
+  html body.f-vslider:not(.f-wave):not(.fs) .footer { padding-right: calc(10px + 38px + 64px + (268px - 24px) / 5 * 2 + 18px + 8px); }
   html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz, html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { width: 100%; }
   html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { height: 38px; display: flex; align-items: center; justify-content: center; padding: 0 2px; }
   html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 3; width: auto; height: 38px; }
@@ -514,7 +516,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { height: 38px; }
   html body.fs.f-vslider:not(.f-wave) .brow { opacity: .85; }
   /* v210: на весь екран шкала — до ▷ масштабу; вихід — вище, ліворуч від кнопок (не на шкалі) */
-  html body.fs.f-vslider:not(.f-wave) .timeline { right: calc(10px + 38px + 64px + (268px - 24px) / 5 + 12px + 8px); }
+  html body.fs.f-vslider:not(.f-wave) .timeline { right: calc(10px + 38px + 64px + (268px - 24px) / 5 * 2 + 18px + 8px); }
   html body.fs.f-vslider:not(.f-wave) .fsexit { right: calc(268px + 10px + 10px); bottom: calc(70px + env(safe-area-inset-bottom)); }
   html body.fs.f-vslider .actions .r2 { position: fixed; z-index: 16; left: auto; right: calc(10px + var(--kc) * 2 + 12px); width: calc(var(--kc) * 3 + 11px); bottom: var(--fb); gap: 6px; opacity: .85; }
   html body.fs.f-vslider #btnMark { position: fixed; z-index: 16; top: auto; left: auto; right: 10px; width: var(--kc); height: 44px; margin: 0; bottom: var(--fb); opacity: .85; }
@@ -3737,7 +3739,7 @@ if (FEAT.hdrpl) {
     sp.className = 'ftspd'; sp.appendChild($('vspeed'));
     tl.append(document.querySelector('.tlzoom'), sp);
     if (!matchMedia('(max-width: 860px)').matches) {   // v207: планшет — ▷ % ×1 окремим рядком під кнопками ◁ ▷
-      const br = document.createElement('div'); br.className = 'brow'; br.append($('tlR'), document.querySelector('.tlzoom'), sp); document.body.appendChild(br);
+      const br = document.createElement('div'); br.className = 'brow'; br.append($('tlR'), document.querySelector('.tlzoom'), sp, $('btnFs')); document.body.appendChild(br);   // v214: «на весь екран» — у самому кутку, праворуч від ×1
     }
   }
   const open = on => {
@@ -6455,7 +6457,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v213';
+const APP_VER = 'v214';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
