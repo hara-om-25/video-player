@@ -506,6 +506,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
     display: grid; grid-template-columns: 38px 64px calc((268px - 24px) / 5) calc((268px - 24px) / 5); gap: 6px; align-items: end; height: 38px; }
   html body.f-vslider:not(.f-wave) .brow #btnFs { position: static; display: block; grid-column: 4; width: auto; height: 38px; padding: 6px; }
   html body.fs.f-vslider:not(.f-wave) .brow #btnFs { visibility: hidden; }
+  html body.f-vslider:not(.f-wave) .brow #btnFs, html body.fs.f-vslider:not(.f-wave) .fsexit { background: var(--surf2); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; box-sizing: border-box; }   /* v216: як ×1 / 30% */
   html body.f-vslider:not(.f-wave) .brow > * { height: 38px; }   /* v209: розміром як в аудіоплеєрі */
   html body.f-vslider:not(.f-wave) .brow #tlR { grid-column: 1; width: auto; height: 38px; }
   html body.f-vslider:not(.f-wave) .brow .tlzoom { grid-column: 2; width: auto; margin: 0; }
@@ -515,7 +516,8 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 3; width: auto; height: 38px; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { width: 100%; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { height: 38px; }
-  html body.fs.f-vslider:not(.f-wave) .brow { opacity: .85; }
+  html body.fs.f-vslider:not(.f-wave) .brow, html body.fs.f-vslider:not(.f-wave) .fsexit { opacity: .85; }
+  html body.fs.f-vslider:not(.f-wave) .fsexit { background: rgba(0,0,0,.55); }
   /* v210: на весь екран шкала — до ▷ масштабу; вихід — вище, ліворуч від кнопок (не на шкалі) */
   html body.fs.f-vslider:not(.f-wave) .timeline { right: calc(10px + 38px + 64px + (268px - 24px) / 5 * 2 + 18px + 8px); }
   html body.fs.f-vslider:not(.f-wave) .fsexit { right: calc(268px + 10px + 10px); bottom: calc(70px + env(safe-area-inset-bottom)); }
@@ -6458,7 +6460,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v215';
+const APP_VER = 'v216';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
