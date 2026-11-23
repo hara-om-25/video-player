@@ -320,7 +320,16 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 .timeline { padding: 6px 16px 0; display: flex; align-items: center; gap: 10px; }
 .timeline .bar { flex: 1; min-width: 0; }
 /* масштаб шкали: ◁ 100% ▷ */
-.tlzoom { flex: none; display: flex; align-items: center; gap: 2px; }
+.tlzoom { flex: none; display: flex; align-items: center; gap: 2px; position: relative; width: 64px; height: 38px; }
+.tlzoom #tlIn, .tlzoom #tlOut { display: none; }        /* v165: замість ◁ ▷ — «100%» тягнеться, як ×1 */
+html body .tlzoom .vspeed.tz { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: 64px; height: 220px; z-index: 30; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; }
+html body .tlzoom .vspeed.tz .vsbox { pointer-events: auto; min-width: 0; width: 64px; box-sizing: border-box; padding: 8px 2px; font-size: 14px;
+  background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
+/* ◁ ▷ на краях шкали — лише коли масштаб менший за 100% */
+.tledge { display: none; flex: none; width: 34px; height: 34px; padding: 0; font-size: 16px; color: var(--accent); background: var(--surf2); border: 1px solid var(--accent); border-radius: 7px; }
+body.tlz .tledge { display: block; }
+.tledge:disabled { opacity: .3; }
 .tlzoom button { width: 30px; height: 30px; padding: 0; font-size: 15px; color: var(--accent); background: var(--surf2); border: 1px solid var(--surf3); border-radius: 7px; }
 .tlzoom button:disabled { opacity: .35; }
 .tlzoom b { min-width: 3.2em; text-align: center; color: var(--accent); font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
@@ -393,8 +402,7 @@ body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
 html body.f-wave .wzbox .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 /* «◁ 100% ▷» — з жовтою обводкою (v161) */
-html body.f-wave .tlzoom button { border: 1px solid var(--accent); background: var(--surf2); height: 38px; width: 38px; }
-html body.f-wave .tlzoom b { border: 1px solid var(--accent); border-radius: 7px; padding: 0 4px; margin: 0 4px; height: 38px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+body.f-wave .tledge { height: 38px; width: 38px; }
 html body.f-wave .wzbox .vsbox, html body.f-wave .ftspd .vsbox { min-width: 0; width: var(--kw, 56px); box-sizing: border-box; }
 body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 10px; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
 html body.f-wave .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; }
@@ -819,6 +827,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 <div class="footer">
   <div class="timeline">
     <div class="tlzoom" title="Масштаб шкали: скільки відсотків запису видно"><button id="tlIn" title="Збільшити (видно менше)">◁</button><b id="tlPct">100%</b><button id="tlOut" title="Зменшити (видно більше)">▷</button></div>
+    <button class="tledge" id="tlL" title="Показати раніше">◁</button>
     <div class="bar" id="bar">
       <div class="track"></div>
       <div class="sel" id="sel"></div>
@@ -826,6 +835,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
       <div class="fill" id="fill"></div>
       <div class="knob" id="knob"></div>
     </div>
+    <button class="tledge" id="tlR" title="Показати далі">▷</button>
   </div>
   <div class="lastrow">
     <button class="act last" data-last="60" title="Останні 60 секунд — і відтворити">60с</button>
@@ -5205,22 +5215,26 @@ let lastPosSave = 0;
 const TL_PCTS = [100, 50, 25, 10, 5, 2, 1];
 let tlPct = getSetting('tlPct', 100), tlWin = null, tlLastA = null;
 if (!TL_PCTS.includes(tlPct)) tlPct = 100;
+let tlFix = null;     // v165: ◁ / ▷ на краях шкали — вікно посунуте вручну (початок), доки не торкнешся шкали
 function tlView(tt) {
   if (tlWin) return tlWin;
   const a0 = T0(), sp = span();
   if (tlPct >= 100) return [a0, sp];
   const w = sp * tlPct / 100, t = tt ?? (Rev.active ? Rev.time() : audio.currentTime) ?? 0;
+  if (tlFix != null) return [Math.min(Math.max(a0, tlFix), a0 + sp - w), w];
   return [Math.min(Math.max(a0, t - w / 2), a0 + sp - w), w];
 }
 const tlX = (t, v = tlView()) => (t - v[0]) / v[1] * 100;
 function setTlPct(p) {
-  tlPct = p; setSetting('tlPct', p); $('tlPct').textContent = (p < 1 ? p.toFixed(1) : p) + '%';
+  tlPct = p; tlFix = null; setSetting('tlPct', p); $('tlPct').textContent = (p < 1 ? p.toFixed(1) : p) + '%';
+  document.body.classList.toggle('tlz', p < 100);
   $('tlIn').disabled = p <= TL_PCTS[TL_PCTS.length - 1]; $('tlOut').disabled = p >= 100;
   tlLastA = null; renderBar(); updateTime();
 }
 function updateTime(tt) {
   const d = dur(), t = tt ?? (audio.currentTime || 0), v = tlView(t), p = d ? Math.max(0, Math.min(100, tlX(t, v))) : 0;
   if (tlPct < 100 && v[0] !== tlLastA) { tlLastA = v[0]; renderBar(v); }   // вікно зсунулось — мітки на шкалі переставити
+  if (tlPct < 100) { $('tlL').disabled = v[0] <= T0() + 1e-3; $('tlR').disabled = v[0] + v[1] >= T0() + span() - 1e-3; }
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
   $('tCur').textContent = hms(t - T0());
@@ -5252,14 +5266,37 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
     scrub(at(e));
   });
   bar.addEventListener('pointermove', e => { if (drag) scrub(at(e)); });
-  const end = () => { drag = false; tlWin = null; if (pend != null) { const t = pend; pend = null; if (!audio.seeking) seek(t); else pend = t; } updateTime(pend ?? undefined); };
+  const end = () => { drag = false; tlWin = null; tlFix = null; if (pend != null) { const t = pend; pend = null; if (!audio.seeking) seek(t); else pend = t; } updateTime(pend ?? undefined); };
   bar.addEventListener('pointerup', end);
   bar.addEventListener('pointercancel', end);
   // коліщатко миші над шкалою — масштаб
   bar.addEventListener('wheel', e => { e.preventDefault(); const i = TL_PCTS.indexOf(tlPct) + (e.deltaY < 0 ? 1 : -1); if (i >= 0 && i < TL_PCTS.length) setTlPct(TL_PCTS[i]); }, { passive: false });
   $('tlIn').onclick = () => { const i = TL_PCTS.indexOf(tlPct); if (i < TL_PCTS.length - 1) setTlPct(TL_PCTS[i + 1]); };
   $('tlOut').onclick = () => { const i = TL_PCTS.indexOf(tlPct); if (i > 0) setTlPct(TL_PCTS[i - 1]); };
-  $('tlPct').ondblclick = () => setTlPct(100);
+  // ◁ / ▷ на краях: посунути видиму частину шкали на 80% вікна
+  const pan = dir => { const v = tlView(); tlFix = v[0] + dir * v[1] * 0.8; tlLastA = null; updateTime(); };
+  $('tlL').onclick = () => pan(-1); $('tlR').onclick = () => pan(1);
+  // «100%» — як ×1: натиснув і ведеш угору (більше видно) / вниз (менше), подвійний дотик — 100% (v165)
+  const zb = $('tlPct'), zc = document.createElement('div'), N = TL_PCTS.length;
+  zc.className = 'vspeed tz';
+  zc.innerHTML = '<span class="vsl top">100%</span><div class="vstrack"><i class="vsmid" style="display:none"></i></div><span class="vsl bot">1%</span>';
+  zb.classList.add('vsbox'); zb.title = 'Масштаб шкали: натисніть і ведіть вгору (видно більше) чи вниз (менше); подвійний дотик — 100%';
+  zc.appendChild(zb); document.querySelector('.tlzoom').appendChild(zc);
+  const ztr = zc.querySelector('.vstrack'); let zd = null, zt = 0;
+  const vOf = p => 1 - TL_PCTS.indexOf(p) / (N - 1);
+  zb.addEventListener('pointerdown', e => { e.preventDefault(); zb.setPointerCapture(e.pointerId); zd = { y: e.clientY, v: vOf(tlPct), moved: false }; zc.classList.add('drag'); });
+  zb.addEventListener('pointermove', e => {
+    if (!zd) return; const dy = zd.y - e.clientY; if (Math.abs(dy) > 4) zd.moved = true; if (!zd.moved) return;
+    const v = Math.max(0, Math.min(1, zd.v + dy / (ztr.getBoundingClientRect().height || 200))), p = TL_PCTS[Math.round((1 - v) * (N - 1))];
+    if (p !== tlPct) setTlPct(p);
+    zb.style.top = (ztr.offsetTop + ztr.offsetHeight * (1 - vOf(tlPct))) + 'px';
+  });
+  const zup = () => {
+    if (!zd) return; const tap = !zd.moved; zd = null; zc.classList.remove('drag'); zb.style.top = '';
+    if (!tap) return; const now = performance.now();
+    if (now - zt < 350) { zt = 0; setTlPct(100); } else zt = now;
+  };
+  zb.addEventListener('pointerup', zup); zb.addEventListener('pointercancel', zup);
 })();
 
 function renderBar(vv) {
@@ -6172,7 +6209,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v164';
+const APP_VER = 'v165';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
