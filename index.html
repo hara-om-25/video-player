@@ -5080,7 +5080,11 @@ const Wave = (() => {
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
     const t = drag ? drag.t : Rev.active ? Rev.time() : audio.currentTime;
     pump(t);
-    const k = t.toFixed(3) + '|' + ver + '|' + W + 'x' + H; if (k === lastKey) return; lastKey = k;
+    // фрагменти й поточне виділення [ ] — зеленим (v159)
+    const rg = (data && data.clips ? data.clips.map(c => [c.start, c.end]) : []);
+    if (selStart != null || selEnd != null) rg.push([selStart != null ? selStart : -1e9, selEnd != null ? selEnd : 1e9, 1]);
+    const k = t.toFixed(3) + '|' + ver + '|' + W + 'x' + H + '|' + rg.join(';'); if (k === lastKey) return; lastKey = k;
+    const inClip = x => rg.some(r => x >= r[0] && x <= r[1]);
     ctx.clearRect(0, 0, W, H);
     const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(1, Math.round(d));
     const lo = T0(), hi = T1();
@@ -5091,8 +5095,15 @@ const Wave = (() => {
       for (let s = ta; s < tb; s += 1 / RATE) { const v = at(s); if (v < 0) { miss = true; break; } if (v > m) m = v; }
       if (miss) { ctx.fillStyle = 'rgba(255,210,63,.18)'; ctx.fillRect(x, mid - d / 2, bw, d); continue; }
       const h = Math.max(d, Math.sqrt(m / top) * amp);
-      ctx.fillStyle = ta < t ? '#ffd23f' : 'rgba(255,210,63,.75)';
+      ctx.fillStyle = inClip((ta + tb) / 2) ? (ta < t ? '#5fd35f' : 'rgba(76,175,80,.85)') : ta < t ? '#ffd23f' : 'rgba(255,210,63,.75)';
       ctx.fillRect(x, mid - h, bw, h * 2);
+    }
+    // дужки [ ] на краях фрагментів
+    ctx.strokeStyle = '#4caf50'; ctx.lineWidth = Math.max(2, 2.5 * d);
+    for (const r of rg) for (const [tt, dir] of [[r[0], 1], [r[1], -1]]) {
+      const x = (tt - t0) * pps; if (x < -10 || x > W + 10) continue;
+      const w = 7 * d, y0 = d * 2, y1 = H - d * 2;
+      ctx.beginPath(); ctx.moveTo(x + dir * w, y0); ctx.lineTo(x, y0); ctx.lineTo(x, y1); ctx.lineTo(x + dir * w, y1); ctx.stroke();
     }
     // мітки — тонкі риски
     if (data) for (const mk of data.marks) { const x = (mk.t - t0) * pps; if (x >= 0 && x <= W) { ctx.fillStyle = 'rgba(255,214,63,.5)'; ctx.fillRect(x - d / 2, 0, d, H * 0.18); } }
@@ -6108,7 +6119,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v158';
+const APP_VER = 'v159';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
