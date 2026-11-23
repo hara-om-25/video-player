@@ -500,14 +500,16 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.fs.f-vslider { --kc: calc((268px - 24px) / 5); --fb: calc(10px + env(safe-area-inset-bottom) + 50px + 106px + 12px); }
   /* v207: блок кнопок піднято на рядок; під ним, на рівні шкали, — ▷ масштабу, «%» і ×1 */
   html body.f-vslider:not(.f-wave) .tpad { bottom: calc(60px + env(safe-area-inset-bottom)); }
-  html body.f-vslider:not(.f-wave) .brow { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); width: 268px; height: 44px;
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; align-items: stretch; }
+  /* як в аудіоплеєрі: шкала тягнеться до ▷, далі «%» і ×1 (×1 — під «+10») */
+  html body.f-vslider:not(.f-wave) .brow { position: fixed; z-index: 15; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); height: 44px;
+    display: grid; grid-template-columns: 44px 88px calc((268px - 24px) / 5); gap: 6px; align-items: stretch; }
   html body.f-vslider:not(.f-wave) .brow > * { height: 44px; }
   html body.f-vslider:not(.f-wave) .brow #tlR { grid-column: 1; width: auto; height: 44px; }
-  html body.f-vslider:not(.f-wave) .brow .tlzoom { grid-column: 2 / span 2; width: auto; margin: 0; }
+  html body.f-vslider:not(.f-wave) .brow .tlzoom { grid-column: 2; width: auto; margin: 0; }
+  html body.f-vslider:not(.f-wave):not(.fs) .footer { padding-right: calc(10px + 44px + 88px + (268px - 24px) / 5 + 12px + 8px); }
   html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz, html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { width: 100%; }
   html body.f-vslider:not(.f-wave) .brow .tlzoom .vspeed.tz .vsbox { height: 44px; display: flex; align-items: center; justify-content: center; padding: 0 2px; }
-  html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 4 / span 2; width: auto; height: 44px; }
+  html body.f-vslider:not(.f-wave) .brow .ftspd { grid-column: 3; width: auto; height: 44px; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed, html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { width: 100%; }
   html body.f-vslider:not(.f-wave) .brow .ftspd .vspeed .vsbox { height: 44px; }
   html body.fs.f-vslider:not(.f-wave) .brow { opacity: .85; }
@@ -6443,7 +6445,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v207';
+const APP_VER = 'v208';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
