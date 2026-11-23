@@ -365,8 +365,7 @@ body.f-wave .vidbox { display: none; }
 body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
-body.f-wave .panel.playlist > .stagelogo { display: block; flex: 1 1 auto; min-height: 120px; width: 62%; max-width: 260px; margin: 0 auto; }
-body.f-wave .panel.playlist .fragsec { flex: 0 1 auto; }
+body.f-wave .panel.side > .stagelogo { display: block; flex: 1 1 auto; min-height: 120px; width: 62%; max-width: 260px; margin: 0 auto; }
 body.f-wave .fragsec .item { flex-wrap: nowrap; align-items: flex-start; }
 body.f-wave .fragsec .item .col { flex: 1 1 auto; }
 body.f-wave .fragsec .item .acts { width: auto; padding-left: 0; gap: 10px; flex: none; }
@@ -391,8 +390,8 @@ body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
 html body.f-wave .wzbox .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 /* «◁ 100% ▷» — з жовтою обводкою (v161) */
-html body.f-wave .tlzoom button { border: 1px solid var(--accent); background: var(--surf2); }
-html body.f-wave .tlzoom b { border: 1px solid var(--accent); border-radius: 7px; padding: 6px 4px; margin: 0 4px; }
+html body.f-wave .tlzoom button { border: 1px solid var(--accent); background: var(--surf2); height: 38px; width: 38px; }
+html body.f-wave .tlzoom b { border: 1px solid var(--accent); border-radius: 7px; padding: 0 4px; margin: 0 4px; height: 38px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
 html body.f-wave .wzbox .vsbox, html body.f-wave .ftspd .vsbox { min-width: 0; width: var(--kw, 56px); box-sizing: border-box; }
 body.f-wave .ftspd { position: relative; flex: none; width: var(--kw, 56px); height: 38px; margin-left: 10px; margin-right: 11px; }   /* правий край — як у стовпчика над ним */
 html body.f-wave .ftspd .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; }
@@ -407,13 +406,14 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .waverow { flex: none; height: 120px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
   body.f-wave .tpad .key.sm { font-size: 16px; }
-  body.f-wave .panel.playlist > .stagelogo { max-width: 90px; flex: none; }
+  body.f-wave .panel.side > .stagelogo { max-width: 90px; flex: none; min-height: 0; }
 }
 @media (min-width: 861px) {
   body.f-wave { --tpW: 0px; --tpH: 0px; }
   body.f-wave main { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); grid-template-rows: minmax(0, 1fr) auto; }
-  body.f-wave .panel.playlist { grid-column: 1; grid-row: 1 / span 2; }
-  body.f-wave .panel.side { grid-column: 2; grid-row: 1; }
+  /* v163: мітки — ліворуч на всю висоту (з логотипом), фрагменти — праворуч угорі */
+  body.f-wave .panel.side { grid-column: 1; grid-row: 1 / span 2; }
+  body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
   body.f-wave .panel.stage { height: 218px; }
@@ -425,7 +425,7 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .tpad .key.big svg { width: 44px; height: 44px; }   /* ▷ — більша (v162) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
-  html body.f-wave .panel.side > .sec { position: absolute; inset: 0; }   /* мітки — уся ширина */
+  html body.f-wave .panel.side > .sec { position: static; flex: 0 1 auto; min-height: 0; }
 }
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
 body.f-vspd .vspeed .vsbox, #btnMark { border-color: var(--accent) !important; }
@@ -3551,7 +3551,7 @@ if (FEAT.hdrpl) {
   pop.appendChild($('playlist'));
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
   if (FEAT.wave) {        // аудіоплеєр: логотип — у «Фрагментах», кнопки ◁ ▷ — у рядку з часом
-    document.querySelector('.panel.playlist').appendChild(document.querySelector('.stagelogo'));
+    document.querySelector('.panel.side').appendChild(document.querySelector('.stagelogo'));   // v163: логотип — під мітками (ліворуч)
     document.querySelector('.markctl.ovl').appendChild($('tpad'));
     // ×1 і ★ — праворуч від звукової доріжки (v156)
     const row = document.createElement('div'), rail = document.createElement('div');
@@ -5112,7 +5112,7 @@ const Wave = (() => {
     const k = t.toFixed(3) + '|' + ver + '|' + W + 'x' + H + '|' + rg.join(';'); if (k === lastKey) return; lastKey = k;
     const inClip = x => rg.some(r => x >= r[0] && x <= r[1]);
     ctx.clearRect(0, 0, W, H);
-    const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(1, Math.round(d));
+    const pps = W / WIN, t0 = t - WIN / 2, mid = H / 2, amp = H * 0.46, bw = Math.max(1, Math.round(2 * d)), gap = Math.max(2, Math.round(2.5 * d));   // v163: рисок на третину менше
     const lo = T0(), hi = T1();
     for (let x = 0; x < W; x += bw + gap) {
       const ta = t0 + x / pps, tb = t0 + (x + bw + gap) / pps;
@@ -6169,7 +6169,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v162';
+const APP_VER = 'v163';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
