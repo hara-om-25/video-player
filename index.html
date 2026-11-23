@@ -440,7 +440,10 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) + 30px) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 30px); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
   body.f-wave .tpad .key.sm { font-size: 16px; height: var(--kw); }
-  body.f-wave .tpad .key.big { height: calc(var(--kw) + 30px); }
+  body.f-wave .tpad .key.big { height: calc(var(--kw) + 30px); position: relative; top: 20px; }   /* v174: ▷ трохи залазить нижче панелі */
+  body.f-wave .tpad { align-items: end; }
+  body.f-wave .markctl.ovl { align-items: flex-end; margin-bottom: -2px; }
+  body.f-wave .panel.stage { padding-bottom: 8px; }
   body.f-wave .tpad .key.big svg { width: calc(var(--kw) * 0.95); height: calc(var(--kw) * 0.95); }   /* ▷ — великий квадрат (v168) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
@@ -6252,7 +6255,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v173';
+const APP_VER = 'v174';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
