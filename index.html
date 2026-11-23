@@ -770,8 +770,8 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 <button id="btnFsExit" class="fsbtn fsexit" title="Вийти з повного екрана  ( Esc )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></svg></button>
 <svg class="jog" id="jog" viewBox="-115 -115 230 230" aria-label="Регулятор прокрутки"></svg>
 <div class="tpad" id="tpad">
-  <button class="key sm" data-r="-10" title="Назад ×10"><i></i></button><button class="key sm" data-r="-5" title="Назад ×5"><i></i></button><button class="key sm" data-r="-2" title="Назад ×2"><i></i></button>
-  <button class="key sm" data-r="2" title="Вперед ×2"><i></i></button><button class="key sm" data-r="5" title="Вперед ×5"><i></i></button><button class="key sm" data-r="10" title="Вперед ×10"><i></i></button>
+  <button class="key sm" data-r="-10" title="Назад на 10 с"><i></i></button><button class="key sm" data-r="-5" title="Назад на 5 с"><i></i></button><button class="key sm" data-r="-2" title="Назад на 2 с"><i></i></button>
+  <button class="key sm" data-r="2" title="Вперед на 2 с"><i></i></button><button class="key sm" data-r="5" title="Вперед на 5 с"><i></i></button><button class="key sm" data-r="10" title="Вперед на 10 с"><i></i></button>
   <button class="key big" data-r="-1" title="Назад (зі швидкістю з віконця)"><i></i></button><button class="key big" data-r="1" title="Пуск / пауза"><i></i></button>
 </div>
 
@@ -4871,9 +4871,9 @@ const JOG_LIM = 45;   // ±45° = ±5.0: на краю ямка заходить
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
 })();
 
-/* ── кнопки ◁ ▷ і швидкості −10 −5 −2 / 2 5 10 (замість РП, з v148) ──
+/* ── кнопки ◁ ▷ і перескоку −10 −5 −2 / 2 5 10 с (замість РП, з v148) ──
    ▷ — пуск / пауза (швидкість з віконця); ◁ — відтворення назад зі швидкістю з віконця;
-   малі — назад / вперед з цією швидкістю. Увімкнена кнопка світиться; ще раз — пауза.
+   малі — перескок назад / вперед на стільки секунд (з v150). Увімкнена кнопка світиться; ще раз — пауза.
    Вигляд: жовтий прозорий пластик, верх рівно пофарбований чорним, знаки вигравірувані лазером до пластику (paintKey). */
 const Tp = (() => {
   const pad = $('tpad'), keys = [...pad.querySelectorAll('.key')];
@@ -4926,6 +4926,13 @@ const Tp = (() => {
     } finally { switching = false; }
     render();
   }
+  // −10 −5 −2 / 2 5 10 — перескок на стільки секунд; пауза лишається паузою, відтворення (і назад теж) триває
+  function jump(sec) {
+    if (!hasTrack()) return toast('Спочатку відкрийте файл');
+    clipStopAt = null;
+    if (mode < 0) { const was = mode, t = Rev.active ? Rev.time() : audio.currentTime; set(0); seek(t + sec); set(was); return; }
+    seek(audio.currentTime + sec);
+  }
   keys.forEach(k => {
     k.addEventListener('pointerdown', e => { e.preventDefault(); k.classList.add('down'); click(true); try { k.setPointerCapture(e.pointerId); } catch {} });
     const up = (e, go) => {
@@ -4935,7 +4942,8 @@ const Tp = (() => {
       const r = k.getBoundingClientRect(); if (e.clientX < r.left - 10 || e.clientX > r.right + 10 || e.clientY < r.top - 10 || e.clientY > r.bottom + 10) return;
       const v = +k.dataset.r;
       if (v === 1) set(mode === 1 && !audio.paused ? 0 : 1);          // ▷ — пуск / пауза
-      else set(mode === v ? 0 : v);                                    // ще раз ту саму — стоп
+      else if (v === -1) set(mode === -1 ? 0 : -1);                    // ◁ — назад / стоп
+      else jump(v);                                                    // малі — перескок на стільки секунд
       if (FEAT.video && audio.videoWidth && mode >= 0 && audio.paused) Rev.prepareSoon();
     };
     k.addEventListener('pointerup', e => up(e, true)); k.addEventListener('pointercancel', e => up(e, false));
@@ -5963,7 +5971,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v149';
+const APP_VER = 'v150';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
