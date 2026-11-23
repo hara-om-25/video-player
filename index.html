@@ -365,7 +365,7 @@ body.f-wave .vidbox { display: none; }
 body.f-wave .wave { display: block; flex: 1; min-height: 70px; width: 100%; touch-action: none; cursor: grab; }
 body.f-wave .panel.stage { padding: 8px 10px 10px; gap: 8px; }
 body.f-wave .markctl.ovl { position: static; display: flex; align-items: center; justify-content: flex-start; gap: 18px; pointer-events: auto; }
-body.f-wave .panel.side > .stagelogo { display: block; flex: 1 1 auto; min-height: 120px; width: 62%; max-width: 260px; margin: 0 auto; }
+body.f-wave .panel.side > .stagelogo { display: block; flex: 0 1 260px; min-height: 0; height: 260px; width: auto; aspect-ratio: 1; max-width: 62%; margin: auto; }   /* посередині вільного місця; стискається, а не мітки */
 body.f-wave .fragsec .item { flex-wrap: nowrap; align-items: flex-start; }
 body.f-wave .fragsec .item .col { flex: 1 1 auto; }
 body.f-wave .fragsec .item .acts { width: auto; padding-left: 0; gap: 10px; flex: none; }
@@ -384,8 +384,11 @@ html body.f-wave #btnMark { position: static; width: var(--kw, 56px); height: 50
 html body.f-wave .vspeed .vsbox, html body.f-wave #btnMark { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
 html body.f-wave #btnMark { color: var(--star); }
 /* аудіоплеєр (v158): жовта з чорними літерами — лише «Встановити»; решта кнопок — чорні з жовтими літерами й обводкою */
-html body.f-wave button.accent:not(#btnInstall):not(#btnAdd), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
-html body.f-wave #btnInstall, html body.f-wave #btnAdd { background: var(--accent); color: #111; border-color: var(--accent); }   /* «+» — жовта, як «Встановити» (v160) */
+html body.f-wave button.accent:not(#btnInstall):not(#btnAdd):not(#btnSaveClip), html body.f-wave .hbtn, html body.f-wave .hsq.accent { background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }
+html body.f-wave #btnInstall, html body.f-wave #btnAdd, html body.f-wave #btnSaveClip { background: var(--accent); color: #111; border-color: var(--accent); }
+html body.f-wave .warail #btnSaveClip { width: var(--kw, 56px); height: 42px; margin-bottom: 8px; padding: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 12px; line-height: 1.05; }
+html body.f-wave .warail #btnSaveClip b { font-size: 15px; }
+html body.f-wave .panel.side .actions { border-top: 0; }   /* v164: без смужки під мітками */   /* «+» — жовта, як «Встановити» (v160) */
 body.f-wave .wzbox { position: relative; height: 38px; margin-bottom: 8px; }
 html body.f-wave .wzbox .vspeed { position: absolute; left: 0; right: auto; top: auto; bottom: 0; width: var(--kw, 56px); height: 260px; z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 html body.f-wave .wzbox .vsbox { pointer-events: auto; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent) !important; }
@@ -403,7 +406,7 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   html body.f-wave .markctl.ovl { gap: 10px; }
 }
 @media (max-width: 860px) {
-  body.f-wave .waverow { flex: none; height: 120px; }
+  body.f-wave .waverow { flex: none; height: 160px; }
   body.f-wave .tpad { grid-template-columns: repeat(3, 1fr) 1.5fr repeat(3, 1fr); height: 54px; }
   body.f-wave .tpad .key.sm { font-size: 16px; }
   body.f-wave .panel.side > .stagelogo { max-width: 90px; flex: none; min-height: 0; }
@@ -416,7 +419,7 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
   body.f-wave .panel.stage { grid-column: 2; grid-row: 2; height: 230px; }
   /* кнопки — одним рядком −10 −5 −2 ▷ 2 5 10, квадратні (v156) */
-  body.f-wave .panel.stage { height: 218px; }
+  body.f-wave .panel.stage { height: 250px; }
   body.f-wave { --kw: 52px; }      /* ширина квадратних кнопок і стовпчика праворуч (віконце, ★, «10», ×1) — v162 */
   body.f-wave .tpad { position: static; width: auto; height: auto; margin-left: auto; grid-template-columns: repeat(3, var(--kw)) calc(var(--kw) * 2.3) repeat(3, var(--kw)); grid-template-rows: calc(var(--kw) + 12px); gap: 6px; align-items: center; }
   body.f-wave .tpad .key[data-r] { grid-row: 1; grid-column: auto; }
@@ -425,7 +428,7 @@ body.f-wave .timeline .tlzoom { margin-left: 10px; }
   body.f-wave .tpad .key.big svg { width: 44px; height: 44px; }   /* ▷ — більша (v162) */
   body.f-wave .markctl .sq { width: 46px; height: 46px; }
   body.f-wave .markctl .bigtime { font-size: 30px; }
-  html body.f-wave .panel.side > .sec { position: static; flex: 0 1 auto; min-height: 0; }
+  html body.f-wave .panel.side > .sec { position: static; flex: 0 0 auto; min-height: 0; max-height: 100%; }
 }
 /* віконце швидкості й ★ — з жовтою обводкою (з v153) */
 body.f-vspd .vspeed .vsbox, #btnMark { border-color: var(--accent) !important; }
@@ -3556,7 +3559,7 @@ if (FEAT.hdrpl) {
     // ×1 і ★ — праворуч від звукової доріжки (v156)
     const row = document.createElement('div'), rail = document.createElement('div');
     row.className = 'waverow'; rail.className = 'warail';
-    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); rail.append($('btnMark'));
+    const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); rail.append($('btnSaveClip'), $('btnMark'));   // v164: ⬇MP3 — над віконцем секунд
     // «◁ 100% ▷» — праворуч від шкали, ×1 — у самому кутку (v160)
     const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
     sp.className = 'ftspd'; sp.appendChild($('vspeed'));
@@ -6169,7 +6172,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v163';
+const APP_VER = 'v164';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
