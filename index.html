@@ -5227,7 +5227,7 @@ const Wave = (() => {
   box.addEventListener('pointerdown', e => { e.preventDefault(); box.setPointerCapture(e.pointerId); zd = { y: e.clientY, v: Math.log(WIN) / LN, moved: false }; col.classList.add('drag'); });
   box.addEventListener('pointermove', e => {
     if (!zd) return; const dy = zd.y - e.clientY; if (Math.abs(dy) > 4) zd.moved = true;
-    if (zd.moved) setWin(Math.exp(Math.max(0, Math.min(1, zd.v + dy / (tr.getBoundingClientRect().height || 240))) * LN));
+    if (zd.moved) { const w0 = WIN; setWin(Math.exp(Math.max(0, Math.min(1, zd.v + dy / (tr.getBoundingClientRect().height || 240))) * LN)); if (WIN !== w0) jogClick(); }
   });
   const zup = () => {
     if (!zd) return; const tap = !zd.moved; zd = null; col.classList.remove('drag'); box.style.top = '';
@@ -5333,7 +5333,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
   zb.addEventListener('pointermove', e => {
     if (!zd) return; const dy = zd.y - e.clientY; if (Math.abs(dy) > 4) zd.moved = true; if (!zd.moved) return;
     const v = Math.max(0, Math.min(1, zd.v + dy / (ztr.getBoundingClientRect().height || 200))), p = TL_PCTS[Math.round((1 - v) * (N - 1))];
-    if (p !== tlPct) setTlPct(p);
+    if (p !== tlPct) { setTlPct(p); jogClick(); }
     zb.style.top = (ztr.offsetTop + ztr.offsetHeight * (1 - vOf(tlPct))) + 'px';
   });
   const zup = () => {
@@ -6267,7 +6267,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v179';
+const APP_VER = 'v180';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -6363,7 +6363,7 @@ setSpeed(speed);
     if (!drag) return;
     const dy = drag.y - e.clientY; if (Math.abs(dy) > 4) drag.moved = true;
     const half = tr.getBoundingClientRect().height / 2 || 150;
-    if (drag.moved) apply(toSp(drag.v + dy / half));
+    if (drag.moved) { const ns = toSp(drag.v + dy / half); if (ns !== cur) { apply(ns); jogClick(); } }   // кожна зміна — клік, як у РП (v180)
   });
   const up = () => {
     if (!drag) return;
