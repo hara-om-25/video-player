@@ -684,6 +684,15 @@ body.f-ai #btnAI { display: inline-block; }
 #dlgFiles .df.had { opacity: .5; }
 #dlgFiles .row { flex-wrap: wrap; }
 #dlgSet .snote { margin-top: 12px; font-size: 12px; color: var(--dim); }
+/* v224: ⚙ і в аудіоплеєрі — лише вибір моделі розпізнавання; у відео — без неї */
+body.f-wave #btnSet { display: inline-block; }
+body.f-wave #dlgSet .vonly, body.f-wave #dlgSet .snote { display: none; }
+#dlgSet .sasr { display: none; }
+body.f-wave #dlgSet .sasr { display: block; margin-top: 10px; }
+#dlgSet .sasr > .sl { font-size: 15px; font-weight: 600; }
+#dlgSet .sasr > .sl small { display: block; color: var(--dim); font-size: 13px; font-weight: 400; margin-top: 2px; }
+#dlgSet .sasr label.srow small { color: var(--dim); white-space: normal; }
+#dlgSet .sasr input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: #8fe388; }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
 dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
@@ -1046,10 +1055,15 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
 
 <dialog id="dlgSet">
   <h3>Налаштування</h3>
-  <div class="srow"><span class="sl">Папка, яку відкриває «+»<small id="setOpenName">не обрано</small></span><button class="accent" id="setOpenBtn">Обрати</button></div>
-  <div class="srow"><span class="sl">Папка для збережених шматків<small id="setSaveName">не обрано — у «Завантаження»</small></span><button class="accent" id="setSaveBtn">Обрати</button></div>
-  <label class="srow"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
-  <label class="srow"><input type="checkbox" id="setSysFs"><span class="sl">Ховати панелі Android на весь екран<small style="color:var(--dim);white-space:normal">Chrome тоді щоразу показує підказку «щоб вийти з повноекранного режиму…»</small></span></label>
+  <div class="srow vonly"><span class="sl">Папка, яку відкриває «+»<small id="setOpenName">не обрано</small></span><button class="accent" id="setOpenBtn">Обрати</button></div>
+  <div class="srow vonly"><span class="sl">Папка для збережених шматків<small id="setSaveName">не обрано — у «Завантаження»</small></span><button class="accent" id="setSaveBtn">Обрати</button></div>
+  <label class="srow vonly"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
+  <label class="srow vonly"><input type="checkbox" id="setSysFs"><span class="sl">Ховати панелі Android на весь екран<small style="color:var(--dim);white-space:normal">Chrome тоді щоразу показує підказку «щоб вийти з повноекранного режиму…»</small></span></label>
+  <div class="sasr">   <!-- v224: аудіоплеєр — модель розпізнавання мови -->
+    <div class="sl">Розпізнавання мови в нотатки<small>Модель працює на планшеті; завантажується один раз</small></div>
+    <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
+    <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
+  </div>
   <div class="snote" id="setNote"></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
 </dialog>
@@ -3332,6 +3346,7 @@ $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
 // v223: розпізнавання мови (Whisper small у фоновому потоці asr/worker.js) — від мітки до наступної, шматками по 30 с
+const asrModel = () => (getSetting('asrModel', 'turbo') === 'small' ? 'small' : 'turbo');   // v224: модель — у ⚙
 const ASR = (() => {
   let w = null, seq = 0, run = 0;
   const wait = new Map();
@@ -3347,7 +3362,7 @@ const ASR = (() => {
     w.onerror = e => { for (const cb of wait.values()) cb.rej(new Error(e.message || 'фоновий потік не запустився')); wait.clear(); w = null; };
     return w;
   };
-  const call = (cmd, audio) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio }, audio ? [audio.buffer] : []); });
+  const call = (cmd, audio, model) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio, model }, audio ? [audio.buffer] : []); });
   const files = {};
   let onLoad = () => {};
   // шматок [a, b) файлу → Float32Array 16 кГц моно (файл не розпаковується цілком — через decodeClip)
@@ -3366,14 +3381,16 @@ const ASR = (() => {
     const next = data.marks.filter(x => x.t > m.t + 0.05).sort((x, y) => x.t - y.t)[0];
     const s0 = m.t, s1 = next ? next.t : dur();
     if (!(s1 - s0 > 0.5)) throw new Error('після мітки немає звуку');
-    if (!localStorage.getItem('asrLoaded')) {
-      const c = await pick('Розпізнавання мови', 'Модель розпізнавання (250–400 МБ) завантажиться один раз — краще через Wi-Fi. Далі працює без інтернету.', ['Завантажити']);
+    const model = asrModel(), MB = model === 'small' ? '≈ 390 МБ' : '≈ 540 МБ', NAME = model === 'small' ? 'Whisper small' : 'Whisper large-v3-turbo';
+    if (!localStorage.getItem('asrLoaded.' + model)) {
+      const c = await pick('Розпізнавання мови', 'Модель ' + NAME + ' (' + MB + ') завантажиться один раз — краще через Wi-Fi. Далі працює на планшеті без інтернету. Модель — у ⚙.', ['Завантажити']);
       if (c !== 0) return false;
     }
+    for (const k in files) delete files[k];
     onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; } status('Завантаження моделі… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
     status('Підготовка моделі…');
-    const r0 = await call('load');
-    try { localStorage.setItem('asrLoaded', '1'); } catch (e) {}
+    const r0 = await call('load', null, model);
+    try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
     const PIECE = 30, T = s1 - s0, t0 = performance.now();
     for (let a = s0; a < s1 - 0.2; a += PIECE) {
       if (my !== run) return false;
@@ -3382,7 +3399,7 @@ const ASR = (() => {
       const audio = await pcm(t, a, b);
       progress('');
       if (my !== run) return false;
-      const r = await call('run', audio);
+      const r = await call('run', audio, model);
       if (my !== run) return false;
       const txt = clean(r.text || '');
       if (txt) put(txt);
@@ -3693,6 +3710,7 @@ async function showSet() {
   $('setSaveName').textContent = sv ? sv.name : 'не обрано — у «Завантаження»';
   $('setStar').checked = !!editCfg.starEnd;
   $('setSysFs').checked = !!getSetting('sysFs', false);
+  document.querySelectorAll('#dlgSet input[name=asrModel]').forEach(r => { r.checked = r.value === asrModel(); });
   const can = !!window.showDirectoryPicker;
   $('setOpenBtn').disabled = $('setSaveBtn').disabled = !can;
   $('setNote').textContent = can ? '' : 'Цей браузер не дає обирати папки: «+» відкриває звичайне вікно вибору, а шматки зберігаються в «Завантаження».';
@@ -3705,6 +3723,7 @@ async function pickDir(key, mode) {
   } catch (err) { if (err.name !== 'AbortError') toast('Не вдалося обрати папку: ' + (err.message || err), 2500); }
 }
 $('btnSet').onclick = showSet;
+document.querySelectorAll('#dlgSet input[name=asrModel]').forEach(r => { r.onchange = () => { if (r.checked) setSetting('asrModel', r.value); }; });
 $('setOpenBtn').onclick = () => pickDir('dir:open', 'read');
 $('setSaveBtn').onclick = () => pickDir('dir:save', 'readwrite');
 $('setSysFs').onchange = e => {      // v188: діє одразу (дотик до галочки — дозволений жест для повного екрана)
@@ -6588,7 +6607,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v223';
+const APP_VER = 'v224';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
