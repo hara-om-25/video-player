@@ -306,6 +306,7 @@ html body.f-wave .item .acts .dlmp3 { color: var(--accent) !important; }   /* а
 .markctl .sq, .savectl .sq { width: 56px; height: 56px; padding: 0; border-radius: 10px; }
 .markctl .br { font-size: 26px; font-weight: 700; line-height: 1; }
 .markctl .br.set { border-color: var(--clip); color: var(--clip); }
+html body.f-wave .markctl .br:not(.set) { border-color: var(--accent); }   /* v220: [ ] ненатиснуті — з жовтою рамкою, як решта кнопок */
 .bigtime { text-align: center; font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--accent); }
 .savectl { display: flex; justify-content: flex-end; }
 .savectl .sq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
@@ -3299,11 +3300,11 @@ addEventListener('resize', placeDlg);
 $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
-function ask(title, text, value) {
+function ask(title, text, value, ph) {
   return new Promise(resolve => {
     const d = $('dlg');
     $('dlgTitle').textContent = title; $('dlgText').textContent = text || '';
-    $('dlgInput').value = value || '';
+    $('dlgInput').value = value || ''; $('dlgInput').placeholder = ph || '';   // v220: підказка в порожньому полі
     const done = v => { d.close(); resolve(v); };
     $('dlgCancel').onclick = () => done(null);
     d.oncancel = e => { e.preventDefault(); done(null); };
@@ -5537,7 +5538,7 @@ async function addMark() {
     data.marks.push(m); data.marks.sort((a, b) => a.t - b.t); selMark = m;
     save(); renderMarks(); renderBar(); renderPlaylist(); return toast('★ ' + fmt(t - T0()), 700);
   }
-  const name = await ask('Нова мітка · ' + fmt(t, true), 'Назва мітки', 'Мітка ' + (data.marks.length + 1));
+  const name = await ask('Нова мітка · ' + fmt(t, true), 'Назва мітки', '', 'Мітка ' + (data.marks.length + 1));   // v220: поле порожнє, «Мітка N» — лише підказка
   if (name === null) return;
   data.marks.push({ t, name: name || 'Мітка ' + (data.marks.length + 1) });
   data.marks.sort((a, b) => a.t - b.t);
@@ -6461,7 +6462,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v219';
+const APP_VER = 'v220';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
