@@ -696,6 +696,11 @@ body.f-wave #dlgSet .sasr { display: block; margin-top: 10px; }
 #asrDl .srow { margin-top: 8px; }
 #asrDl .srow button { background: var(--surf2); color: #ff8a80; border: 1px solid #ff8a80; }
 #dlgSet .sasr input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: #8fe388; }
+/* v227: невибраний перемикач — жовте кільце (не біле), вибраний — зелений; «Готово» — як «Видалити» */
+#dlgSet .sasr input[type=radio] { appearance: none; -webkit-appearance: none; margin: 0; border-radius: 50%; border: 2px solid var(--accent); background: var(--surf2); display: grid; place-content: center; cursor: pointer; }
+#dlgSet .sasr input[type=radio]:checked { border-color: #8fe388; }
+#dlgSet .sasr input[type=radio]:checked::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #8fe388; }
+html body.f-wave #dlgSet #asrDl .srow button, html body.f-wave #dlgSet #setOk { width: 120px; height: 44px; padding: 0; font-size: 15px; }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
 dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
@@ -6647,7 +6652,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v226';
+const APP_VER = 'v227';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
