@@ -279,6 +279,16 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 .item .acts button { background: none; border: none; padding: 6px 9px; color: var(--dim); font-size: 22px; line-height: 1; }
 .item .acts button:hover { background: var(--surf3); }
 .item .acts .retime { color: var(--star); }
+/* v221 (аудіоплеєр): значок нотаток перед часом і годинник замість ★ */
+.item .note { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; margin: -6px 0; padding: 0; background: none; border: 0; color: #6f7378; }
+.item .note.has { color: var(--accent); }
+.item .note svg, .item .acts .retime svg { width: 24px; height: 24px; display: block; pointer-events: none; }
+#dlgNote { width: min(760px, calc(100vw - 32px)); }
+#dlgNote h3 { margin: 0 0 10px; font-size: 17px; }
+#dlgNoteText { display: block; width: 100%; box-sizing: border-box; height: min(42vh, 360px); resize: none; padding: 10px 12px; font: inherit; font-size: 18px; line-height: 1.4;
+  background: var(--surf2); color: var(--text); border: 1px solid var(--accent); border-radius: 10px; user-select: text; }
+#dlgNote .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+#dlgNote .row button { height: 48px; min-width: 110px; }
 /* кольори значків у списках */
 .item .acts [data-a="play"] { color: #4caf50; }
 .item .acts [data-a="dl"]   { color: var(--accent); }
@@ -999,6 +1009,14 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
         <button value="ok" class="accent" id="dlgOk">OK</button>
       </div>
     </div>
+  </form>
+</dialog>
+
+<dialog id="dlgNote">   <!-- v221: нотатки до мітки (аудіоплеєр) -->
+  <form method="dialog" id="dlgNoteForm">
+    <h3 id="dlgNoteTitle"></h3>
+    <textarea id="dlgNoteText" rows="8" autocomplete="off" placeholder="Нотатки до мітки…"></textarea>
+    <div class="row"><button type="button" id="dlgNoteCancel">Скасувати</button><button class="accent" id="dlgNoteOk">Зберегти</button></div>
   </form>
 </dialog>
 
@@ -3300,6 +3318,18 @@ addEventListener('resize', placeDlg);
 $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
+function askNote(m) {   // v221: вікно нотаток — багато рядків, Enter — новий рядок
+  return new Promise(resolve => {
+    const d = $('dlgNote'), ta = $('dlgNoteText');
+    $('dlgNoteTitle').textContent = fmt(m.t - T0()) + '  ' + m.name; ta.value = m.note || '';
+    const done = v => { d.close(); resolve(v); };
+    $('dlgNoteCancel').onclick = () => done(null);
+    d.oncancel = e => { e.preventDefault(); done(null); };
+    $('dlgNoteForm').onsubmit = e => { e.preventDefault(); done(ta.value.replace(/\s+$/, '')); };
+    d.showModal();
+    setTimeout(() => { const n = ta.value.length; ta.focus(); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight; }, 30);
+  });
+}
 function ask(title, text, value, ph) {
   return new Promise(resolve => {
     const d = $('dlg');
@@ -5563,12 +5593,13 @@ function renderMarks() {
   el.innerHTML = data.marks.map((m, i) => m.t < T0() ? '' : `
     <div class="item" data-i="${i}">
       <span class="num">${++k}.</span>
+      ${FEAT.wave ? `<button data-a="note" class="note ${m.note ? 'has' : ''}" title="Нотатки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>` : ''}
       <span class="t">${fmt(m.t - T0())}</span>
       <span class="name" title="${esc(m.name)}">${esc(m.name)}</span>
       <span class="acts">
         ${FEAT.draw ? `<button data-a="draw" class="dr ${m.draw && m.draw.length ? 'has' : ''}" title="Малюнок на мітці">🖌</button>` : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
-        <button data-a="retime" class="retime" title="Перенести мітку на поточний час">★</button>
+        <button data-a="retime" class="retime" title="Перенести мітку на поточний час">${FEAT.wave ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>' : '★'}</button>
       </span>
     </div>`).join('');
 }
@@ -5585,6 +5616,9 @@ $('markList').addEventListener('click', async e => {
     const c = await pick('Змінити час мітки', '«' + m.name + '»: ' + fmt(m.t - T0()) + ' → ' + fmt(t - T0()), ['Змінити']);
     if (c !== 0) return;
     m.t = t; data.marks.sort((x, y) => x.t - y.t); save(); renderMarks(); renderBar(); renderPlaylist(); toast('★ ' + fmt(t - T0()), 900);
+  } else if (a === 'note') {               // v221: нотатки до мітки
+    const v = await askNote(m);
+    if (v !== null) { if (v) m.note = v; else delete m.note; save(); renderMarks(); }
   } else if (a === 'draw') Draw.open(m);
   else { clipStopAt = null; seek(m.t); }
 });
@@ -6414,6 +6448,7 @@ $('restoreInput').onchange = async e => {
       // об'єднуємо без дублікатів
       const mk = new Set(old.marks.map(m => m.t.toFixed(2) + m.name));
       for (const m of v.marks || []) if (!mk.has(m.t.toFixed(2) + m.name)) old.marks.push(m);
+        else if (m.note) { const o = old.marks.find(x => x.t.toFixed(2) + x.name === m.t.toFixed(2) + m.name); if (o && !o.note) o.note = m.note; }   // v221
       const ck = new Set(old.clips.map(c => c.start.toFixed(2) + c.end.toFixed(2) + c.name));
       for (const c of v.clips || []) if (!ck.has(c.start.toFixed(2) + c.end.toFixed(2) + c.name)) old.clips.push(c);
       old.marks.sort((a, b) => a.t - b.t);
@@ -6428,7 +6463,7 @@ $('restoreInput').onchange = async e => {
 
 /* ═════════ клавіатура та системні кнопки ═════════ */
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input') || $('dlg').open) return;
+  if (e.target.matches('input, textarea') || $('dlg').open || $('dlgNote').open) return;   // v221: у нотатках пробіл — це пробіл
   if (Draw.editing) return;                          // малюємо — клавіші застосунку не діють
   const k = e.key;
   if (k === ' ') { e.preventDefault(); togglePlay(); }
@@ -6462,7 +6497,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v220';
+const APP_VER = 'v221';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
