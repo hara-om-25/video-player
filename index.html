@@ -281,12 +281,13 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 .item .acts .retime { color: var(--star); }
 /* v221 (аудіоплеєр): значок нотаток перед часом і годинник замість ★ */
 .item .note { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; margin: -6px 0; padding: 0; background: none; border: 0; color: #6f7378; }
-.item .note.has { color: var(--accent); }
+.item .note.has { color: #8fe388; }   /* v222: є нотатки — світло-зелений */
 .item .note svg, .item .acts .retime svg { width: 24px; height: 24px; display: block; pointer-events: none; }
 #dlgNote { width: min(760px, calc(100vw - 32px)); }
 #dlgNote h3 { margin: 0 0 10px; font-size: 17px; }
 #dlgNoteText { display: block; width: 100%; box-sizing: border-box; height: min(42vh, 360px); resize: none; padding: 10px 12px; font: inherit; font-size: 18px; line-height: 1.4;
-  background: var(--surf2); color: var(--text); border: 1px solid var(--accent); border-radius: 10px; user-select: text; }
+  background: var(--surf2); color: #8fe388; border: 1px solid #9a9ea4; border-radius: 10px; user-select: text; outline: none; }   /* v222: світло-зелені літери, світло-сіра обводка */
+#dlgNoteText:focus { border-color: #9a9ea4; outline: none; }
 #dlgNote .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 #dlgNote .row button { height: 48px; min-width: 110px; }
 /* кольори значків у списках */
@@ -455,6 +456,7 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
   html body.f-wave { --kw: 40px; }
   html body.f-wave .tpad { gap: 5px; }
   html body.f-wave .markctl.ovl { gap: 10px; }
+  html body.f-wave .panel.stage.stage { padding-left: 10px; }
 }
 @media (max-width: 860px) {
   body.f-wave .waverow { flex: none; height: 160px; }
@@ -464,7 +466,12 @@ body.f-wave .timeline { gap: 6px; }   /* v171: без зайвих проміж�
 }
 @media (min-width: 861px) {
   body.f-wave { --tpW: 0px; --tpH: 0px; }
-  body.f-wave main { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  body.f-wave main { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto; }
+  /* v222: права колонка — рівно під [ час ] і кнопки (час притиснуто до −10, проміжки до краю й до −10 однакові); решта — «Міткам» */
+  body.f-wave .panel.playlist { width: 0; min-width: 100%; }
+  body.f-wave .wave { width: 0; }
+  html body.f-wave .panel.stage { padding-left: 18px; }
+  html body.f-wave .markctl.ovl .tpad { margin-left: 0; }
   /* v163: мітки — ліворуч на всю висоту (з логотипом), фрагменти — праворуч угорі */
   body.f-wave .panel.side { grid-column: 1; grid-row: 1 / span 2; }
   body.f-wave .panel.playlist { grid-column: 2; grid-row: 1; }
@@ -6497,7 +6504,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v221';
+const APP_VER = 'v222';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
