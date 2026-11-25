@@ -692,6 +692,9 @@ body.f-wave #dlgSet .sasr { display: block; margin-top: 10px; }
 #dlgSet .sasr > .sl { font-size: 15px; font-weight: 600; }
 #dlgSet .sasr > .sl small { display: block; color: var(--dim); font-size: 13px; font-weight: 400; margin-top: 2px; }
 #dlgSet .sasr label.srow small { color: var(--dim); white-space: normal; }
+#dlgSet .asrhd { margin-top: 16px; }
+#asrDl .srow { margin-top: 8px; }
+#asrDl .srow button { background: var(--surf2); color: #ff8a80; border: 1px solid #ff8a80; }
 #dlgSet .sasr input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: #8fe388; }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
@@ -1064,6 +1067,8 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="large"><span class="sl">Whisper large-v3<small>≈ 930 МБ · найбільша й найточніша, але найповільніша; планшету потрібно багато пам'яті</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
+    <div class="sl asrhd">Завантажені моделі<small id="asrTotal">рахую…</small></div>
+    <div id="asrDl"></div>
   </div>
   <div class="snote" id="setNote"></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
@@ -3347,7 +3352,38 @@ $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
 // v223: розпізнавання мови (Whisper small у фоновому потоці asr/worker.js) — від мітки до наступної, шматками по 30 с
-const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ'], large: ['Whisper large-v3', '≈ 930 МБ'], small: ['Whisper small', '≈ 390 МБ'] };   // v225
+const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ', 'onnx-community/whisper-large-v3-turbo/'], large: ['Whisper large-v3', '≈ 930 МБ', 'onnx-community/whisper-large-v3-ONNX/'],
+  small: ['Whisper small', '≈ 390 МБ', 'onnx-community/whisper-small/'] };   // v225; [2] — шлях моделі в адресах кешу transformers.js
+// v226: завантажені моделі в ⚙ — розмір і «Видалити» (кеш «transformers-cache», куди transformers.js кладе файли моделей)
+async function asrCached() {
+  const out = {};
+  try {
+    if (!(await caches.has('transformers-cache'))) return out;
+    const c = await caches.open('transformers-cache');
+    for (const req of await c.keys()) {
+      const k = Object.keys(ASR_MODELS).find(m => req.url.includes('/' + ASR_MODELS[m][2])); if (!k) continue;
+      const r = await c.match(req); let n = +(r && r.headers.get('content-length')) || 0;
+      if (!n && r) { try { n = (await r.blob()).size; } catch (e) {} }
+      (out[k] = out[k] || { n: 0, reqs: [] }).n += n; out[k].reqs.push(req);
+    }
+  } catch (e) { console.warn(e); }
+  return out;
+}
+const mb = n => n >= 1073741824 ? (n / 1073741824).toFixed(1).replace('.', ',') + ' ГБ' : Math.round(n / 1048576) + ' МБ';
+async function showAsrDl() {
+  if (!FEAT.wave) return;
+  const box = $('asrDl'), have = await asrCached(), ks = Object.keys(have);
+  $('asrTotal').textContent = ks.length ? 'разом ' + mb(ks.reduce((a, k) => a + have[k].n, 0)) + ' на планшеті' : 'немає — модель завантажиться під час першого розпізнавання';
+  box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    const k = b.dataset.m, c = await pick('Видалити модель', ASR_MODELS[k][0] + ' (' + mb(have[k].n) + ') зникне з планшета. Для розпізнавання її доведеться завантажити знову.', ['Видалити']);
+    if (c !== 0) return;
+    ASR.reset();                          // модель могла бути відкрита у фоновому потоці
+    try { const cc = await caches.open('transformers-cache'); for (const r of have[k].reqs) await cc.delete(r); } catch (e) {}
+    try { localStorage.removeItem('asrLoaded.' + k); } catch (e) {}
+    toast(ASR_MODELS[k][0] + ' — видалено', 2400); showAsrDl();
+  });
+}
 const asrModel = () => { const m = getSetting('asrModel', 'turbo'); return ASR_MODELS[m] ? m : 'turbo'; };   // v224: модель — у ⚙
 const ASR = (() => {
   let w = null, seq = 0, run = 0;
@@ -3410,7 +3446,8 @@ const ASR = (() => {
     return true;
   }
   const fmtLeft = s => s < 60 ? Math.ceil(s) + ' с' : Math.round(s / 60) + ' хв';
-  return { transcribe, stop: () => { run++; progress(''); }, get busy() { return !!wait.size; } };
+  const reset = () => { run++; progress(''); if (w) { w.terminate(); w = null; } for (const cb of wait.values()) cb.rej(new Error('зупинено')); wait.clear(); };   // v226
+  return { transcribe, reset, stop: () => { run++; progress(''); }, get busy() { return !!wait.size; } };
 })();
 function askNote(m) {   // v221: вікно нотаток — багато рядків, Enter — новий рядок
   return new Promise(resolve => {
@@ -3713,6 +3750,7 @@ async function showSet() {
   $('setStar').checked = !!editCfg.starEnd;
   $('setSysFs').checked = !!getSetting('sysFs', false);
   document.querySelectorAll('#dlgSet input[name=asrModel]').forEach(r => { r.checked = r.value === asrModel(); });
+  showAsrDl();
   const can = !!window.showDirectoryPicker;
   $('setOpenBtn').disabled = $('setSaveBtn').disabled = !can;
   $('setNote').textContent = can ? '' : 'Цей браузер не дає обирати папки: «+» відкриває звичайне вікно вибору, а шматки зберігаються в «Завантаження».';
@@ -6609,7 +6647,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v225';
+const APP_VER = 'v226';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
