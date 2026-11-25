@@ -290,6 +290,12 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 #dlgNoteText:focus { border-color: #9a9ea4; outline: none; }
 #dlgNote .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 #dlgNote .row button { height: 48px; min-width: 110px; }
+/* v223: розпізнавання мови в нотатки */
+#dlgNote .row { align-items: center; }
+#dlgNoteAsr { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; background: var(--surf2); color: #8fe388; border: 1px solid #8fe388; }
+#dlgNoteAsr svg { width: 22px; height: 22px; flex: none; }
+#dlgNoteAsr.on { background: #8fe388; color: #111; }
+#dlgNoteProg { flex: 1; min-width: 0; font-size: 14px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* кольори значків у списках */
 .item .acts [data-a="play"] { color: #4caf50; }
 .item .acts [data-a="dl"]   { color: var(--accent); }
@@ -1023,7 +1029,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <form method="dialog" id="dlgNoteForm">
     <h3 id="dlgNoteTitle"></h3>
     <textarea id="dlgNoteText" rows="8" autocomplete="off" placeholder="Нотатки до мітки…"></textarea>
-    <div class="row"><button type="button" id="dlgNoteCancel">Скасувати</button><button class="accent" id="dlgNoteOk">Зберегти</button></div>
+    <div class="row"><button type="button" id="dlgNoteAsr" title="Розпізнати мову від цієї мітки до наступної й дописати сюди"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Розпізнати</span></button><span id="dlgNoteProg"></span><button type="button" id="dlgNoteCancel">Скасувати</button><button class="accent" id="dlgNoteOk">Зберегти</button></div>
   </form>
 </dialog>
 
@@ -3325,11 +3331,88 @@ addEventListener('resize', placeDlg);
 $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
+// v223: розпізнавання мови (Whisper small у фоновому потоці asr/worker.js) — від мітки до наступної, шматками по 30 с
+const ASR = (() => {
+  let w = null, seq = 0, run = 0;
+  const wait = new Map();
+  const worker = () => {
+    if (w) return w;
+    w = new Worker(new URL('asr/worker.js', location.href), { type: 'module' });
+    w.onmessage = e => {
+      const d = e.data;
+      if (d.type === 'load') { const p = d.p || {}; if (p.status === 'progress' && p.total > 1e6) onLoad(p); return; }
+      const cb = wait.get(d.id); if (!cb) return; wait.delete(d.id);
+      d.type === 'error' ? cb.rej(new Error(d.msg)) : cb.res(d);
+    };
+    w.onerror = e => { for (const cb of wait.values()) cb.rej(new Error(e.message || 'фоновий потік не запустився')); wait.clear(); w = null; };
+    return w;
+  };
+  const call = (cmd, audio) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio }, audio ? [audio.buffer] : []); });
+  const files = {};
+  let onLoad = () => {};
+  // шматок [a, b) файлу → Float32Array 16 кГц моно (файл не розпаковується цілком — через decodeClip)
+  async function pcm(t, a, b) {
+    const { ab, offset } = await decodeClip(t, a, b);
+    const n = Math.max(1, Math.ceil((b - a) * 16000));
+    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext, ctx = new Ctx(1, n, 16000);
+    const src = ctx.createBufferSource(); src.buffer = ab; src.connect(ctx.destination); src.start(0, Math.max(0, offset), b - a);
+    return (await ctx.startRendering()).getChannelData(0).slice();
+  }
+  // повтори, якими Whisper «заповнює» тишу, — геть
+  const clean = s => s.replace(/\s+/g, ' ').trim().replace(/([^.!?]{3,}?[.!?]?)(\s+\1){2,}/g, '$1');
+  async function transcribe(m, put, status) {
+    if (!hasTrack()) throw new Error('немає відкритого файлу');
+    const t = tracks[cur], my = ++run;
+    const next = data.marks.filter(x => x.t > m.t + 0.05).sort((x, y) => x.t - y.t)[0];
+    const s0 = m.t, s1 = next ? next.t : dur();
+    if (!(s1 - s0 > 0.5)) throw new Error('після мітки немає звуку');
+    if (!localStorage.getItem('asrLoaded')) {
+      const c = await pick('Розпізнавання мови', 'Модель розпізнавання (250–400 МБ) завантажиться один раз — краще через Wi-Fi. Далі працює без інтернету.', ['Завантажити']);
+      if (c !== 0) return false;
+    }
+    onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; } status('Завантаження моделі… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
+    status('Підготовка моделі…');
+    const r0 = await call('load');
+    try { localStorage.setItem('asrLoaded', '1'); } catch (e) {}
+    const PIECE = 30, T = s1 - s0, t0 = performance.now();
+    for (let a = s0; a < s1 - 0.2; a += PIECE) {
+      if (my !== run) return false;
+      const b = Math.min(s1, a + PIECE), done = (a - s0) / T, el = (performance.now() - t0) / 1000;
+      status('Розпізнавання ' + Math.round(done * 100) + '%' + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' (без відеокарти — повільно)'));
+      const audio = await pcm(t, a, b);
+      progress('');
+      if (my !== run) return false;
+      const r = await call('run', audio);
+      if (my !== run) return false;
+      const txt = clean(r.text || '');
+      if (txt) put(txt);
+    }
+    status('Готово');
+    return true;
+  }
+  const fmtLeft = s => s < 60 ? Math.ceil(s) + ' с' : Math.round(s / 60) + ' хв';
+  return { transcribe, stop: () => { run++; progress(''); }, get busy() { return !!wait.size; } };
+})();
 function askNote(m) {   // v221: вікно нотаток — багато рядків, Enter — новий рядок
   return new Promise(resolve => {
-    const d = $('dlgNote'), ta = $('dlgNoteText');
+    const d = $('dlgNote'), ta = $('dlgNoteText'), btn = $('dlgNoteAsr'), st = $('dlgNoteProg');
     $('dlgNoteTitle').textContent = fmt(m.t - T0()) + '  ' + m.name; ta.value = m.note || '';
-    const done = v => { d.close(); resolve(v); };
+    st.textContent = ''; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
+    let on = false;
+    const stopAsr = () => { if (on) { on = false; ASR.stop(); btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати'; } };
+    btn.onclick = async () => {
+      if (on) { stopAsr(); st.textContent = 'Зупинено'; return; }
+      on = true; btn.classList.add('on'); btn.lastChild.textContent = 'Зупинити';
+      try {
+        const ok = await ASR.transcribe(m, txt => {          // текст — одразу в поле й у нотатки мітки (щоб не загубився)
+          ta.value = ta.value.replace(/\s+$/, '') + (ta.value.trim() ? ' ' : '') + txt;
+          ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks();
+        }, x => { if (on) st.textContent = x; });
+        if (ok === false && on) st.textContent = '';
+      } catch (err) { console.warn(err); st.textContent = 'Не вдалося: ' + (err.message || err); }
+      on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
+    };
+    const done = v => { stopAsr(); d.close(); resolve(v); };
     $('dlgNoteCancel').onclick = () => done(null);
     d.oncancel = e => { e.preventDefault(); done(null); };
     $('dlgNoteForm').onsubmit = e => { e.preventDefault(); done(ta.value.replace(/\s+$/, '')); };
@@ -5201,7 +5284,8 @@ function btnClick(down) {
     b.dataset.invBg = b.style.background; b.dataset.invFg = b.style.color; b.dataset.invT = Date.now();
     // v205: темна кнопка (і «Скасувати» з білим текстом) → жовта з чорним; жовта/світла → чорна з жовтим
     const m = (clear ? 'rgb(0,0,0)' : bg).match(/\d+(\.\d+)?/g).map(Number), light = 0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2] > 128;
-    b.style.setProperty('background', light ? '#111' : 'var(--accent)', 'important'); b.style.setProperty('color', light ? 'var(--accent)' : '#111', 'important');
+    const acc = b.matches('.note, #dlgNoteAsr') ? '#8fe388' : 'var(--accent)';   // v223: нотатки — зелені й при натисканні
+    b.style.setProperty('background', light ? '#111' : acc, 'important'); b.style.setProperty('color', light ? acc : '#111', 'important');
   };
   const uninv = b => {
     if (!b || b.dataset.invT == null) return;
@@ -6504,7 +6588,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v222';
+const APP_VER = 'v223';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
