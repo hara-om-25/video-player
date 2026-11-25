@@ -1062,6 +1062,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <div class="sasr">   <!-- v224: аудіоплеєр — модель розпізнавання мови -->
     <div class="sl">Розпізнавання мови в нотатки<small>Модель працює на планшеті; завантажується один раз</small></div>
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
+    <label class="srow"><input type="radio" name="asrModel" value="large"><span class="sl">Whisper large-v3<small>≈ 930 МБ · найбільша й найточніша, але найповільніша; планшету потрібно багато пам'яті</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
   </div>
   <div class="snote" id="setNote"></div>
@@ -3346,7 +3347,8 @@ $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
 // v223: розпізнавання мови (Whisper small у фоновому потоці asr/worker.js) — від мітки до наступної, шматками по 30 с
-const asrModel = () => (getSetting('asrModel', 'turbo') === 'small' ? 'small' : 'turbo');   // v224: модель — у ⚙
+const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ'], large: ['Whisper large-v3', '≈ 930 МБ'], small: ['Whisper small', '≈ 390 МБ'] };   // v225
+const asrModel = () => { const m = getSetting('asrModel', 'turbo'); return ASR_MODELS[m] ? m : 'turbo'; };   // v224: модель — у ⚙
 const ASR = (() => {
   let w = null, seq = 0, run = 0;
   const wait = new Map();
@@ -3381,7 +3383,7 @@ const ASR = (() => {
     const next = data.marks.filter(x => x.t > m.t + 0.05).sort((x, y) => x.t - y.t)[0];
     const s0 = m.t, s1 = next ? next.t : dur();
     if (!(s1 - s0 > 0.5)) throw new Error('після мітки немає звуку');
-    const model = asrModel(), MB = model === 'small' ? '≈ 390 МБ' : '≈ 540 МБ', NAME = model === 'small' ? 'Whisper small' : 'Whisper large-v3-turbo';
+    const model = asrModel(), [NAME, MB] = ASR_MODELS[model];
     if (!localStorage.getItem('asrLoaded.' + model)) {
       const c = await pick('Розпізнавання мови', 'Модель ' + NAME + ' (' + MB + ') завантажиться один раз — краще через Wi-Fi. Далі працює на планшеті без інтернету. Модель — у ⚙.', ['Завантажити']);
       if (c !== 0) return false;
@@ -6607,7 +6609,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v224';
+const APP_VER = 'v225';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
