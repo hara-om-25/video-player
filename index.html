@@ -3431,14 +3431,18 @@ const ASR = (() => {
       if (c !== 0) return false;
     }
     for (const k in files) delete files[k];
-    onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; } status('Завантаження моделі… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
-    status('Підготовка моделі…');
+    // v229: модель уже на планшеті — це читання з пам'яті, а не завантаження з інтернету
+    const local = !!localStorage.getItem('asrLoaded.' + model);
+    onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
+      status(local ? 'Модель з пам\'яті планшета… ' + Math.round(a / b * 100) + '%' : 'Завантаження моделі з інтернету… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
+    status(local ? 'Модель з пам\'яті планшета…' : 'Підготовка моделі…');
     const r0 = await call('load', null, model);
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
     const PIECE = 30, T = s1 - s0, t0 = performance.now(), N = Math.ceil((T - 0.2) / PIECE);
     let k = 0, words = '', head = '';
     // v228: рядок ходу оновлюється щосекунди: відсоток, шматок i з N, скільки йде цей шматок і останні слова
-    const show = () => status(head + ' · ' + fmtLeft((performance.now() - tp) / 1000, true) + (words ? ' · …' + words.slice(-60) : ''));
+    const show = () => { const s = (performance.now() - tp) / 1000;
+      status(head + ' · ' + fmtLeft(s, true) + (words ? ' · …' + words.slice(-60) : ' · модель слухає шматок' + (s > 150 ? ' — дуже довго; можливо, планшет не тягне цю модель, спробуйте у ⚙ меншу' : '…'))); };
     let tp = performance.now();
     const tick = setInterval(() => { if (my === run) show(); }, 1000);
     onTok = x => { words = (words + x).replace(/\s+/g, ' '); show(); };
@@ -3452,7 +3456,9 @@ const ASR = (() => {
         const audio = await pcm(t, a, b);
         progress('');
         if (my !== run) return false;
-        const r = await call('run', audio, model);
+        let r;
+        try { r = await call('run', audio, model); }
+        catch (err) { const part = clean(words); if (part) put(part + ' …'); throw err; }   // v229: зупинили посеред шматка — уже почуті слова не губляться
         if (my !== run) return false;
         const txt = clean(r.text || '');
         if (txt) put(txt);
@@ -3463,7 +3469,8 @@ const ASR = (() => {
   }
   const fmtLeft = (s, clock) => clock ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : s < 60 ? Math.ceil(s) + ' с' : Math.round(s / 60) + ' хв';
   const reset = () => { run++; progress(''); if (w) { w.terminate(); w = null; } for (const cb of wait.values()) cb.rej(new Error('зупинено')); wait.clear(); };   // v226
-  return { transcribe, reset, stop: () => { run++; progress(''); }, get busy() { return !!wait.size; } };
+  // v229: «Зупинити» / закрите вікно — якщо модель ще рахує, фоновий потік закривається (інакше рахувала б далі й заважала наступному разу)
+  return { transcribe, reset, stop: () => { if (wait.size) reset(); else { run++; progress(''); } }, get busy() { return !!wait.size; } };
 })();
 function askNote(m) {   // v221: вікно нотаток — багато рядків, Enter — новий рядок
   return new Promise(resolve => {
@@ -3481,7 +3488,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
           ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks();
         }, x => { if (on) st.textContent = x; });
         if (ok === false && on) st.textContent = '';
-      } catch (err) { console.warn(err); st.textContent = 'Не вдалося: ' + (err.message || err); }
+      } catch (err) { console.warn(err); st.textContent = err.message === 'зупинено' ? 'Зупинено' : 'Не вдалося: ' + (err.message || err); }
       on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
     };
     const done = v => { stopAsr(); d.close(); resolve(v); };
@@ -6663,7 +6670,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v228';
+const APP_VER = 'v229';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
