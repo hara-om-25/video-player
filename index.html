@@ -1072,6 +1072,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="large"><span class="sl">Whisper large-v3<small>≈ 930 МБ · найбільша й найточніша, але найповільніша; планшету потрібно багато пам'яті</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
+    <label class="srow"><input type="radio" name="asrModel" value="ctc"><span class="sl">wav2vec2 «як чути» — для суржику<small>≈ 340 МБ (з відеокартою ≈ 600 МБ). Інший тип моделі: не знає мов і нічого не перекладає — пише літерами те, що чує, слово за словом; суржик лишається суржиком, російські слова — українськими літерами («сєводня»). Без розділових знаків і великих літер, помилок більше, ніж у Whisper. «Мова тексту» на неї не діє</small></span></label>
     <div class="sl asrhd">Мова тексту</div>
     <label class="srow"><input type="radio" name="asrLang" value="auto"><span class="sl">Як чути<small>Кожні 30 с модель сама визначає мову й пише нею, без перекладу: російське — російською, українське — українською; суржик — мовою, якої в шматку більше</small></span></label>
     <label class="srow"><input type="radio" name="asrLang" value="uk"><span class="sl">Завжди українською<small>Російське мовлення модель перекладатиме українською</small></span></label>
@@ -3361,7 +3362,8 @@ $('dlgInput').addEventListener('keydown', e => {
 });
 // v223: розпізнавання мови (Whisper small у фоновому потоці asr/worker.js) — від мітки до наступної, шматками по 30 с
 const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ', 'onnx-community/whisper-large-v3-turbo/'], large: ['Whisper large-v3', '≈ 930 МБ', 'onnx-community/whisper-large-v3-ONNX/'],
-  small: ['Whisper small', '≈ 390 МБ', 'onnx-community/whisper-small/'] };   // v225; [2] — шлях моделі в адресах кешу transformers.js
+  small: ['Whisper small', '≈ 390 МБ', 'onnx-community/whisper-small/'],
+  ctc: ['wav2vec2 «як чути»', '≈ 340 МБ', 'XDcobra/wav2vec2-large-xlsr-53-ukrainian-ONNX/'] };   // v231   // v225; [2] — шлях моделі в адресах кешу transformers.js
 // v226: завантажені моделі в ⚙ — розмір і «Видалити» (кеш «transformers-cache», куди transformers.js кладе файли моделей)
 async function asrCached() {
   const out = {};
@@ -3442,7 +3444,8 @@ const ASR = (() => {
     status(local ? 'Модель з пам\'яті планшета…' : 'Підготовка моделі…');
     const r0 = await call('load', null, model);
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
-    const PIECE = 30, T = s1 - s0, t0 = performance.now(), N = Math.ceil((T - 0.2) / PIECE);
+    // v231: шматки ~10 с (7…13 с), різ — у найтихішому місці (пауза між словами), щоб мова визначалась частіше й слова не різались
+    const SR = 16000, T = s1 - s0, t0 = performance.now(), N = Math.max(1, Math.round(T / 10));
     let k = 0, words = '', head = '', heard = '';
     // v228: рядок ходу оновлюється щосекунди: відсоток, шматок i з N, скільки йде цей шматок і останні слова
     const show = () => { const s = (performance.now() - tp) / 1000;
@@ -3450,27 +3453,39 @@ const ASR = (() => {
     let tp = performance.now();
     const tick = setInterval(() => { if (my === run) show(); }, 1000);
     onTok = x => { words = (words + x).replace(/\s+/g, ' '); show(); };
+    let buf = new Float32Array(0), fed = s0, at = s0;   // buf — ще не розпізнаний звук від моменту at; fed — до куди вже розпаковано
     try {
-      for (let a = s0; a < s1 - 0.2; a += PIECE) {
+      while (true) {
         if (my !== run) return false;
-        const b = Math.min(s1, a + PIECE), done = (a - s0) / T, el = (performance.now() - t0) / 1000;
+        while (buf.length < 14 * SR && fed < s1 - 0.05) {           // розпаковуємо по 60 с наперед
+          const b = Math.min(s1, fed + 60), x = await pcm(t, fed, b); progress('');
+          const nb = new Float32Array(buf.length + x.length); nb.set(buf); nb.set(x, buf.length); buf = nb; fed = b;
+          if (my !== run) return false;
+        }
+        if (buf.length < 0.3 * SR) break;
+        const cut = fed >= s1 - 0.05 && buf.length <= 14 * SR ? buf.length : quietCut(buf, 7 * SR, Math.min(13 * SR, buf.length));
+        const audio = buf.slice(0, cut); buf = buf.slice(cut);
+        const done = (at - s0) / T, el = (performance.now() - t0) / 1000; at += cut / SR;
         k++; words = ''; tp = performance.now();
-        head = Math.round(done * 100) + '% · шматок ' + k + ' з ' + N + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти') + heard;
+        head = Math.round(done * 100) + '% · шматок ' + k + ' з ~' + Math.max(N, k) + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти') + heard;
         show();
-        const audio = await pcm(t, a, b);
-        progress('');
-        if (my !== run) return false;
         let r;
         try { r = await call('run', audio, model); }
         catch (err) { const part = clean(words); if (part) put(part + ' …'); throw err; }   // v229: зупинили посеред шматка — уже почуті слова не губляться
         if (my !== run) return false;
         const txt = clean(r.text || '');
         if (txt) put(txt);
-        if (asrLang() === 'auto') heard = ' · попередній — ' + (r.lang === 'russian' ? 'рос.' : 'укр.');   // v230: яку мову модель почула
+        if (asrLang() === 'auto' && r.lang) heard = ' · попередній — ' + (r.lang === 'russian' ? 'рос.' : 'укр.');   // v230: яку мову модель почула
       }
     } finally { clearInterval(tick); onTok = () => {}; }
     status('Готово');
     return true;
+  }
+  // найтихіше місце (кадри по 0,1 с) між from і to — там різати шматок
+  function quietCut(x, from, to) {
+    const F = 1600; let best = to, bv = Infinity;
+    for (let i = Math.floor(from / F) * F; i + F <= to; i += F) { let e = 0; for (let j = i; j < i + F; j++) e += x[j] * x[j]; if (e < bv) { bv = e; best = i + F / 2; } }
+    return Math.max(1, Math.min(x.length, best));
   }
   const fmtLeft = (s, clock) => clock ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : s < 60 ? Math.ceil(s) + ' с' : Math.round(s / 60) + ' хв';
   const reset = () => { run++; progress(''); if (w) { w.terminate(); w = null; } for (const cb of wait.values()) cb.rej(new Error('зупинено')); wait.clear(); };   // v226
@@ -6677,7 +6692,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v230';
+const APP_VER = 'v231';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
