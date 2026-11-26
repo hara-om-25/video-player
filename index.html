@@ -1072,6 +1072,9 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="large"><span class="sl">Whisper large-v3<small>≈ 930 МБ · найбільша й найточніша, але найповільніша; планшету потрібно багато пам'яті</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
+    <div class="sl asrhd">Мова тексту</div>
+    <label class="srow"><input type="radio" name="asrLang" value="auto"><span class="sl">Як чути<small>Кожні 30 с модель сама визначає мову й пише нею, без перекладу: російське — російською, українське — українською; суржик — мовою, якої в шматку більше</small></span></label>
+    <label class="srow"><input type="radio" name="asrLang" value="uk"><span class="sl">Завжди українською<small>Російське мовлення модель перекладатиме українською</small></span></label>
     <div class="sl asrhd">Завантажені моделі<small id="asrTotal">рахую…</small></div>
     <div id="asrDl"></div>
   </div>
@@ -3389,6 +3392,7 @@ async function showAsrDl() {
     toast(ASR_MODELS[k][0] + ' — видалено', 2400); showAsrDl();
   });
 }
+const asrLang = () => (getSetting('asrLang', 'auto') === 'uk' ? 'uk' : 'auto');   // v230: «як чути» / «завжди українською»
 const asrModel = () => { const m = getSetting('asrModel', 'turbo'); return ASR_MODELS[m] ? m : 'turbo'; };   // v224: модель — у ⚙
 const ASR = (() => {
   let w = null, seq = 0, run = 0;
@@ -3406,7 +3410,7 @@ const ASR = (() => {
     w.onerror = e => { for (const cb of wait.values()) cb.rej(new Error(e.message || 'фоновий потік не запустився')); wait.clear(); w = null; };
     return w;
   };
-  const call = (cmd, audio, model) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio, model }, audio ? [audio.buffer] : []); });
+  const call = (cmd, audio, model) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio, model, mode: asrLang() }, audio ? [audio.buffer] : []); });
   const files = {};
   let onLoad = () => {}, onTok = () => {};
   // шматок [a, b) файлу → Float32Array 16 кГц моно (файл не розпаковується цілком — через decodeClip)
@@ -3439,7 +3443,7 @@ const ASR = (() => {
     const r0 = await call('load', null, model);
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
     const PIECE = 30, T = s1 - s0, t0 = performance.now(), N = Math.ceil((T - 0.2) / PIECE);
-    let k = 0, words = '', head = '';
+    let k = 0, words = '', head = '', heard = '';
     // v228: рядок ходу оновлюється щосекунди: відсоток, шматок i з N, скільки йде цей шматок і останні слова
     const show = () => { const s = (performance.now() - tp) / 1000;
       status(head + ' · ' + fmtLeft(s, true) + (words ? ' · …' + words.slice(-60) : ' · модель слухає шматок' + (s > 150 ? ' — дуже довго; можливо, планшет не тягне цю модель, спробуйте у ⚙ меншу' : '…'))); };
@@ -3451,7 +3455,7 @@ const ASR = (() => {
         if (my !== run) return false;
         const b = Math.min(s1, a + PIECE), done = (a - s0) / T, el = (performance.now() - t0) / 1000;
         k++; words = ''; tp = performance.now();
-        head = Math.round(done * 100) + '% · шматок ' + k + ' з ' + N + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти');
+        head = Math.round(done * 100) + '% · шматок ' + k + ' з ' + N + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти') + heard;
         show();
         const audio = await pcm(t, a, b);
         progress('');
@@ -3462,6 +3466,7 @@ const ASR = (() => {
         if (my !== run) return false;
         const txt = clean(r.text || '');
         if (txt) put(txt);
+        if (asrLang() === 'auto') heard = ' · попередній — ' + (r.lang === 'russian' ? 'рос.' : 'укр.');   // v230: яку мову модель почула
       }
     } finally { clearInterval(tick); onTok = () => {}; }
     status('Готово');
@@ -3773,6 +3778,7 @@ async function showSet() {
   $('setStar').checked = !!editCfg.starEnd;
   $('setSysFs').checked = !!getSetting('sysFs', false);
   document.querySelectorAll('#dlgSet input[name=asrModel]').forEach(r => { r.checked = r.value === asrModel(); });
+  document.querySelectorAll('#dlgSet input[name=asrLang]').forEach(r => { r.checked = r.value === asrLang(); });
   showAsrDl();
   const can = !!window.showDirectoryPicker;
   $('setOpenBtn').disabled = $('setSaveBtn').disabled = !can;
@@ -3787,6 +3793,7 @@ async function pickDir(key, mode) {
 }
 $('btnSet').onclick = showSet;
 document.querySelectorAll('#dlgSet input[name=asrModel]').forEach(r => { r.onchange = () => { if (r.checked) setSetting('asrModel', r.value); }; });
+document.querySelectorAll('#dlgSet input[name=asrLang]').forEach(r => { r.onchange = () => { if (r.checked) setSetting('asrLang', r.value); }; });
 $('setOpenBtn').onclick = () => pickDir('dir:open', 'read');
 $('setSaveBtn').onclick = () => pickDir('dir:save', 'readwrite');
 $('setSysFs').onchange = e => {      // v188: діє одразу (дотик до галочки — дозволений жест для повного екрана)
@@ -6670,7 +6677,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v229';
+const APP_VER = 'v230';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
