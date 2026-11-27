@@ -3624,24 +3624,57 @@ async function restoreSession() {
   for (const key of ses.keys) {
     const sub = SUBS && subOf(key);
     if (sub) { const p = tracks.find(t => t.key === sub.parent); if (p) tracks.push(mkSub(p, sub.start, sub.end)); continue; }
-    try {
-      const f = await idb.get(key);
-      if (f) tracks.push({ file: f, url: URL.createObjectURL(f), key });
-    } catch {}
+    let f = null;
+    try { f = await idb.get(key); } catch {}
+    if (!f) {                                // v244: копії немає — відкриваємо за handle з вікна Android
+      const h = await idb.get('h:' + key).catch(() => null);
+      if (h) {
+        try { if (await h.queryPermission({ mode: 'read' }) === 'granted') f = await h.getFile(); } catch {}
+        if (!f) { needPerm.push({ key, h }); continue; }   // дозвіл попросимо дотиком (див. нижче)
+      }
+    }
+    if (f) tracks.push({ file: f, url: URL.createObjectURL(f), key });
   }
   const i = tracks.findIndex(t => t.key === ses.cur);
   if (tracks.length) openTrack(i >= 0 ? i : 0); else renderAll();
-  if (tracks.length < ses.keys.length) toast('Частину файлів не вдалося відновити — додайте їх знову');
+  if (needPerm.length) askReopen();
+  else if (tracks.length < ses.keys.length) toast('Частину файлів не вдалося відновити — додайте їх знову', 6000);
+  if (!needPerm.length) saveSession();       // з невідкритими (чекають дозволу) список не переписуємо — інакше вони зникли б
+}
+// v244: Android не дав відкрити файли за handle без дотику — одна кнопка «Відкрити знову» для всіх
+const needPerm = [];
+async function askReopen() {
+  const n = needPerm.length;
+  const c = await pick('Файли з минулого разу', n + ' ' + (n === 1 ? 'файл' : n < 5 ? 'файли' : 'файлів') + ' зі списку: Android просить дозволу відкрити ' + (n === 1 ? 'його' : 'їх') + ' знову', ['Відкрити']);
+  const left = [];
+  if (c === 0) {
+    const got = [];
+    for (const it of needPerm.splice(0)) {
+      try {
+        if (await it.h.requestPermission({ mode: 'read' }) === 'granted') { const f = await it.h.getFile(); got.push({ f, key: it.key }); continue; }
+      } catch {}
+      left.push(it);
+    }
+    for (const g of got) if (!tracks.some(t => t.key === g.key)) tracks.push({ file: g.f, url: URL.createObjectURL(g.f), key: g.key });
+    renderPlaylist(); if (cur < 0 && tracks.length) openTrack(0);
+    if (left.length) toast('Не вдалося відкрити ' + left.length + ' — додайте їх через «+»', 5000);
+  } else needPerm.splice(0);
   saveSession();
 }
-function addFiles(files) {
+// v244: разом з файлом — і його handle з вікна Android (якщо є): handle крихітний, тож запам'ятовується завжди,
+// навіть коли на копію файлу в IndexedDB забракло місця (на телефоні великі записи туди не влазили — список «обнулявся»)
+function addFiles(files, handles) {
   const first = tracks.length;
+  [...files].forEach((f, i) => { const h = handles && handles[i]; if (h) idb.put('h:' + fileKey(f), h).catch(() => {}); });
   for (const f of files) {
     if (!/^(audio|video)\//.test(f.type) && !/\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|amr|3gp|webm|mp4|wma)$/i.test(f.name)) continue;
     if (tracks.some(t => t.key === fileKey(f))) continue;
     const t = { file: f, url: URL.createObjectURL(f), key: fileKey(f) };
     tracks.push(t);
-    idb.put(t.key, f).catch(() => toast('Не вистачило місця, щоб запам\'ятати «' + f.name + '» — після перезапуску його доведеться додати знову'));
+    idb.put(t.key, f).catch(async () => {
+      const h = await idb.get('h:' + t.key).catch(() => null);
+      if (!h) toast('Не вистачило місця, щоб запам\'ятати «' + f.name + '» — після перезапуску його доведеться додати знову', 12000);
+    });
   }
   saveSession();
   renderPlaylist();
@@ -3706,7 +3739,7 @@ function removeTrack(i) {
     const t = tracks[i], curT = tracks[cur];
     // файл забирає з собою й свої обрізані шматки; шматок — лише себе (файл лишається)
     const gone = t.parent ? [t] : tracks.filter(x => x === t || x.parent === t.key);
-    if (!t.parent) { URL.revokeObjectURL(t.url); idb.del(t.key).catch(() => {}); }
+    if (!t.parent) { URL.revokeObjectURL(t.url); idb.del(t.key).catch(() => {}); idb.del('h:' + t.key).catch(() => {}); }
     for (const x of gone) {
       Slicer.cache.delete(x.key);
       if (x.parent) try { localStorage.removeItem(x.key); } catch {}
@@ -3817,21 +3850,22 @@ async function showFolder(dir, path) {
   $('dfAdd').onclick = async () => {
     if (!sel.size) return toast('Відмітьте файли');
     d.close();
-    addFiles(await Promise.all([...sel].sort((a, b) => a - b).map(i => files[i].getFile())));
+    const hs = [...sel].sort((a, b) => a - b).map(i => files[i]);
+    addFiles(await Promise.all(hs.map(h => h.getFile())), hs);
   };
   $('dfCancel').onclick = () => d.close();
   $('dfOther').onclick = () => { d.close(); sysPick(); };
 }
 async function sysPick() {
-  if (FEAT.edit && window.showOpenFilePicker) {
+  if ((FEAT.edit || FEAT.wave) && window.showOpenFilePicker) {   // v244: і аудіоплеєр — щоб мати handle файлу
     const exts = $('fileInput').accept.split(',').filter(x => x.startsWith('.'));
-    const opt = { multiple: true, types: [{ description: 'Відео', accept: { 'video/*': exts } }] };
-    const dir = await idb.get('dir:open').catch(() => null);
+    const opt = { multiple: true, types: [{ description: FEAT.wave ? 'Аудіо' : 'Відео', accept: { [FEAT.wave ? 'audio/*' : 'video/*']: exts } }] };
+    const dir = FEAT.edit ? await idb.get('dir:open').catch(() => null) : null;
     try {
       let hs;
       try { hs = await showOpenFilePicker(dir ? Object.assign({ startIn: dir }, opt) : opt); }
       catch (err) { if (err.name === 'AbortError') return; hs = await showOpenFilePicker(opt); }
-      return addFiles(await Promise.all(hs.map(h => h.getFile())));
+      return addFiles(await Promise.all(hs.map(h => h.getFile())), hs);
     } catch (err) { if (err.name === 'AbortError') return; }
   }
   $('fileInput').click();
@@ -6834,7 +6868,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v243';
+const APP_VER = 'v244';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -6904,7 +6938,7 @@ $('dlgInfoOk').onclick = () => $('dlgInfo').close();
 if ('launchQueue' in window) {
   launchQueue.setConsumer(async p => {
     if (!p.files || !p.files.length) return;
-    addFiles(await Promise.all(p.files.map(h => h.getFile())));
+    addFiles(await Promise.all(p.files.map(h => h.getFile())), p.files);
   });
 }
 
