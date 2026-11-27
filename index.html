@@ -926,8 +926,8 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   </div>
   <div class="hc2"><button id="plBtn" title="Плейлист">▽</button><span class="now" id="nowTitle"></span><span class="hdur" id="tDur">00:00:00</span></div>
   <div class="hc3">
-  <button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">Копіювати</button>
-  <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button>
+  <button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">Експорт</button>
+  <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Імпорт</button>
   <input type="file" id="restoreInput" accept=".json,application/json" hidden>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
   <button id="btnAI" title="Обробка: стабілізація й об’єкти">🎯</button>
@@ -4066,8 +4066,8 @@ if (FEAT.hdrpl) {
     // v241 (вибір користувача з 10 пар): «Копіювати» — лоток, стрілка вгору з нього (експорт); «Відновити» — лоток, стрілка вниз у нього (імпорт)
     bk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/></svg>';
     rs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/></svg>';
-    bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Копіювати'); rs.setAttribute('aria-label', 'Відновити');
-    bk.title = 'Копіювати: зберегти всі мітки, нотатки й фрагменти у файл'; rs.title = 'Відновити: взяти мітки з файлу копії';
+    bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Експорт'); rs.setAttribute('aria-label', 'Імпорт');   // v242: назви — «Експорт» / «Імпорт»
+    bk.title = 'Експорт: зберегти всі мітки, нотатки й фрагменти у файл'; rs.title = 'Імпорт: взяти мітки, нотатки й фрагменти з файлу';
     if (!FEAT.wave) document.querySelector('.panel.side .sec > h2 > i.r').prepend(bk, rs);
   }
   if (FEAT.wave) {        // v238: ⚙ — дві колонки: ліворуч моделі, праворуч «Мова тексту», «Завантажені моделі» й «Готово»
@@ -6794,8 +6794,8 @@ $('restoreInput').onchange = async e => {
     }
     if (cur >= 0) data = load(tracks[cur].key);
     renderAll();
-    toast('Відновлено дані для ' + n + ' файл(ів)');
-  } catch (err) { toast('Помилка відновлення: ' + err.message); }
+    toast('Імпортовано дані для ' + n + ' файл(ів)');
+  } catch (err) { toast('Помилка імпорту: ' + err.message); }
 };
 
 /* ═════════ клавіатура та системні кнопки ═════════ */
@@ -6834,7 +6834,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v241';
+const APP_VER = 'v242';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
