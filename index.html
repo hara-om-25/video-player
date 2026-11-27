@@ -3466,7 +3466,7 @@ const ASR = (() => {
     w = new Worker(new URL('asr/worker.js', location.href), { type: 'module' });
     w.onmessage = e => {
       const d = e.data;
-      if (d.type === 'load') { const p = d.p || {}; if (p.status === 'progress' && p.total > 1e6) onLoad(p); return; }
+      if (d.type === 'load') { const p = d.p || {}; if (p.status === 'phase') onPhase(p.text); else if (p.status === 'progress' && p.total > 1e6) onLoad(p); return; }
       if (d.type === 'tok') { onTok(d.t || ''); return; }
       const cb = wait.get(d.id); if (!cb) return; wait.delete(d.id);
       d.type === 'error' ? cb.rej(new Error(d.msg)) : cb.res(d);
@@ -3476,7 +3476,7 @@ const ASR = (() => {
   };
   const call = (cmd, audio, model) => new Promise((res, rej) => { const id = ++seq; wait.set(id, { res, rej }); worker().postMessage({ id, cmd, audio, model, mode: asrLang() }, audio ? [audio.buffer] : []); });
   const files = {};
-  let onLoad = () => {}, onTok = () => {};
+  let onLoad = () => {}, onTok = () => {}, onPhase = () => {};
   // шматок [a, b) файлу → Float32Array 16 кГц моно (файл не розпаковується цілком — через decodeClip)
   async function pcm(t, a, b) {
     const { ab, offset } = await decodeClip(t, a, b);
@@ -3504,8 +3504,16 @@ const ASR = (() => {
     const local = !!localStorage.getItem('asrLoaded.' + model);
     onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
       status(local ? 'Модель з пам\'яті планшета… ' + Math.round(a / b * 100) + '%' : (p.resumed ? 'Докачування моделі з місця зупинки… ' : 'Завантаження моделі з інтернету… ') + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
-    status(NAME + ': ' + (local ? 'модель з пам\'яті планшета…' : 'підготовка моделі…'));
-    const r0 = await call('load', null, model);
+    // v252: етап завантаження й таймер — щоб було видно, що робота йде
+    let ltxt = local ? 'модель з пам\'яті планшета…' : 'підготовка моделі…'; const lt0 = performance.now();
+    const lshow = () => { if (my === run) status(NAME + ': ' + ltxt + ' · ' + fmtLeft((performance.now() - lt0) / 1000, true)); };
+    const onLoad0 = onLoad;
+    onLoad = p => { onLoad0(p); files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
+      ltxt = (p.resumed ? 'докачування з місця зупинки… ' : 'завантаження ') + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'; lshow(); };
+    onPhase = t => { ltxt = t; lshow(); };
+    lshow(); const ltick = setInterval(lshow, 1000);
+    let r0;
+    try { r0 = await call('load', null, model); } finally { clearInterval(ltick); onPhase = () => {}; }
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
     // v245: чи модель справді записалась на планшет (бібліотека мовчки пропускає невдалий запис — тоді вона качається щоразу)
     asrCached().then(have => { if (!have[model] || have[model].n - (have[model].parts || 0) < 50 * 1048576) toast('Модель ' + NAME + ' не вдалося записати на планшет (мало місця?) — наступного разу вона завантажиться знову', 15000); });
@@ -6971,7 +6979,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v251';
+const APP_VER = 'v252';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
