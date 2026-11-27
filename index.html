@@ -699,13 +699,20 @@ body.f-ai #btnAI { display: inline-block; }
 #dlgSet .snote { margin-top: 12px; font-size: 12px; color: var(--dim); }
 /* v224: ⚙ і в аудіоплеєрі — лише вибір моделі розпізнавання; у відео — без неї */
 body.f-wave #btnSet { display: inline-block; }
-body.f-wave #dlgSet .vonly, body.f-wave #dlgSet .snote { display: none; }
+body.f-wave #dlgSet .vonly, body.f-wave #dlgSet #setNote { display: none; }
 #dlgSet .sasr { display: none; }
 body.f-wave #dlgSet .sasr { display: block; margin-top: 10px; }
-#dlgSet .sasr > .sl { font-size: 15px; font-weight: 600; }
-#dlgSet .sasr > .sl small { display: block; color: var(--dim); font-size: 13px; font-weight: 400; margin-top: 2px; }
+#dlgSet .sasr :is(.sc1, .sc2) > .sl { font-size: 15px; font-weight: 600; }
+#dlgSet .sasr :is(.sc1, .sc2) > .sl small { display: block; color: var(--dim); font-size: 13px; font-weight: 400; margin-top: 2px; }
 #dlgSet .sasr label.srow small { color: var(--dim); white-space: normal; }
 #dlgSet .asrhd { margin-top: 16px; }
+html body.f-wave #dlgSet { width: min(1060px, calc(100vw - 32px)); }   /* v238: дві колонки */
+html body.f-wave #dlgSet .sasr { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; }
+html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 0; }
+html body.f-wave #dlgSet .sc2 > .row { margin-top: 18px; display: flex; justify-content: flex-end; }
+html body.f-wave #dlgSet .sc1 > label.srow:first-of-type { margin-top: 14px; }
+@media (max-width: 760px) { html body.f-wave #dlgSet .sasr { grid-template-columns: 1fr; } html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 16px; } }
+#asrStore { margin-top: 10px; font-size: 12px; color: var(--dim); }
 #asrDl .srow { margin-top: 8px; }
 #asrDl .srow button { background: var(--surf2); color: #ff8a80; border: 1px solid #ff8a80; }
 #dlgSet .sasr input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: #8fe388; }
@@ -1087,10 +1094,11 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="ctc"><span class="sl">wav2vec2 «як чути» — для суржику<small>≈ 340 МБ (з відеокартою ≈ 600 МБ). Інший тип моделі: не знає мов і нічого не перекладає — пише літерами те, що чує, слово за словом; суржик лишається суржиком, російські слова — українськими літерами («сєводня»). Без розділових знаків і великих літер, помилок більше, ніж у Whisper. «Мова тексту» на неї не діє</small></span></label>
     <div class="sl asrhd">Мова тексту</div>
-    <label class="srow"><input type="radio" name="asrLang" value="auto"><span class="sl">Як чути<small>Кожні 30 с модель сама визначає мову й пише нею, без перекладу: російське — російською, українське — українською; суржик — мовою, якої в шматку більше</small></span></label>
+    <label class="srow"><input type="radio" name="asrLang" value="auto"><span class="sl">Як чути<small>Кожні ~10 с модель сама визначає мову й пише нею, без перекладу: російське — російською, українське — українською; суржик — мовою, якої в шматку більше</small></span></label>
     <label class="srow"><input type="radio" name="asrLang" value="uk"><span class="sl">Завжди українською<small>Російське мовлення модель перекладатиме українською</small></span></label>
     <div class="sl asrhd">Завантажені моделі<small id="asrTotal">рахую…</small></div>
     <div id="asrDl"></div>
+    <div class="snote" id="asrStore"></div>
   </div>
   <div class="snote" id="setNote"></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
@@ -3397,6 +3405,13 @@ async function showAsrDl() {
   if (!FEAT.wave) return;
   const box = $('asrDl'), have = await asrCached(), ks = Object.keys(have);
   $('asrTotal').textContent = ks.length ? 'разом ' + mb(ks.reduce((a, k) => a + have[k].n, 0)) + ' на планшеті' : 'немає — модель завантажиться під час першого розпізнавання';
+  // v238: чи браузер не зітре моделі сам (постійне сховище) і скільки місця зайнято
+  (async () => { try {
+    const st = navigator.storage; if (!st) return;
+    const pers = st.persisted ? await st.persisted() : false, est = st.estimate ? await st.estimate() : null;
+    $('asrStore').textContent = (pers ? '✓ Сховище постійне — браузер сам моделі не зітре.' : '⚠ Браузер не дав постійного сховища: якщо на планшеті забракне місця, він може сам стерти моделі. Допомагає «Встановити» застосунок.')
+      + (est && est.usage ? ' Зайнято ' + mb(est.usage) + (est.quota ? ' з ' + mb(est.quota) : '') + '.' : '');
+  } catch (e) {} })();
   box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = async () => {
     const k = b.dataset.m, c = await pick('Видалити модель', ASR_MODELS[k][0] + ' (' + mb(have[k].n) + ') зникне з планшета. Для розпізнавання її доведеться завантажити знову.', ['Видалити']);
@@ -3450,6 +3465,7 @@ const ASR = (() => {
       if (c !== 0) return false;
     }
     for (const k in files) delete files[k];
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}   // v238: щоб браузер не стер модель
     // v229: модель уже на планшеті — це читання з пам'яті, а не завантаження з інтернету
     const local = !!localStorage.getItem('asrLoaded.' + model);
     onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
@@ -3987,6 +4003,13 @@ if (FEAT.hdrpl) {
     bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Копіювати'); rs.setAttribute('aria-label', 'Відновити');
     bk.title = 'Копіювати: зберегти всі мітки, нотатки й фрагменти у файл'; rs.title = 'Відновити: взяти мітки з файлу копії';
     if (!FEAT.wave) document.querySelector('.panel.side .sec > h2 > i.r').prepend(bk, rs);
+  }
+  if (FEAT.wave) {        // v238: ⚙ — дві колонки: ліворуч моделі, праворуч «Мова тексту», «Завантажені моделі» й «Готово»
+    const sa = document.querySelector('#dlgSet .sasr'), c1 = document.createElement('div'), c2 = document.createElement('div');
+    c1.className = 'sc1'; c2.className = 'sc2';
+    const kids = [...sa.children], cut = kids.findIndex(e => e.classList.contains('asrhd'));
+    c1.append(...kids.slice(0, cut)); c2.append(...kids.slice(cut), document.querySelector('#dlgSet > .row'));
+    sa.append(c1, c2);
   }
   if (FEAT.wave) {        // v192: підказки — у заголовках «Мітки» / «Фрагменти», праворуч від назви, у 2 рядки (видно завжди)
     const hm = document.createElement('span'); hm.className = 'hhint'; hm.innerHTML = 'Натисніть ★, щоб поставити<br>мітку на поточній позиції';
@@ -6745,7 +6768,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v237';
+const APP_VER = 'v238';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
