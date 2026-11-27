@@ -1104,7 +1104,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="large"><span class="sl">Whisper large-v3<small>≈ 930 МБ · найбільша й найточніша, але найповільніша; планшету потрібно багато пам'яті</small></span></label>
     <label class="srow"><input type="radio" name="asrModel" value="small"><span class="sl">Whisper small<small>≈ 390 МБ · швидше, але більше помилок</small></span></label>
-    <label class="srow"><input type="radio" name="asrModel" value="ctc"><span class="sl">wav2vec2 «як чути» — для суржику<small>≈ 340 МБ (з відеокартою ≈ 600 МБ). Інший тип моделі: не знає мов і нічого не перекладає — пише літерами те, що чує, слово за словом; суржик лишається суржиком, російські слова — українськими літерами («сєводня»). Без розділових знаків і великих літер, помилок більше, ніж у Whisper. «Мова тексту» на неї не діє</small></span></label>
+    <label class="srow"><input type="radio" name="asrModel" value="ctc"><span class="sl">wav2vec2 «як чути» — для суржику<small>≈ 340 МБ. Інший тип моделі: не знає мов і нічого не перекладає — пише літерами те, що чує, слово за словом; суржик лишається суржиком, російські слова — українськими літерами («сєводня»). Без розділових знаків і великих літер, помилок більше, ніж у Whisper. «Мова тексту» на неї не діє</small></span></label>
     <div class="sl asrhd">Мова тексту</div>
     <label class="srow"><input type="radio" name="asrLang" value="auto"><span class="sl">Як чути<small>Кожні ~10 с модель сама визначає мову й пише нею, без перекладу: російське — російською, українське — українською; суржик — мовою, якої в шматку більше</small></span></label>
     <label class="srow"><input type="radio" name="asrLang" value="uk"><span class="sl">Завжди українською<small>Російське мовлення модель перекладатиме українською</small></span></label>
@@ -3424,7 +3424,7 @@ async function showAsrDl() {
     $('asrStore').textContent = (pers ? '✓ Сховище постійне — браузер сам моделі не зітре.' : '⚠ Браузер не дав постійного сховища: якщо на планшеті забракне місця, він може сам стерти моделі. Допомагає «Встановити» застосунок.')
       + (est && est.usage ? ' Зайнято ' + mb(est.usage) + (est.quota ? ' з ' + mb(est.quota) : '') + '.' : '');
   } catch (e) {} })();
-  box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
+  box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}${have[k].n < 50 * 1048576 ? ' — не до кінця (завантажиться під час розпізнавання)' : ''}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = async () => {
     const k = b.dataset.m, c = await pick('Видалити модель', ASR_MODELS[k][0] + ' (' + mb(have[k].n) + ') зникне з планшета. Для розпізнавання її доведеться завантажити знову.', ['Видалити']);
     if (c !== 0) return;
@@ -3482,9 +3482,11 @@ const ASR = (() => {
     const local = !!localStorage.getItem('asrLoaded.' + model);
     onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
       status(local ? 'Модель з пам\'яті планшета… ' + Math.round(a / b * 100) + '%' : 'Завантаження моделі з інтернету… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
-    status(local ? 'Модель з пам\'яті планшета…' : 'Підготовка моделі…');
+    status(NAME + ': ' + (local ? 'модель з пам\'яті планшета…' : 'підготовка моделі…'));
     const r0 = await call('load', null, model);
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
+    // v245: чи модель справді записалась на планшет (бібліотека мовчки пропускає невдалий запис — тоді вона качається щоразу)
+    asrCached().then(have => { if (!have[model] || have[model].n < 50 * 1048576) toast('Модель ' + NAME + ' не вдалося записати на планшет (мало місця?) — наступного разу вона завантажиться знову', 15000); });
     // v231: шматки ~10 с (7…13 с), різ — у найтихішому місці (пауза між словами), щоб мова визначалась частіше й слова не різались
     const SR = 16000, T = s1 - s0, t0 = performance.now(), N = Math.max(1, Math.round(T / 10));
     let k = 0, words = '', head = '', heard = '';
@@ -3508,7 +3510,7 @@ const ASR = (() => {
         const audio = buf.slice(0, cut); buf = buf.slice(cut);
         const done = (at - s0) / T, el = (performance.now() - t0) / 1000; at += cut / SR;
         k++; words = ''; tp = performance.now();
-        head = Math.round(done * 100) + '% · шматок ' + k + ' з ~' + Math.max(N, k) + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти') + heard;
+        head = NAME + ' · ' + Math.round(done * 100) + '% · шматок ' + k + ' з ~' + Math.max(N, k) + (done > 0.05 ? ' · лишилось ~' + fmtLeft(el / done * (1 - done)) : '') + (r0.dev === 'webgpu' ? '' : ' · без відеокарти') + heard;
         show();
         let r;
         try { r = await call('run', audio, model); }
@@ -3519,7 +3521,7 @@ const ASR = (() => {
         if (asrLang() === 'auto' && r.lang) heard = ' · попередній — ' + (r.lang === 'russian' ? 'рос.' : 'укр.');   // v230: яку мову модель почула
       }
     } finally { clearInterval(tick); onTok = () => {}; }
-    status('Готово');
+    status('Готово · ' + NAME);
     return true;
   }
   // найтихіше місце (кадри по 0,1 с) між from і to — там різати шматок
@@ -3542,6 +3544,11 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
     const stopAsr = () => { if (on) { on = false; ASR.stop(); btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати'; } };
     btn.onclick = async () => {
       if (on) { stopAsr(); st.textContent = 'Зупинено'; return; }
+      if (ta.value.trim()) {                 // v245: у нотатці вже є текст — замінити чи дописати
+        const c = await pick('У нотатці вже є текст', 'Новий розпізнаний текст — замість старого чи після нього?', ['Замінити', 'Дописати']);
+        if (c === null) return;
+        if (c === 0) { ta.value = ''; m.note = ''; save(); renderMarks(); }
+      }
       on = true; btn.classList.add('on'); btn.lastChild.textContent = 'Зупинити';
       try {
         const ok = await ASR.transcribe(m, txt => {          // текст — одразу в поле й у нотатки мітки (щоб не загубився)
@@ -6868,7 +6875,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v244';
+const APP_VER = 'v245';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»

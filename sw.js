@@ -2,7 +2,7 @@
 // Спершу кеш — застосунок відкривається миттєво й без інтернету (і при поганому зв'язку не чекає мережу).
 // Нові версії приходять так: сторінка сама порівнює APP_VER на сайті (checkUpdate, запит з ?u=… — лише мережа),
 // просить оновити цей файл; новий sw.js з новим CACHE завантажує свіжі файли — і сторінка перезапускається.
-const CACHE = 'video-player-v244';
+const CACHE = 'video-player-v245';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './fonts/tektur-cyrillic.woff2', './fonts/tektur-cyrillic-ext.woff2', './fonts/tektur-latin.woff2', './fonts/tektur-latin-ext.woff2'];
 
@@ -17,7 +17,7 @@ self.addEventListener('activate', e => {
 });
 const INBOX = 'share-video-player';
 const AICACHE = 'ai1-video-player';   // ai1 — змінити, коли зміняться файли в ai/   (не з префіксом CACHE — інакше activate її стер би)
-const ASRCACHE = 'asr7-video-player';  // asr7 — змінити, коли зміняться файли в asr/ (розпізнавання мови аудіоплеєра)
+const ASRCACHE = 'asr8-video-player';  // asr8 — змінити, коли зміняться файли в asr/ (розпізнавання мови аудіоплеєра)
 self.addEventListener('fetch', e => {
   const req = e.request;
   // «Поділитися» → файли кладемо у вхідні й відкриваємо застосунок; сторінка забере їх у плейлист
