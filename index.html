@@ -295,6 +295,10 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 #dlgNote .row { align-items: center; }
 #dlgNoteAsr { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; background: var(--surf2); color: #8fe388; border: 1px solid #8fe388; }
 #dlgNoteAsr svg { width: 22px; height: 22px; flex: none; }
+#dlgNote .row button.nico { min-width: 0; width: 48px; padding: 10px; background: var(--surf2); color: #8fe388; border: 1px solid #8fe388; }   /* v235: копіювати / вставити */
+#dlgNote .row button.nico svg { width: 100%; height: 100%; display: block; }
+#dlgNoteAsr { margin-right: 0 !important; }
+#dlgNoteProg { margin-left: 4px; }
 #dlgNoteAsr.on { background: #8fe388; color: #111; }
 #dlgNoteProg { flex: 1; min-width: 0; font-size: 14px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
 /* кольори значків у списках */
@@ -1050,7 +1054,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <form method="dialog" id="dlgNoteForm">
     <h3 id="dlgNoteTitle"></h3>
     <textarea id="dlgNoteText" rows="8" autocomplete="off" placeholder="Нотатки до мітки…"></textarea>
-    <div class="row"><button type="button" id="dlgNoteAsr" title="Розпізнати мову від цієї мітки до наступної й дописати сюди"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Розпізнати</span></button><span id="dlgNoteProg"></span><button type="button" id="dlgNoteCancel">Скасувати</button><button class="accent" id="dlgNoteOk">Зберегти</button></div>
+    <div class="row"><button type="button" id="dlgNoteAsr" title="Розпізнати мову від цієї мітки до наступної й дописати сюди"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Розпізнати</span></button><button type="button" id="dlgNoteCopy" class="nico" title="Копіювати весь текст нотатки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg></button><button type="button" id="dlgNotePaste" class="nico" title="Вставити з буфера обміну"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 4.5V3.5h6v1"/><path d="M9 3h6v3H9z"/><path d="M9 12h6M9 16h4"/></svg></button><span id="dlgNoteProg"></span><button type="button" id="dlgNoteCancel">Скасувати</button><button class="accent" id="dlgNoteOk">Зберегти</button></div>
   </form>
 </dialog>
 
@@ -3514,6 +3518,20 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
         if (ok === false && on) st.textContent = '';
       } catch (err) { console.warn(err); st.textContent = err.message === 'зупинено' ? 'Зупинено' : 'Не вдалося: ' + (err.message || err); }
       on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
+    };
+    // v235: копіювати весь текст / вставити з буфера туди, де курсор
+    $('dlgNoteCopy').onclick = async () => {
+      const v = ta.value; if (!v.trim()) return toast('Нотатка порожня', 1500);
+      try { await navigator.clipboard.writeText(v); }
+      catch (e) { ta.focus(); ta.select(); try { document.execCommand('copy'); } catch (e2) {} ta.setSelectionRange(v.length, v.length); }
+      toast('Текст нотатки скопійовано', 1500);
+    };
+    $('dlgNotePaste').onclick = async () => {
+      let v = '';
+      try { v = await navigator.clipboard.readText(); } catch (e) { return toast('Браузер не дав прочитати буфер — утримайте палець у полі й виберіть «Вставити»', 4500); }
+      if (!v) return toast('У буфері обміну немає тексту', 1500);
+      const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+      ta.setRangeText(v, a, b, 'end'); ta.focus();
     };
     const done = v => { stopAsr(); d.close(); resolve(v); };
     $('dlgNoteCancel').onclick = () => done(null);
@@ -6712,7 +6730,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v234';
+const APP_VER = 'v235';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
