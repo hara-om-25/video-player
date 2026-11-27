@@ -723,6 +723,9 @@ html body.f-wave #dlgSet { width: min(1060px, calc(100vw - 32px)); }   /* v238: 
 html body.f-wave #dlgSet .sasr { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; }
 html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 0; }
 html body.f-wave #dlgSet .sc2 > .row { margin-top: 18px; display: flex; justify-content: flex-end; }
+html body.f-wave #dlgSet .sasr { align-items: stretch; }   /* v254: «Готово» — у правому нижньому куті вікна */
+html body.f-wave #dlgSet .sc2 { display: flex; flex-direction: column; }
+html body.f-wave #dlgSet .sc2 > .row { margin-top: auto; padding-top: 18px; }
 html body.f-wave #dlgSet .sc1 > label.srow:first-of-type { margin-top: 14px; }
 @media (max-width: 760px) { html body.f-wave #dlgSet .sasr { grid-template-columns: 1fr; } html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 16px; } }
 #asrStore { margin-top: 10px; font-size: 12px; color: var(--dim); }
@@ -6980,7 +6983,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v253';
+const APP_VER = 'v254';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
