@@ -3984,15 +3984,21 @@ if (FEAT.hdrpl) {
 $('btnSaveTrim').onclick = async () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   if (!tracks[cur].parent && !T0()) return toast('Спочатку натисніть «Обрізати» там, звідки має починатися шматок', 2000);
+  // v232: «★ — кінець шматка» діє й на MP4: шматок без кінця (обрізаний до кінця файлу) пишеться лише до першої ★ після його початку
+  let end = T1();
+  if (FEAT.edit && editCfg.starEnd && !(data.end && data.end < dur())) {
+    const s = data.marks.map(m => m.t).filter(x => x > T0() + 0.5 && x < end).sort((a, b) => a - b)[0];
+    if (s) end = s;
+  }
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
-  const name = base + ' з ' + hms(T0()).replace(/:/g, '-') + (T1() < dur() ? ' до ' + hms(T1()).replace(/:/g, '-') : '');
+  const name = base + ' з ' + hms(T0()).replace(/:/g, '-') + (end < dur() ? ' до ' + hms(end).replace(/:/g, '-') : '');
   // відеоредактор: у вибрану папку (дозвіл питаємо зараз, поки є дотик; після запису його вже не дадуть)
   let dir = null;
   if (FEAT.edit) {
     dir = await idb.get('dir:save').catch(() => null) || null;
     if (dir && !await dirAllowed(dir, true)) { toast('Немає дозволу писати в «' + dir.name + '» — збережу в «Завантаження»', 2500); dir = null; }
   }
-  exportVideo({ name, start: T0(), end: T1() }, dir);
+  exportVideo({ name, start: T0(), end }, dir);
 };
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
@@ -6692,7 +6698,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v231';
+const APP_VER = 'v232';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
