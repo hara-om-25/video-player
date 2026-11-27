@@ -3567,7 +3567,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
       on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
     };
     // v248: «Копіювати» видно лише коли в полі є текст
-    const syncCopy = () => { $('dlgNoteCopy').style.display = ta.value.trim() ? '' : 'none'; };
+    const syncCopy = () => { const d = ta.value.trim() ? '' : 'none'; $('dlgNoteCopy').style.display = d; $('dlgNotePaste').style.display = d; };   // v249: і «Вставити» — лише з текстом (рішення користувача)
     ta.oninput = syncCopy; syncCopy();
     // v235: копіювати весь текст / вставити з буфера туди, де курсор
     $('dlgNoteCopy').onclick = async () => {
@@ -6885,7 +6885,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v248';
+const APP_VER = 'v249';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
