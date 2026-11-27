@@ -3408,18 +3408,27 @@ const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ', 'onnx-com
   small: ['Whisper small', '≈ 390 МБ', 'onnx-community/whisper-small/'],
   ctc: ['wav2vec2 «як чути»', '≈ 340 МБ', 'XDcobra/wav2vec2-large-xlsr-53-ukrainian-ONNX/'] };   // v231   // v225; [2] — шлях моделі в адресах кешу transformers.js
 // v226: завантажені моделі в ⚙ — розмір і «Видалити» (кеш «transformers-cache», куди transformers.js кладе файли моделей)
+// v251: сховище моделей (IndexedDB «asr-models», пише фоновий потік asr/worker.js)
+function mdbOpen() { return new Promise((res, rej) => { const r = indexedDB.open('asr-models', 1); r.onupgradeneeded = () => { r.result.createObjectStore('files'); r.result.createObjectStore('parts'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function mdbList(st) {                  // [[ключ, розмір]] без читання самих файлів
+  const db = await mdbOpen();
+  try { return await new Promise((res, rej) => { const out = [], q = db.transaction(st, 'readonly').objectStore(st).openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); out.push([String(c.key), (c.value && c.value.size) || 0]); c.continue(); }; q.onerror = () => rej(q.error); }); }
+  finally { db.close(); }
+}
+async function mdbDelete(pairs) {
+  const db = await mdbOpen();
+  try { await new Promise((res, rej) => { const t = db.transaction(['files', 'parts'], 'readwrite'); for (const [st, k] of pairs) t.objectStore(st).delete(k); t.oncomplete = res; t.onerror = t.onabort = () => rej(t.error); }); }
+  finally { db.close(); }
+}
 async function asrCached() {
   const out = {};
   try {
-    for (const cn of ['transformers-cache', 'asr-parts']) {   // v246: і недокачані частини
-      if (!(await caches.has(cn))) continue;
-      const c = await caches.open(cn);
-      for (const req of await c.keys()) {
-        const k = Object.keys(ASR_MODELS).find(m => req.url.includes('/' + ASR_MODELS[m][2])); if (!k) continue;
-        const r = await c.match(req); let n = +(r && r.headers.get('content-length')) || 0;
-        if (!n && r) { try { n = (await r.blob()).size; } catch (e) {} }
-        const o = (out[k] = out[k] || { n: 0, reqs: [], parts: 0 }); o.n += n; o.reqs.push([cn, req]);
-        if (cn === 'asr-parts') o.parts += n;
+    // v251: моделі — в IndexedDB «asr-models» (files — цілі файли, parts — недокачані частини)
+    for (const st of ['files', 'parts']) {
+      for (const [key, size] of await mdbList(st)) {
+        const k = Object.keys(ASR_MODELS).find(m => key.includes('/' + ASR_MODELS[m][2])); if (!k) continue;
+        const o = (out[k] = out[k] || { n: 0, reqs: [], parts: 0 }); o.n += size; o.reqs.push([st, key]);
+        if (st === 'parts') o.parts += size;
       }
     }
   } catch (e) { console.warn(e); }
@@ -3442,7 +3451,7 @@ async function showAsrDl() {
     const k = b.dataset.m, c = await pick('Видалити модель', ASR_MODELS[k][0] + ' (' + mb(have[k].n) + ') зникне з планшета. Для розпізнавання її доведеться завантажити знову.', ['Видалити']);
     if (c !== 0) return;
     ASR.reset();                          // модель могла бути відкрита у фоновому потоці
-    try { for (const [cn, r] of have[k].reqs) await (await caches.open(cn)).delete(r); } catch (e) {}
+    try { await mdbDelete(have[k].reqs); } catch (e) {}
     try { localStorage.removeItem('asrLoaded.' + k); } catch (e) {}
     toast(ASR_MODELS[k][0] + ' — видалено', 2400); showAsrDl();
   });
@@ -3950,6 +3959,7 @@ async function showMem() {
       if (cnt) rows.push(`<div class="mrow"><span class="sl">${label}: копії файлів зі списку<small>${cnt} файл(ів) — щоб відкривались і без вікна Android</small></span><b>${gb(n)}</b></div>`);
     }
     let models = 0, appc = 0;
+    for (const st of ['files', 'parts']) for (const [, s] of await mdbList(st).catch(() => [])) models += s;
     for (const k of await caches.keys()) { const s = await cacheSize(k); if (k === 'transformers-cache' || k === 'asr-parts') models += s; else appc += s; }
     known += extraN + models + appc;
     rows.unshift(`<div class="mrow"><span class="sl">Моделі розпізнавання<small>прибрати — у «Завантажених моделях»</small></span><b>${gb(models)}</b></div>`);
@@ -6961,7 +6971,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v250';
+const APP_VER = 'v251';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
