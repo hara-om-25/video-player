@@ -3550,7 +3550,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
       if (ta.value.trim()) {                 // v245: у нотатці вже є текст — замінити чи дописати
         const c = await pick('У нотатці вже є текст', 'Новий розпізнаний текст — замість старого чи після нього?', ['Замінити', 'Дописати']);
         if (c === null) return;
-        if (c === 0) { ta.value = ''; m.note = ''; save(); renderMarks(); }
+        if (c === 0) { ta.value = ''; m.note = ''; save(); renderMarks(); syncCopy(); }
       }
       on = true; btn.classList.add('on'); btn.lastChild.textContent = 'Зупинити';
       try {
@@ -3558,7 +3558,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
         const ok = await ASR.transcribe(m, txt => {          // текст — одразу в поле й у нотатки мітки (щоб не загубився)
           const t0 = ta.value.replace(/\s+$/, '');
           ta.value = t0 + (t0 ? (added ? ' ' : '\n\n') : '') + txt; added++;   // новий розпізнаний текст — з нового абзацу
-          ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks();
+          ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks(); syncCopy();
         }, x => { if (on) st.textContent = x; });
         if (ok === false && on) st.textContent = '';
       } catch (err) { console.warn(err); st.textContent = err.message === 'зупинено' ? 'Зупинено' : 'Не вдалося: ' + (err.message || err); }
@@ -3566,6 +3566,9 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
       if (added) { ta.value = ta.value.replace(/\s+$/, '') + '\n— розпізнано: ' + who; ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks(); }
       on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
     };
+    // v248: «Копіювати» видно лише коли в полі є текст
+    const syncCopy = () => { $('dlgNoteCopy').style.display = ta.value.trim() ? '' : 'none'; };
+    ta.oninput = syncCopy; syncCopy();
     // v235: копіювати весь текст / вставити з буфера туди, де курсор
     $('dlgNoteCopy').onclick = async () => {
       const v = ta.value; if (!v.trim()) return toast('Нотатка порожня', 1500);
@@ -3578,7 +3581,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
       try { v = await navigator.clipboard.readText(); } catch (e) { return toast('Браузер не дав прочитати буфер — утримайте палець у полі й виберіть «Вставити»', 4500); }
       if (!v) return toast('У буфері обміну немає тексту', 1500);
       const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
-      ta.setRangeText(v, a, b, 'end'); ta.focus();
+      ta.setRangeText(v, a, b, 'end'); ta.focus(); syncCopy();
     };
     const done = v => { stopAsr(); d.close(); resolve(v); };
     $('dlgNoteCancel').onclick = () => done(null);
@@ -6882,7 +6885,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v247';
+const APP_VER = 'v248';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
