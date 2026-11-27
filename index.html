@@ -725,6 +725,15 @@ html body.f-wave #dlgSet .sc2 > .row { margin-top: 18px; display: flex; justify-
 html body.f-wave #dlgSet .sc1 > label.srow:first-of-type { margin-top: 14px; }
 @media (max-width: 760px) { html body.f-wave #dlgSet .sasr { grid-template-columns: 1fr; } html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 16px; } }
 #asrStore { margin-top: 10px; font-size: 12px; color: var(--dim); }
+/* v250: «Пам'ять планшета» в ⚙ (усі три) */
+#memBox { margin-top: 4px; }
+#memBox .asrhd { margin-top: 16px; font-size: 15px; font-weight: 600; }
+#memBox .asrhd small { display: block; color: var(--dim); font-size: 13px; font-weight: 400; margin-top: 2px; white-space: normal; }
+#memList .mrow { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; }
+#memList .mrow .sl { flex: 1; min-width: 0; }
+#memList .mrow small { display: block; color: var(--dim); font-size: 12px; white-space: normal; }
+#memList .mrow b { color: var(--accent); font-weight: 600; white-space: nowrap; }
+#memList .mrow button { flex: none; height: 40px; padding: 0 12px; font-size: 14px; background: var(--surf2); color: #ff8a80; border: 1px solid #ff8a80; }
 #asrDl .srow { margin-top: 8px; }
 #asrDl .srow button { background: var(--surf2); color: #ff8a80; border: 1px solid #ff8a80; }
 #dlgSet .sasr input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: #8fe388; }
@@ -1113,6 +1122,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
     <div class="snote" id="asrStore"></div>
   </div>
   <div class="snote" id="setNote"></div>
+  <div id="memBox"><div class="sl asrhd">Пам'ять планшета<small id="memSum">рахую…</small></div><div id="memList"></div></div>
   <div class="row"><button class="accent" id="setOk">Готово</button></div>
 </dialog>
 
@@ -3688,6 +3698,7 @@ function addFiles(files, handles) {
     if (tracks.some(t => t.key === fileKey(f))) continue;
     const t = { file: f, url: URL.createObjectURL(f), key: fileKey(f) };
     tracks.push(t);
+    if (handles && handles[[...files].indexOf(f)]) continue;   // v250: є посилання на файл — копію не робимо (вона з'їдала гігабайти)
     idb.put(t.key, f).catch(async () => {
       const h = await idb.get('h:' + t.key).catch(() => null);
       if (!h) toast('Не вистачило місця, щоб запам\'ятати «' + f.name + '» — після перезапуску його доведеться додати знову', 12000);
@@ -3895,7 +3906,72 @@ async function dirAllowed(dir, ask) {
     return ask && await dir.requestPermission({ mode: 'readwrite' }) === 'granted';
   } catch { return false; }
 }
+// v250: що займає пам'ять сайту (усі три застосунки на одному домені) і що можна прибрати, не чіпаючи міток і нотаток
+const APP_DBS = [['markplayer', 'session', 'Аудіоплеєр'], ['markplayer-video', 'session.video', 'Відеоплеєр'], ['markplayer-editor', 'session.editor', 'Відеоредактор']];
+function openDb(name) {
+  return new Promise((res, rej) => { const r = indexedDB.open(name, 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function dbEntries(name) {             // [{key, size, blob, handle}] — без читання самих файлів (лише розмір)
+  const db = await openDb(name);
+  try {
+    return await new Promise((res, rej) => {
+      const out = [], t = db.transaction('files', 'readonly'), cur = t.objectStore('files').openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (!c) return res(out); const v = c.value; out.push({ key: String(c.key), size: v instanceof Blob ? v.size : 0, blob: v instanceof Blob }); c.continue(); };
+      cur.onerror = () => rej(cur.error);
+    });
+  } finally { db.close(); }
+}
+async function dbDelete(name, keys) {
+  const db = await openDb(name);
+  try { await new Promise((res, rej) => { const t = db.transaction('files', 'readwrite'), st = t.objectStore('files'); keys.forEach(k => st.delete(k)); t.oncomplete = res; t.onerror = t.onabort = () => rej(t.error); }); }
+  finally { db.close(); }
+}
+async function cacheSize(name) {
+  let n = 0; const c = await caches.open(name);
+  for (const req of await c.keys()) { const r = await c.match(req); let s = +(r && r.headers.get('content-length')) || 0; if (!s && r) { try { s = (await r.blob()).size; } catch (e) {} } n += s; }
+  return n;
+}
+async function showMem() {
+  const box = $('memList'); if (!box) return;
+  const gb = n => n >= 1073741824 ? (n / 1073741824).toFixed(1).replace('.', ',') + ' ГБ' : n > 0 && n < 1048576 ? '<1 МБ' : Math.round(n / 1048576) + ' МБ';
+  try {
+    const rows = []; let known = 0, extraKeys = [], extraN = 0, dupKeys = [], dupN = 0;
+    for (const [db, ses, label] of APP_DBS) {
+      let ents = []; try { ents = await dbEntries(db); } catch (e) {}
+      const live = new Set((getSetting(ses, null) || {}).keys || []);
+      const hs = new Set(ents.filter(e => e.key.startsWith('h:')).map(e => e.key.slice(2)));
+      let n = 0, cnt = 0;
+      for (const e of ents) {
+        if (!e.blob) continue;
+        if (!live.has(e.key)) { extraKeys.push([db, e.key]); extraN += e.size; }           // файлу вже немає в списку — копія зайва
+        else { n += e.size; cnt++; if (hs.has(e.key)) { dupKeys.push([db, e.key]); dupN += e.size; } }   // є посилання — копія не потрібна
+      }
+      known += n + 0;
+      if (cnt) rows.push(`<div class="mrow"><span class="sl">${label}: копії файлів зі списку<small>${cnt} файл(ів) — щоб відкривались і без вікна Android</small></span><b>${gb(n)}</b></div>`);
+    }
+    let models = 0, appc = 0;
+    for (const k of await caches.keys()) { const s = await cacheSize(k); if (k === 'transformers-cache' || k === 'asr-parts') models += s; else appc += s; }
+    known += extraN + models + appc;
+    rows.unshift(`<div class="mrow"><span class="sl">Моделі розпізнавання<small>прибрати — у «Завантажених моделях»</small></span><b>${gb(models)}</b></div>`);
+    if (dupN) rows.push(`<div class="mrow"><span class="sl">Копії, без яких можна обійтись<small>файли відкриваються з планшета за посиланням (після перезапуску Android може раз попросити дозволу)</small></span><b>${gb(dupN)}</b><button data-m="dup">Прибрати</button></div>`);
+    if (extraN) rows.push(`<div class="mrow"><span class="sl">Зайві копії<small>файлів уже немає в жодному списку</small></span><b>${gb(extraN)}</b><button data-m="extra">Прибрати</button></div>`);
+    rows.push(`<div class="mrow"><span class="sl">Самі застосунки й обробка відео 🎯</span><b>${gb(appc)}</b></div>`);
+    const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+    if (est && est.usage > known + 50 * 1048576) rows.push(`<div class="mrow"><span class="sl">Інше на цьому сайті<small>браузер рахує із запасом; сюди ж — інші застосунки з адреси hara-om-25.github.io</small></span><b>${gb(est.usage - known)}</b></div>`);
+    $('memSum').textContent = est ? 'усього зайнято ' + gb(est.usage) + (est.quota ? ' з ' + gb(est.quota) : '') + '. Мітки й нотатки тут не зачіпаються' : '';
+    box.innerHTML = rows.join('');
+    box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+      const list = b.dataset.m === 'dup' ? dupKeys : extraKeys, n = b.dataset.m === 'dup' ? dupN : extraN;
+      const c = await pick('Прибрати копії', 'Звільниться ' + gb(n) + '. Самі файли на планшеті, мітки й нотатки лишаються.', ['Прибрати']);
+      if (c !== 0) return;
+      const by = {}; for (const [db, k] of list) (by[db] = by[db] || []).push(k);
+      for (const db in by) await dbDelete(db, by[db]).catch(() => {});
+      toast('Звільнено ' + gb(n), 2500); showMem();
+    });
+  } catch (e) { box.textContent = 'Не вдалося порахувати: ' + (e.message || e); }
+}
 async function showSet() {
+  showMem();
   const o = await idb.get('dir:open').catch(() => null), sv = await idb.get('dir:save').catch(() => null);
   $('setOpenName').textContent = o ? o.name : 'не обрано';
   $('setSaveName').textContent = sv ? sv.name : 'не обрано — у «Завантаження»';
@@ -4125,7 +4201,7 @@ if (FEAT.hdrpl) {
     const sa = document.querySelector('#dlgSet .sasr'), c1 = document.createElement('div'), c2 = document.createElement('div');
     c1.className = 'sc1'; c2.className = 'sc2';
     const kids = [...sa.children], cut = kids.findIndex(e => e.classList.contains('asrhd'));
-    c1.append(...kids.slice(0, cut)); c2.append(...kids.slice(cut), document.querySelector('#dlgSet > .row'));
+    c1.append(...kids.slice(0, cut)); c2.append(...kids.slice(cut), $('memBox'), document.querySelector('#dlgSet > .row'));
     sa.append(c1, c2);
   }
   if (FEAT.wave) {        // v192: підказки — у заголовках «Мітки» / «Фрагменти», праворуч від назви, у 2 рядки (видно завжди)
@@ -6885,7 +6961,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v249';
+const APP_VER = 'v250';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
