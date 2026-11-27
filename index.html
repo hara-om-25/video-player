@@ -274,6 +274,7 @@ body.drawing header, body.drawing .panel.side, body.drawing .footer, body.drawin
 .item .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .item .col .name { flex: none; }
 .item .meta { color: var(--dim); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item.sub .name small.tm { display: block; font-size: 13px; color: var(--dim); margin-top: 2px; }   /* v234 */
 .item .badge { font-size: 14px; color: var(--star); white-space: nowrap; }
 .item .acts { display: flex; gap: 4px; flex: none; }
 .item .acts button { background: none; border: none; padding: 6px 9px; color: var(--dim); font-size: 22px; line-height: 1; }
@@ -3619,6 +3620,7 @@ function addSub(t, e) {                    // повертає індекс ря
   if (i <= cur) cur++;
   return i;
 }
+const subMarkName = (d, e) => { const m = d && d.marks && d.marks.find(x => Math.abs(x.t - e) < 0.05); return m && m.name ? m.name : ''; };   // v234
 function renderPlaylist() {
   const el = $('playlist');
   if (!tracks.length) {
@@ -3632,9 +3634,11 @@ function renderPlaylist() {
     const d = i === cur ? data : load(t.key);
     const n = d.marks.length, c = FEAT.clips ? d.clips.length : 0;
     const badge = (n ? '★' + n : '') + (c ? ' ✂' + c : '');
+    // v234: шматок до ★ — назва цієї мітки (її можна змінити ✎ у «Мітках»), час — дрібно під нею
+    const em = t.parent && t.end ? subMarkName(d, t.end) : '';
     if (t.parent) return `<div class="item sub ${i === cur ? 'active' : ''}" data-i="${i}">
       <span class="num">↳</span>
-      <span class="name" title="${esc(t.file.name)} з ${hms(t.start)}${t.end ? ' до ' + hms(t.end) : ''}">${hms(t.start)}${t.end ? '<br>–' + hms(t.end) : ''}</span>
+      <span class="name" title="${esc(t.file.name)} з ${hms(t.start)}${t.end ? ' до ' + hms(t.end) : ''}">${em ? esc(em) + '<small class="tm">' + hms(t.start) + ' – ' + hms(t.end) + '</small>' : hms(t.start) + (t.end ? '<br>–' + hms(t.end) : '')}</span>
       <span class="badge">${badge}</span>
     </div>`;
     const kids = tracks.some(x => x.parent === t.key);
@@ -4000,7 +4004,8 @@ $('btnSaveTrim').onclick = async () => {
     if (s) end = s;
   }
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
-  const name = base + ' з ' + hms(T0()).replace(/:/g, '-') + (end < dur() ? ' до ' + hms(end).replace(/:/g, '-') : '');
+  const mn = end < dur() ? subMarkName(data, end) : '';   // v234: шматок до ★ — у назві файлу й назва мітки
+  const name = base + (mn ? ' ' + mn.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) : '') + ' з ' + hms(T0()).replace(/:/g, '-') + (end < dur() ? ' до ' + hms(end).replace(/:/g, '-') : '');
   // відеоредактор: у вибрану папку (дозвіл питаємо зараз, поки є дотик; після запису його вже не дадуть)
   let dir = null;
   if (FEAT.edit) {
@@ -5820,7 +5825,7 @@ $('markList').addEventListener('click', async e => {
   const a = e.target.closest('[data-a]')?.dataset.a;
   if (a === 'ren') {
     const n = await ask('Перейменувати мітку', fmt(m.t, true), m.name);
-    if (n) { m.name = n; save(); renderMarks(); renderBar(); }
+    if (n) { m.name = n; save(); renderMarks(); renderBar(); renderPlaylist(); }
   } else if (a === 'retime') {             // v191: ★ у рядку — перенести мітку на поточне місце (з питанням)
     const t = Rev.active ? Rev.time() : audio.currentTime;
     const c = await pick('Змінити час мітки', '«' + m.name + '»: ' + fmt(m.t - T0()) + ' → ' + fmt(t - T0()), ['Змінити']);
@@ -6707,7 +6712,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v233';
+const APP_VER = 'v234';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
