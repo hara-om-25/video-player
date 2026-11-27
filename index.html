@@ -4063,9 +4063,9 @@ if (FEAT.hdrpl) {
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
   {   // v233/v236: «Копіювати» / «Відновити» — із шапки в заголовок «Мітки» (у всіх трьох), значками; назва — у підказці title
     const bk = $('btnBackup'), rs = $('btnRestore');
-    bk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>';
-    // v236: «Відновити» — відкрита тека зі стрілкою вгору («взяти з файлу копії»), замість годинника
-    rs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19.5V6a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.2v11.3"/><path d="M3 19.5h18"/><path d="M12 17V10.5"/><path d="M9 13.2l3-3 3 3"/></svg>';
+    // v241 (вибір користувача з 10 пар): «Копіювати» — лоток, стрілка вгору з нього (експорт); «Відновити» — лоток, стрілка вниз у нього (імпорт)
+    bk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/></svg>';
+    rs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/></svg>';
     bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Копіювати'); rs.setAttribute('aria-label', 'Відновити');
     bk.title = 'Копіювати: зберегти всі мітки, нотатки й фрагменти у файл'; rs.title = 'Відновити: взяти мітки з файлу копії';
     if (!FEAT.wave) document.querySelector('.panel.side .sec > h2 > i.r').prepend(bk, rs);
@@ -6834,7 +6834,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v240';
+const APP_VER = 'v241';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
