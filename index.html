@@ -3861,19 +3861,31 @@ async function showSet() {
 // v239: вікно Android завжди відкривається в останній папці (веб не може вказати іншу), тож спершу — своє вікно
 // з уже доданими папками (`dir:hist` + обидві поточні); вікно Android — лише через «Інша папка…»
 async function sameDir(a, b) { try { return a === b || (a && b && await a.isSameEntry(b)); } catch { return false; } }
+// v240: свайп убік прибирає папку зі списку (і з налаштування, де вона обрана)
+async function forgetDir(h) {
+  const hist = (await idb.get('dir:hist').catch(() => null)) || [], keep = [];
+  for (const x of hist) if (!(await sameDir(x, h))) keep.push(x);
+  await idb.put('dir:hist', keep);
+  for (const k of ['dir:open', 'dir:save']) { const x = await idb.get(k).catch(() => null); if (x && await sameDir(x, h)) { await idb.del(k); if (k === 'dir:open') dirOpenH = null; } }
+}
+let ddState = null;
 function dirsDialog(title, list, curH) {
   return new Promise(async res => {
     let d = $('dlgDirs');
     if (!d) {
       d = document.createElement('dialog'); d.id = 'dlgDirs';
-      d.innerHTML = '<h3 id="ddTitle"></h3><p class="ddHint">Уже додані папки — дотик обирає. Іншу — у вікні Android.</p><div id="ddList"></div><div class="row"><button type="button" id="ddOther">Інша папка…</button><button type="button" id="ddCancel">Скасувати</button></div>';
+      d.innerHTML = '<h3 id="ddTitle"></h3><p class="ddHint">Уже додані папки — дотик обирає, свайп убік — прибрати зі списку. Іншу — у вікні Android.</p><div id="ddList"></div><div class="row"><button type="button" id="ddOther">Інша папка…</button><button type="button" id="ddCancel">Скасувати</button></div>';
       document.body.appendChild(d);
+      swipeDelete($('ddList'), async i => { const s = ddState; if (!s) return; const h = s.list[i]; await forgetDir(h); s.list.splice(i, 1); toast('«' + h.name + '» прибрано зі списку', 1800); s.draw(); showSet(); });
     }
     $('ddTitle').textContent = title;
+    const done = v => { ddState = null; d.close(); res(v); };
+    const draw = async () => {
     const marks = await Promise.all(list.map(h => sameDir(h, curH)));
-    $('ddList').innerHTML = list.map((h, i) => `<button type="button" class="ddItem${marks[i] ? ' cur' : ''}" data-i="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 19V6a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.2V19H3z"/></svg><span>${esc(h.name)}</span>${marks[i] ? '<b>✓ зараз</b>' : ''}</button>`).join('');
-    const done = v => { d.close(); res(v); };
+    $('ddList').innerHTML = list.length ? list.map((h, i) => `<button type="button" class="item ddItem${marks[i] ? ' cur' : ''}" data-i="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 19V6a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.2V19H3z"/></svg><span>${esc(h.name)}</span>${marks[i] ? '<b>✓ зараз</b>' : ''}</button>`).join('') : '<p class="ddHint">Список порожній — оберіть папку через «Інша папка…»</p>';
     $('ddList').querySelectorAll('.ddItem').forEach(b => b.onclick = () => done(+b.dataset.i));
+    };
+    ddState = { list, draw }; await draw();
     $('ddOther').onclick = () => done('other'); $('ddCancel').onclick = () => done(null);
     d.oncancel = e => { e.preventDefault(); done(null); };
     d.showModal();
@@ -6822,7 +6834,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v239';
+const APP_VER = 'v240';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
