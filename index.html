@@ -4081,7 +4081,7 @@ if (FEAT.hdrpl) {
     const hm = document.createElement('span'); hm.className = 'hhint'; hm.innerHTML = 'Натисніть ★, щоб поставити<br>мітку на поточній позиції';
     document.querySelector('.panel.side .sec > h2 > span').after(hm);
     hm.after($('btnBackup'), $('btnRestore'));   // v233: «Копіювати» / «Відновити» — у заголовку «Мітки», праворуч від підказки
-    const hf = document.createElement('span'); hf.className = 'hhint'; hf.innerHTML = 'Позначте [ початок і ] кінець, потім ⬇ —<br>фрагмент збережеться окремим MP3';
+    const hf = document.createElement('span'); hf.className = 'hhint'; hf.innerHTML = 'Позначте [ початок і ] кінець, потім MP3 —<br>фрагмент збережеться окремим MP3';
     document.querySelector('.fragsec > h2 > span').after(hf);
   }
   if (FEAT.wave) {        // аудіоплеєр: логотип — у «Фрагментах», кнопки ◁ ▷ — у рядку з часом
@@ -4091,7 +4091,7 @@ if (FEAT.hdrpl) {
     const row = document.createElement('div'), rail = document.createElement('div');
     row.className = 'waverow'; rail.className = 'warail';
     const wv = $('wave'); wv.replaceWith(row); row.append(wv, rail); const sc = $('btnSaveClip');      // v168: значок «стрілка в лоток», як у зеленої кнопки фрагмента, і більші літери
-    sc.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M4.5 13.5v5.5h15v-5.5"/></svg><small>MP3</small>';
+    sc.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/></svg><small>MP3</small>';
     rail.append(sc, $('btnMark'));   // v164: ⬇MP3 — над віконцем секунд
     // «◁ 100% ▷» — праворуч від шкали, ×1 — у самому кутку (v160)
     const tl = document.querySelector('.footer .timeline'), sp = document.createElement('div');
@@ -6232,7 +6232,7 @@ function renderClips() {
       <span class="meta">${fmt(Math.max(0, c.start - T0()))}–${fmt(c.end - T0())}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
-        <button data-a="dl" class="dlmp3" title="Зберегти MP3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M4.5 13.5v5.5h15v-5.5"/></svg></button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
+        <button data-a="dl" class="dlmp3" title="Зберегти MP3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/></svg></button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
       </span>
     </div>`).join('');
@@ -6834,7 +6834,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v242';
+const APP_VER = 'v243';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
