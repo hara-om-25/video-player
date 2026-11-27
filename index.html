@@ -1079,7 +1079,7 @@ input, textarea, dialog input, dialog textarea { -webkit-user-select: text; user
   <div class="srow vonly"><span class="sl">Папка, яку відкриває «+»<small id="setOpenName">не обрано</small></span><button class="accent" id="setOpenBtn">Обрати</button></div>
   <div class="srow vonly"><span class="sl">Папка для збережених шматків<small id="setSaveName">не обрано — у «Завантаження»</small></span><button class="accent" id="setSaveBtn">Обрати</button></div>
   <label class="srow vonly"><input type="checkbox" id="setStar"><span class="sl">★ — кінець шматка<small style="color:var(--dim);white-space:normal">«Обрізати» вирізає від курсора до найближчої ★ після нього</small></span></label>
-  <label class="srow vonly"><input type="checkbox" id="setSysFs"><span class="sl">Ховати панелі Android на весь екран<small style="color:var(--dim);white-space:normal">Chrome тоді щоразу показує підказку «щоб вийти з повноекранного режиму…»</small></span></label>
+  <label class="srow vonly" style="display:none"><input type="checkbox" id="setSysFs"><span class="sl">Ховати панелі Android на весь екран<small style="color:var(--dim);white-space:normal">Chrome тоді щоразу показує підказку «щоб вийти з повноекранного режиму…»</small></span></label>
   <div class="sasr">   <!-- v224: аудіоплеєр — модель розпізнавання мови -->
     <div class="sl">Розпізнавання мови в нотатки<small>Модель працює на планшеті; завантажується один раз</small></div>
     <label class="srow"><input type="radio" name="asrModel" value="turbo"><span class="sl">Whisper large-v3-turbo<small>≈ 540 МБ · краще розпізнає українську, повільніше</small></span></label>
@@ -3832,7 +3832,13 @@ async function showSet() {
 }
 async function pickDir(key, mode) {
   try {
-    const d = await showDirectoryPicker({ id: key.replace(':', '-'), mode });
+    // v237: системне вікно — з уже обраної для ЦЬОГО пункту папки (раніше обидві «Обрати» відкривали ту саму, останню);
+    // ще не обрано — «+» з «Відео», збереження — з «Завантажень». Android може й цього не послухати — тоді вже нічого не вдієш
+    const cur0 = await idb.get(key).catch(() => null);
+    const opt = { id: key === 'dir:open' ? 'mp-open' : 'mp-save', mode, startIn: cur0 || (key === 'dir:open' ? 'videos' : 'downloads') };
+    let d;
+    try { d = await showDirectoryPicker(opt); }
+    catch (e) { if (e.name === 'AbortError') throw e; delete opt.startIn; d = await showDirectoryPicker(opt); }   // старий handle / startIn не підтримано
     await idb.put(key, d); if (key === 'dir:open') dirOpenH = d; showSet();
   } catch (err) { if (err.name !== 'AbortError') toast('Не вдалося обрати папку: ' + (err.message || err), 2500); }
 }
@@ -6111,7 +6117,7 @@ function setFs(on) {
   }
   d.body.classList.toggle('fs', on);
   // системний повний екран Chrome показує підказку «щоб вийти…» — тому лише якщо ввімкнено в ⚙ (sysFs)
-  if (on && !inFs && getSetting('sysFs', false)) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }
+  if (false && on && !inFs) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }   // v237: «Ховати панелі Android» прибрано (не працює, рішення користувача)
   if (!on && inFs) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
   zoomReset();
   requestAnimationFrame(() => { fitVideo(); zoomReset(); layoutActions(); });
@@ -6739,7 +6745,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v236';
+const APP_VER = 'v237';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
