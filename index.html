@@ -719,6 +719,7 @@ body.f-wave #dlgSet .sasr { display: block; margin-top: 10px; }
 #dlgSet .sasr label.srow small { color: var(--dim); white-space: normal; }
 #dlgSet .asrhd { margin-top: 16px; }
 html body.f-wave #dlgSet { width: min(1060px, calc(100vw - 32px)); }   /* v238: дві колонки */
+#dlgSet { max-height: calc(100dvh - 24px - env(safe-area-inset-top)); overflow-y: auto; }   /* v253: не вище за екран — інакше гортається */
 html body.f-wave #dlgSet .sasr { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; }
 html body.f-wave #dlgSet .sc2 > .asrhd:first-child { margin-top: 0; }
 html body.f-wave #dlgSet .sc2 > .row { margin-top: 18px; display: flex; justify-content: flex-end; }
@@ -4219,7 +4220,7 @@ if (FEAT.hdrpl) {
     const sa = document.querySelector('#dlgSet .sasr'), c1 = document.createElement('div'), c2 = document.createElement('div');
     c1.className = 'sc1'; c2.className = 'sc2';
     const kids = [...sa.children], cut = kids.findIndex(e => e.classList.contains('asrhd'));
-    c1.append(...kids.slice(0, cut)); c2.append(...kids.slice(cut), $('memBox'), document.querySelector('#dlgSet > .row'));
+    c1.append(...kids.slice(0, cut), $('memBox')); c2.append(...kids.slice(cut), document.querySelector('#dlgSet > .row'));   // v253: «Пам'ять» — ліворуч під моделями (праворуч «Готово» з'їжджало за екран)
     sa.append(c1, c2);
   }
   if (FEAT.wave) {        // v192: підказки — у заголовках «Мітки» / «Фрагменти», праворуч від назви, у 2 рядки (видно завжди)
@@ -6979,7 +6980,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v252';
+const APP_VER = 'v253';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
