@@ -696,6 +696,18 @@ body.f-ai #btnAI { display: inline-block; }
 #dlgFiles .df.dir .ck::after { content: '▸'; }
 #dlgFiles .df.had { opacity: .5; }
 #dlgFiles .row { flex-wrap: wrap; }
+#dlgDirs { width: min(520px, calc(100vw - 32px)); position: fixed; inset: 0; margin: auto; height: fit-content; }   /* v239 */
+#dlgDirs h3 { margin: 0 0 4px; }
+#dlgDirs .ddHint { margin: 0 0 12px; font-size: 13px; color: var(--dim); }
+#ddList { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+#ddList .ddItem { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; text-align: left; font-size: 17px; background: var(--surf2); color: var(--text); border: 1px solid var(--surf3); border-radius: 10px; }
+#ddList .ddItem svg { width: 24px; height: 24px; flex: none; color: var(--accent); }
+#ddList .ddItem span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ddList .ddItem b { font-size: 13px; color: var(--accent); font-weight: 600; }
+#ddList .ddItem.cur { border-color: var(--accent); }
+#dlgDirs .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+#dlgDirs .row button { height: 46px; min-width: 120px; }
+#ddOther { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
 #dlgSet .snote { margin-top: 12px; font-size: 12px; color: var(--dim); }
 /* v224: ⚙ і в аудіоплеєрі — лише вибір моделі розпізнавання; у відео — без неї */
 body.f-wave #btnSet { display: inline-block; }
@@ -3846,8 +3858,44 @@ async function showSet() {
   $('setNote').textContent = can ? '' : 'Цей браузер не дає обирати папки: «+» відкриває звичайне вікно вибору, а шматки зберігаються в «Завантаження».';
   if (!$('dlgSet').open) $('dlgSet').showModal();
 }
+// v239: вікно Android завжди відкривається в останній папці (веб не може вказати іншу), тож спершу — своє вікно
+// з уже доданими папками (`dir:hist` + обидві поточні); вікно Android — лише через «Інша папка…»
+async function sameDir(a, b) { try { return a === b || (a && b && await a.isSameEntry(b)); } catch { return false; } }
+function dirsDialog(title, list, curH) {
+  return new Promise(async res => {
+    let d = $('dlgDirs');
+    if (!d) {
+      d = document.createElement('dialog'); d.id = 'dlgDirs';
+      d.innerHTML = '<h3 id="ddTitle"></h3><p class="ddHint">Уже додані папки — дотик обирає. Іншу — у вікні Android.</p><div id="ddList"></div><div class="row"><button type="button" id="ddOther">Інша папка…</button><button type="button" id="ddCancel">Скасувати</button></div>';
+      document.body.appendChild(d);
+    }
+    $('ddTitle').textContent = title;
+    const marks = await Promise.all(list.map(h => sameDir(h, curH)));
+    $('ddList').innerHTML = list.map((h, i) => `<button type="button" class="ddItem${marks[i] ? ' cur' : ''}" data-i="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 19V6a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.2V19H3z"/></svg><span>${esc(h.name)}</span>${marks[i] ? '<b>✓ зараз</b>' : ''}</button>`).join('');
+    const done = v => { d.close(); res(v); };
+    $('ddList').querySelectorAll('.ddItem').forEach(b => b.onclick = () => done(+b.dataset.i));
+    $('ddOther').onclick = () => done('other'); $('ddCancel').onclick = () => done(null);
+    d.oncancel = e => { e.preventDefault(); done(null); };
+    d.showModal();
+  });
+}
 async function pickDir(key, mode) {
   try {
+    const curH = await idb.get(key).catch(() => null), list = [];
+    for (const h of [await idb.get('dir:open').catch(() => null), await idb.get('dir:save').catch(() => null), ...((await idb.get('dir:hist').catch(() => null)) || [])]) {
+      if (!h) continue; let dup = false; for (const x of list) if (await sameDir(x, h)) { dup = true; break; }
+      if (!dup) list.push(h);
+    }
+    if (list.length) {
+      const c = await dirsDialog(key === 'dir:open' ? 'Папка, яку відкриває «+»' : 'Папка для збережених шматків', list, curH);
+      if (c === null) return;
+      if (c !== 'other') {
+        const h = list[c];
+        const ok = mode === 'readwrite' ? await dirAllowed(h, true) : await dirAllowedRead(h);
+        if (!ok) return toast('Немає дозволу на «' + h.name + '» — оберіть її ще раз через «Інша папка…»', 3000);
+        await idb.put(key, h); if (key === 'dir:open') dirOpenH = h; return showSet();
+      }
+    }
     // v237: системне вікно — з уже обраної для ЦЬОГО пункту папки (раніше обидві «Обрати» відкривали ту саму, останню);
     // ще не обрано — «+» з «Відео», збереження — з «Завантажень». Android може й цього не послухати — тоді вже нічого не вдієш
     const cur0 = await idb.get(key).catch(() => null);
@@ -3855,7 +3903,13 @@ async function pickDir(key, mode) {
     let d;
     try { d = await showDirectoryPicker(opt); }
     catch (e) { if (e.name === 'AbortError') throw e; delete opt.startIn; d = await showDirectoryPicker(opt); }   // старий handle / startIn не підтримано
-    await idb.put(key, d); if (key === 'dir:open') dirOpenH = d; showSet();
+    await idb.put(key, d); if (key === 'dir:open') dirOpenH = d;
+    try {   // v239: запам'ятати в списку доданих папок (до 8)
+      const h0 = (await idb.get('dir:hist').catch(() => null)) || [], h1 = [d];
+      for (const x of h0) if (h1.length < 8 && !(await sameDir(x, d))) h1.push(x);
+      await idb.put('dir:hist', h1);
+    } catch (e) {}
+    showSet();
   } catch (err) { if (err.name !== 'AbortError') toast('Не вдалося обрати папку: ' + (err.message || err), 2500); }
 }
 $('btnSet').onclick = showSet;
@@ -6768,7 +6822,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v238';
+const APP_VER = 'v239';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
