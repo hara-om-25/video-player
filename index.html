@@ -3401,13 +3401,16 @@ const ASR_MODELS = { turbo: ['Whisper large-v3-turbo', '≈ 540 МБ', 'onnx-com
 async function asrCached() {
   const out = {};
   try {
-    if (!(await caches.has('transformers-cache'))) return out;
-    const c = await caches.open('transformers-cache');
-    for (const req of await c.keys()) {
-      const k = Object.keys(ASR_MODELS).find(m => req.url.includes('/' + ASR_MODELS[m][2])); if (!k) continue;
-      const r = await c.match(req); let n = +(r && r.headers.get('content-length')) || 0;
-      if (!n && r) { try { n = (await r.blob()).size; } catch (e) {} }
-      (out[k] = out[k] || { n: 0, reqs: [] }).n += n; out[k].reqs.push(req);
+    for (const cn of ['transformers-cache', 'asr-parts']) {   // v246: і недокачані частини
+      if (!(await caches.has(cn))) continue;
+      const c = await caches.open(cn);
+      for (const req of await c.keys()) {
+        const k = Object.keys(ASR_MODELS).find(m => req.url.includes('/' + ASR_MODELS[m][2])); if (!k) continue;
+        const r = await c.match(req); let n = +(r && r.headers.get('content-length')) || 0;
+        if (!n && r) { try { n = (await r.blob()).size; } catch (e) {} }
+        const o = (out[k] = out[k] || { n: 0, reqs: [], parts: 0 }); o.n += n; o.reqs.push([cn, req]);
+        if (cn === 'asr-parts') o.parts += n;
+      }
     }
   } catch (e) { console.warn(e); }
   return out;
@@ -3424,12 +3427,12 @@ async function showAsrDl() {
     $('asrStore').textContent = (pers ? '✓ Сховище постійне — браузер сам моделі не зітре.' : '⚠ Браузер не дав постійного сховища: якщо на планшеті забракне місця, він може сам стерти моделі. Допомагає «Встановити» застосунок.')
       + (est && est.usage ? ' Зайнято ' + mb(est.usage) + (est.quota ? ' з ' + mb(est.quota) : '') + '.' : '');
   } catch (e) {} })();
-  box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}${have[k].n < 50 * 1048576 ? ' — не до кінця (завантажиться під час розпізнавання)' : ''}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
+  box.innerHTML = ks.map(k => `<div class="srow"><span class="sl">${ASR_MODELS[k][0]}<small>${mb(have[k].n)}${have[k].parts ? ' — недокачана: продовжиться з місця зупинки' : have[k].n < 50 * 1048576 ? ' — не до кінця (завантажиться під час розпізнавання)' : ''}</small></span><button data-m="${k}">Видалити</button></div>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = async () => {
     const k = b.dataset.m, c = await pick('Видалити модель', ASR_MODELS[k][0] + ' (' + mb(have[k].n) + ') зникне з планшета. Для розпізнавання її доведеться завантажити знову.', ['Видалити']);
     if (c !== 0) return;
     ASR.reset();                          // модель могла бути відкрита у фоновому потоці
-    try { const cc = await caches.open('transformers-cache'); for (const r of have[k].reqs) await cc.delete(r); } catch (e) {}
+    try { for (const [cn, r] of have[k].reqs) await (await caches.open(cn)).delete(r); } catch (e) {}
     try { localStorage.removeItem('asrLoaded.' + k); } catch (e) {}
     toast(ASR_MODELS[k][0] + ' — видалено', 2400); showAsrDl();
   });
@@ -3481,12 +3484,12 @@ const ASR = (() => {
     // v229: модель уже на планшеті — це читання з пам'яті, а не завантаження з інтернету
     const local = !!localStorage.getItem('asrLoaded.' + model);
     onLoad = p => { if (my === run) { files[p.file] = [p.loaded, p.total]; let a = 0, b = 0; for (const [x, y] of Object.values(files)) { a += x; b += y; }
-      status(local ? 'Модель з пам\'яті планшета… ' + Math.round(a / b * 100) + '%' : 'Завантаження моделі з інтернету… ' + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
+      status(local ? 'Модель з пам\'яті планшета… ' + Math.round(a / b * 100) + '%' : (p.resumed ? 'Докачування моделі з місця зупинки… ' : 'Завантаження моделі з інтернету… ') + Math.round(a / 1048576) + ' / ' + Math.round(b / 1048576) + ' МБ'); } };
     status(NAME + ': ' + (local ? 'модель з пам\'яті планшета…' : 'підготовка моделі…'));
     const r0 = await call('load', null, model);
     try { localStorage.setItem('asrLoaded.' + model, '1'); } catch (e) {}
     // v245: чи модель справді записалась на планшет (бібліотека мовчки пропускає невдалий запис — тоді вона качається щоразу)
-    asrCached().then(have => { if (!have[model] || have[model].n < 50 * 1048576) toast('Модель ' + NAME + ' не вдалося записати на планшет (мало місця?) — наступного разу вона завантажиться знову', 15000); });
+    asrCached().then(have => { if (!have[model] || have[model].n - (have[model].parts || 0) < 50 * 1048576) toast('Модель ' + NAME + ' не вдалося записати на планшет (мало місця?) — наступного разу вона завантажиться знову', 15000); });
     // v231: шматки ~10 с (7…13 с), різ — у найтихішому місці (пауза між словами), щоб мова визначалась частіше й слова не різались
     const SR = 16000, T = s1 - s0, t0 = performance.now(), N = Math.max(1, Math.round(T / 10));
     let k = 0, words = '', head = '', heard = '';
@@ -6879,7 +6882,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v246';
+const APP_VER = 'v247';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
