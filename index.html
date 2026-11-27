@@ -437,8 +437,13 @@ html body.f-wave #markList .item { padding-top: 5px; padding-bottom: 5px; }   /*
 html body.f-vslider #markList .item { padding-top: 3px; padding-bottom: 3px; }   /* v193: відеоплеєр і редактор — мітки щільніше */
 html body.f-wave .panel.side .sec > h2 { display: flex; justify-content: flex-start; padding-left: 10px; }   /* «МІТКИ» — ліворуч, як «ФРАГМЕНТИ» */
 html body.f-wave .panel.side .sec > h2 > i:empty { display: none; }
-html body.f-wave .panel h2 .hsq.hico { width: 40px; height: 40px; padding: 7px; margin-left: 8px; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }   /* v233 */
-html body.f-wave .panel h2 .hsq.hico svg { width: 100%; height: 100%; display: block; }
+html body .panel h2 .hsq.hico { width: 40px; height: 40px; padding: 7px; margin-left: 8px; background: var(--surf2); color: var(--accent); border: 1px solid var(--accent); }   /* v233 */
+html body .panel h2 .hsq.hico svg { width: 100%; height: 100%; display: block; }
+/* v236: відеоплеєр — «МІТКИ» ліворуч, значки праворуч; редактор — значки перед 🗑 ✎ 🖌, такого ж розміру */
+html body.f-vslider:not(.f-draw) .panel.side .sec > h2 { display: flex; padding-right: 10px; }
+html body.f-vslider:not(.f-draw) .panel.side .sec > h2 > i.l { display: none; }
+html body.f-vslider:not(.f-draw) .panel.side .sec > h2 > i.r { margin-left: auto; }
+html body.f-draw .panel.side h2 .hsq.hico { width: 34px; height: 36px; padding: 6px; margin: 0 4px 0 0; }
 html body.f-wave .panel.side .sec > h2 { padding-right: 10px; }
 html body.f-wave .hhint { flex: 1; min-width: 0; margin-left: 14px; font-size: 12px; line-height: 1.35; letter-spacing: 0; text-transform: none; font-weight: 400; color: #6f7378; white-space: normal; text-align: left; }
 html body.f-wave .fragsec > h2 { flex-wrap: nowrap; align-items: center; }
@@ -3968,15 +3973,19 @@ if (FEAT.hdrpl) {
   const pop = $('plPop');
   pop.appendChild($('playlist'));
   if (FEAT.vslider) document.querySelector('.panel.stage').appendChild($('progress'));
+  {   // v233/v236: «Копіювати» / «Відновити» — із шапки в заголовок «Мітки» (у всіх трьох), значками; назва — у підказці title
+    const bk = $('btnBackup'), rs = $('btnRestore');
+    bk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>';
+    // v236: «Відновити» — відкрита тека зі стрілкою вгору («взяти з файлу копії»), замість годинника
+    rs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19.5V6a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.2v11.3"/><path d="M3 19.5h18"/><path d="M12 17V10.5"/><path d="M9 13.2l3-3 3 3"/></svg>';
+    bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Копіювати'); rs.setAttribute('aria-label', 'Відновити');
+    bk.title = 'Копіювати: зберегти всі мітки, нотатки й фрагменти у файл'; rs.title = 'Відновити: взяти мітки з файлу копії';
+    if (!FEAT.wave) document.querySelector('.panel.side .sec > h2 > i.r').prepend(bk, rs);
+  }
   if (FEAT.wave) {        // v192: підказки — у заголовках «Мітки» / «Фрагменти», праворуч від назви, у 2 рядки (видно завжди)
     const hm = document.createElement('span'); hm.className = 'hhint'; hm.innerHTML = 'Натисніть ★, щоб поставити<br>мітку на поточній позиції';
     document.querySelector('.panel.side .sec > h2 > span').after(hm);
-    // v233: «Копіювати» / «Відновити» — із шапки в заголовок «Мітки», праворуч; замість слів — значки (назва — у підказці title)
-    const bk = $('btnBackup'), rs = $('btnRestore');
-    bk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>';
-    rs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 3.5v5h5"/><path d="M12 7.5V12l3 2"/></svg>';
-    bk.className = rs.className = 'hsq hico'; bk.setAttribute('aria-label', 'Копіювати'); rs.setAttribute('aria-label', 'Відновити');
-    hm.after(bk, rs);
+    hm.after($('btnBackup'), $('btnRestore'));   // v233: «Копіювати» / «Відновити» — у заголовку «Мітки», праворуч від підказки
     const hf = document.createElement('span'); hf.className = 'hhint'; hf.innerHTML = 'Позначте [ початок і ] кінець, потім ⬇ —<br>фрагмент збережеться окремим MP3';
     document.querySelector('.fragsec > h2 > span').after(hf);
   }
@@ -6730,7 +6739,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v235';
+const APP_VER = 'v236';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
