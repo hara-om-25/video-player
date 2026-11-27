@@ -3540,7 +3540,7 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
     const d = $('dlgNote'), ta = $('dlgNoteText'), btn = $('dlgNoteAsr'), st = $('dlgNoteProg');
     $('dlgNoteTitle').textContent = fmt(m.t - T0()) + '  ' + m.name; ta.value = m.note || '';
     st.textContent = ''; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
-    let on = false;
+    let on = false, added = 0, who = '';
     const stopAsr = () => { if (on) { on = false; ASR.stop(); btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати'; } };
     btn.onclick = async () => {
       if (on) { stopAsr(); st.textContent = 'Зупинено'; return; }
@@ -3551,12 +3551,16 @@ function askNote(m) {   // v221: вікно нотаток — багато ря
       }
       on = true; btn.classList.add('on'); btn.lastChild.textContent = 'Зупинити';
       try {
+        added = 0; who = ASR_MODELS[asrModel()][0];
         const ok = await ASR.transcribe(m, txt => {          // текст — одразу в поле й у нотатки мітки (щоб не загубився)
-          ta.value = ta.value.replace(/\s+$/, '') + (ta.value.trim() ? ' ' : '') + txt;
+          const t0 = ta.value.replace(/\s+$/, '');
+          ta.value = t0 + (t0 ? (added ? ' ' : '\n\n') : '') + txt; added++;   // новий розпізнаний текст — з нового абзацу
           ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks();
         }, x => { if (on) st.textContent = x; });
         if (ok === false && on) st.textContent = '';
       } catch (err) { console.warn(err); st.textContent = err.message === 'зупинено' ? 'Зупинено' : 'Не вдалося: ' + (err.message || err); }
+      // v246: підпис — якою моделлю розпізнано
+      if (added) { ta.value = ta.value.replace(/\s+$/, '') + '\n— розпізнано: ' + who; ta.scrollTop = ta.scrollHeight; m.note = ta.value; save(); renderMarks(); }
       on = false; btn.classList.remove('on'); btn.lastChild.textContent = 'Розпізнати';
     };
     // v235: копіювати весь текст / вставити з буфера туди, де курсор
@@ -6875,7 +6879,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v245';
+const APP_VER = 'v246';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
